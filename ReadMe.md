@@ -1,113 +1,88 @@
-# 🤝 Tirana Solidare - Volunteering & Mutual Aid Platform
+#  Tirana Solidare - Volunteering & Mutual Aid Platform
 
 ![Project Status](https://img.shields.io/badge/status-in%20development-orange)
 ![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Tirana Solidare** is a digital ecosystem designed to empower volunteering and mutual aid in the city of Tirana. The platform connects the Municipality, volunteers, and citizens in need through a secure and interactive web interface.
 
----
 
-## 📖 Table of Contents
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Database Architecture](#-database-architecture)
-- [Installation & Setup](#-installation--setup)
-- [Folder Structure](#-folder-structure)
-- [Screenshots](#-screenshots)
+**Tirana Solidare** is a web-based platform designed to facilitate civic engagement and social aid management within the Municipality of Tirana. The system implements a secure Client-Server architecture to connect municipal administrators, volunteers, and citizens in need through a centralized interface.
 
----
+## Project Abstract
 
-## 🚀 Features
+The objective of this project is to digitize the volunteer management process. The platform addresses the need for a scalable system to handle event scheduling, volunteer application tracking, and resource allocation. It features Role-Based Access Control (RBAC) to differentiate between administrative privileges and public access, ensuring data integrity and user privacy.
 
-### 👤 For Users (Volunteers & Citizens)
-* **User Authentication:** Secure login/registration with hashed passwords.
-* **Event Application:** Browse events and apply to volunteer with a single click.
-* **Live Notifications:** Real-time updates on application status via **AJAX Polling**.
-* **Interactive Dashboard:** View application history and profile status.
-* **Need Requests:** Post specific requests for help (social, humanitarian).
+## Technical Architecture
 
-### 🛡️ For Administrators (Municipality)
-* **Event Management:** Create, edit, and delete volunteering events.
-* **Application Review:** Accept or reject volunteer applications.
-* **Analytics Dashboard:** Visual statistics using **Chart.js** (Volunteers per month, top categories).
-* **User Management:** Manage roles and suspend accounts if necessary.
+The application is built using a native LAMP stack (Linux, Apache, MySQL, PHP) approach without reliance on heavy backend frameworks, ensuring optimized performance and full control over the execution flow.
 
----
+### Technology Stack
 
-## 🛠 Tech Stack
+* **Backend:** PHP 8.x (Procedural/Object-Oriented hybrid approach).
+* **Database:** MySQL (InnoDB engine) with normalized relational schema (3NF).
+* **Frontend:** HTML5, CSS3, JavaScript (ES6+).
+* **Async Operations:** AJAX (Fetch API) for non-blocking data updates.
+* **Security:**
+    * `PDO` prepared statements for SQL injection prevention.
+    * `password_hash()` (Bcrypt) for credential storage.
+    * XSS sanitization on output.
 
-### Frontend (Client-Side)
-* **HTML5 & CSS3:** Semantic structure and custom styling.
-* **Bootstrap 5:** For responsive layout and mobile-friendly UI components.
-* **JavaScript (ES6):** Dynamic interactions and DOM manipulation.
-* **SweetAlert2:** Beautiful, responsive popup notifications instead of standard browser alerts.
-* **FontAwesome:** Vector icons for better UX.
+### Database Design
 
-### Backend (Server-Side)
-* **PHP (8.x):** Core business logic, session management, and routing.
-* **PHPMailer:** SMTP integration for sending transactional emails (Registration, Password Reset).
+The system relies on a strictly relational model including:
+* **Users & RBAC:** Centralized user table with role delineation.
+* **Event Management:** One-to-Many relationships for categorization.
+* **Application Tracking:** Junction tables handling Many-to-Many relationships between volunteers and events with status flags.
 
-### Database
-* **MySQL:** Relational database management.
-* **PDO (PHP Data Objects):** For secure database connections to prevent SQL Injection.
+## Core Modules
 
----
+### 1. Authentication & Session Management
+Handles secure login, registration, and session persistence. Includes middleware logic to restrict access to administrative routes based on the `role_type` attribute.
 
-## 🗄 Database Architecture
+### 2. Volunteer Management System (VMS)
+Allows administrators to create, update, and delete events. Volunteers can browse the catalog and submit applications. The system utilizes `AJAX` polling to update application statuses (Pending/Accepted/Rejected) without page reloads.
 
-The system is built on a relational database schema designed for scalability. Key entities include:
+### 3. Notification Engine
+A lightweight polling mechanism that checks for state changes in the `Njoftimi` table, providing real-time feedback to the user regarding their application status or platform announcements.
 
-* **Users (`Perdoruesi`):** Stores credentials and roles (Admin/Volunteer).
-* **Events (`Eventi`):** Stores event details, dates, and locations.
-* **Applications (`Aplikimi`):** A junction table linking Users to Events with status tracking.
-* **Notifications (`Njoftimi`):** System-generated alerts for users.
+## Installation & Setup
 
-*(See `database/schema.sql` for the full ERD implementation)*
+### Prerequisites
+* Apache HTTP Server (via XAMPP/WAMP or native installation).
+* PHP 8.0 or higher.
+* MySQL 8.0 or higher.
 
----
+### Deployment Steps
 
-## ⚙ Installation & Setup
-
-Follow these steps to run the project locally:
-
-1.  **Clone the Repository**
+1.  **Clone the repository**
     ```bash
     git clone [https://github.com/your-username/tirana-solidare.git](https://github.com/your-username/tirana-solidare.git)
     ```
 
-2.  **Set up the Environment**
-    * Install **XAMPP** (or WAMP/MAMP).
-    * Move the project folder to `C:/xampp/htdocs/tirana-solidare`.
+2.  **Database Configuration**
+    * Import `database/schema.sql` into your MySQL instance.
+    * Configure the connection settings in `config/db.php`:
+    ```php
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'root');
+    define('DB_PASS', 'your_password');
+    define('DB_NAME', 'tirana_solidare');
+    ```
 
-3.  **Database Configuration**
-    * Open `phpMyAdmin` (http://localhost/phpmyadmin).
-    * Create a new database named `tirana_solidare_db`.
-    * Import the `database.sql` file located in the `db/` folder of this repo.
-    * Update database credentials in `config/db_connect.php`:
-        ```php
-        $host = 'localhost';
-        $db   = 'tirana_solidare_db';
-        $user = 'root';
-        $pass = '';
-        ```
+3.  **Directory Permissions**
+    Ensure the `/uploads` directory is writable for event banner storage.
 
-4.  **Run the Project**
-    * Open your browser and navigate to: `http://localhost/tirana-solidare`
-
----
-
-## 📂 Folder Structure
+## Project Structure
 
 ```text
-/tirana-solidare
-├── /admin              # Administrator dashboard & logic
-├── /assets
-│   ├── /css            # Custom styles & Bootstrap overrides
-│   ├── /js             # AJAX scripts, SweetAlert config
-│   └── /images         # Project assets
-├── /config             # Database connection & global constants
-├── /includes           # Reusable components (Header, Footer, Navbar)
-├── /database           # SQL dump files
-├── index.php           # Landing page
-└── README.md           # Project documentation
+tirana-solidare/
+├── config/             # Database credentials and global constants
+├── public/             # Publicly accessible assets (CSS, JS, Images)
+├── src/
+│   ├── Auth/           # Login/Register logic
+│   ├── Controllers/    # Business logic for events and applications
+│   └── Utils/          # Helper functions (Sanitization, Formatting)
+├── templates/          # Reusable HTML components (Header, Footer)
+├── database/           # SQL migration scripts
+├── index.php           # Application entry point
+└── README.md
