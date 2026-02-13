@@ -1,4 +1,4 @@
-#  Tirana Solidare - Volunteering & Mutual Aid Platform
+#   Tirana Solidare - Volunteering & Mutual Aid Platform
 
 ![Project Status](https://img.shields.io/badge/status-in%20development-orange)
 ![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue)
