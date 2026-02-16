@@ -1,8 +1,5 @@
 # Tirana Solidare - Developer Setup Guide
 
-Hey team,
-
-Here is a quick walkthrough to get the project running on your local machines. We are using **XAMPP** for our local server and **GitHub** to manage our code.
 
 ## 1. The Tools
 If you haven't already, grab these:
