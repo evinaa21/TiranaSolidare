@@ -19,7 +19,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="../actions/register_action.php" method="POST">
+        <form action="../src/actions/register_action.php" method="POST">
             <div class="form-group mb-3">
                 <label for="emri">Emri i Plotë</label>
                 <input type="text" name="emri" id="emri" class="form-control" placeholder="Emri Mbiemri" required>

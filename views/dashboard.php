@@ -37,7 +37,7 @@ if (!isset($_SESSION['user_id'])) {
     <?php endif; ?>
 
     <br>
-    <a href="../actions/logout.php" style="background: red; color: white; padding: 5px 10px; text-decoration: none;">Dil (Logout)</a>
+    <a href="../src/actions/logout.php" style="background: red; color: white; padding: 5px 10px; text-decoration: none;">Dil (Logout)</a>
 
 </body>
 </html>

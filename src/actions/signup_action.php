@@ -1,7 +1,7 @@
 <?php
 // actions/signup_action.php
 session_start();
-require_once '../config/db.php';
+require_once '../../config/db.php';
 
 if (isset($_POST['signup_submit'])) {
     
@@ -13,17 +13,17 @@ if (isset($_POST['signup_submit'])) {
 
     // 2. Validation
     if (empty($emri) || empty($email) || empty($password) || empty($confirm_password)) {
-        header("Location: ../views/signup.php?error=empty_fields");
+        header("Location: ../../views/signup.php?error=empty_fields");
         exit();
     }
     
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        header("Location: ../views/signup.php?error=invalid_email");
+        header("Location: ../../views/signup.php?error=invalid_email");
         exit();
     }
 
     if ($password !== $confirm_password) {
-        header("Location: ../views/signup.php?error=password_mismatch");
+        header("Location: ../../views/signup.php?error=password_mismatch");
         exit();
     }
 
@@ -32,14 +32,14 @@ if (isset($_POST['signup_submit'])) {
     $stmt = $pdo->prepare($sql_check);
     
     if (!$stmt) {
-        header("Location: ../views/signup.php?error=sql_error");
+        header("Location: ../../views/signup.php?error=sql_error");
         exit();
     }
     
     $stmt->execute([$email]);
     
     if ($stmt->rowCount() > 0) {
-        header("Location: ../views/signup.php?error=email_taken");
+        header("Location: ../../views/signup.php?error=email_taken");
         exit();
     } else {
         // 4. Hash Password (Bcrypt)
@@ -52,16 +52,16 @@ if (isset($_POST['signup_submit'])) {
         
         if ($stmt->execute([$emri, $email, $hashed_password])) {
             // Success! Redirect to login or show success message on signup page
-            header("Location: ../views/signup.php?success=registered");
+            header("Location: ../../views/signup.php?success=registered");
             exit();
         } else {
-            header("Location: ../views/signup.php?error=sql_error");
+            header("Location: ../../views/signup.php?error=sql_error");
             exit();
         }
     }
 
 } else {
     // Prevent direct access to this file
-    header("Location: ../views/signup.php");
+    header("Location: ../../views/signup.php");
     exit();
 }

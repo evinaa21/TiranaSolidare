@@ -23,7 +23,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="../actions/login_action.php" method="POST">
+        <form action="../src/actions/login_action.php" method="POST">
             <div class="form-group mb-3">
                 <label for="email">Email</label>
                 <input type="email" name="email" id="email" class="form-control" placeholder="emri@shembull.com" required>

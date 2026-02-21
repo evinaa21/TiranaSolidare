@@ -1,14 +1,14 @@
 <?php
 // actions/login_action.php
 session_start();
-require_once '../config/db.php';
+require_once '../../config/db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $password = $_POST['password'];
 
     if (empty($email) || empty($password)) {
-        header("Location: ../views/login.php?error=empty_fields");
+        header("Location: ../../views/login.php?error=empty_fields");
         exit();
     }
 
@@ -26,15 +26,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['roli'] = $user['roli'];
 
         // Redirect to dashboard
-        header("Location: ../views/dashboard.php");
+        header("Location: ../../views/dashboard.php");
         exit();
     } else {
         // FAILURE: Redirect back with error
-        header("Location: ../views/login.php?error=wrong_credentials");
+        header("Location: ../../views/login.php?error=wrong_credentials");
         exit();
     }
 } else {
     // If someone tries to access this file directly without POST
-    header("Location: ../views/login.php");
+    header("Location: ../../views/login.php");
     exit();
 }
