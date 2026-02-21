@@ -75,14 +75,142 @@ A lightweight polling mechanism that checks for state changes in the `Njoftimi` 
 ## Project Structure
 
 ```text
-tirana-solidare/
-├── config/             # Database credentials and global constants
-├── public/             # Publicly accessible assets (CSS, JS, Images)
-├── src/
-│   ├── Auth/           # Login/Register logic
-│   ├── Controllers/    # Business logic for events and applications
-│   └── Utils/          # Helper functions (Sanitization, Formatting)
-├── templates/          # Reusable HTML components (Header, Footer)
-├── database/           # SQL migration scripts
-├── index.php           # Application entry point
+TiranaSolidare/
+├── api/                  # JSON REST API endpoints
+│   ├── api_helpers.php   # Shared middleware (auth, CORS, JSON helpers)
+│   ├── auth.php          # Login, register, logout, current-user
+│   ├── get_events.php    # Event CRUD (list/get/create/update/delete)
+│   ├── applications.php  # Volunteer application management
+│   ├── check_notifs.php  # Notification list, mark-read, delete
+│   ├── categories.php    # Category CRUD
+│   ├── help_requests.php # Aid request/offer management
+│   ├── update_status.php # Admin user management (block/role/delete)
+│   └── stats.php         # Dashboard & report statistics
+├── assets/
+│   ├── css/              # Bootstrap + custom styles
+│   └── js/
+│       ├── ajax-polling.js # AJAX polling for notifications & events
+│       └── main.js         # Admin panel & UI interactions
+├── config/
+│   └── db.php            # PDO database connection
+├── includes/
+│   ├── functions.php     # View helpers (auth check, flash, XSS)
+│   ├── header.php        # HTML head + navbar
+│   └── footer.php        # Footer + script includes
+├── src/actions/          # Form-based POST handlers
+│   ├── login_action.php
+│   ├── register_action.php
+│   ├── signup_action.php
+│   ├── create_event.php
+│   └── logout.php
+├── views/                # PHP view pages
+├── TiranaSolidare.sql    # Database schema
+├── index.php             # Entry point (redirect)
 └── README.md
+```
+
+## API Reference
+
+All API endpoints return JSON with the structure:
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+On error:
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "errors": ["field-level errors"]
+}
+```
+
+### Authentication (`api/auth.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `POST` | `?action=login` | No | Log in with email & password |
+| `POST` | `?action=register` | No | Register a new volunteer account |
+| `POST` | `?action=logout` | Yes | Destroy session |
+| `GET`  | `?action=me` | Yes | Get current user profile |
+
+**Login example:**
+```bash
+curl -X POST http://localhost/TiranaSolidare/api/auth.php?action=login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"secret"}'
+```
+
+### Events (`api/get_events.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | No | List events (paginated, filterable) |
+| `GET` | `?action=get&id=1` | No | Get single event detail |
+| `POST` | `?action=create` | Admin | Create a new event |
+| `PUT` | `?action=update&id=1` | Admin | Update event fields |
+| `DELETE` | `?action=delete&id=1` | Admin | Delete an event |
+
+**Filters:** `?search=`, `?category=`, `?date_from=`, `?date_to=`, `?page=`, `?limit=`
+
+### Applications (`api/applications.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | Yes | My applications (volunteer) or all (admin) |
+| `GET` | `?action=by_event&id=1` | Admin | Applications for a specific event |
+| `POST` | `?action=apply` | Volunteer | Submit application for an event |
+| `PUT` | `?action=update_status&id=1` | Admin | Accept/Reject an application |
+| `DELETE` | `?action=withdraw&id=1` | Volunteer | Withdraw a pending application |
+
+### Notifications (`api/check_notifs.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | Yes | List all notifications |
+| `GET` | `?action=unread_count` | Yes | Get unread notification count |
+| `PUT` | `?action=mark_read&id=1` | Yes | Mark one notification as read |
+| `PUT` | `?action=mark_all_read` | Yes | Mark all notifications as read |
+| `DELETE` | `?action=delete&id=1` | Yes | Delete a notification |
+
+### Categories (`api/categories.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | No | List all categories with event counts |
+| `POST` | `?action=create` | Admin | Create a new category |
+| `PUT` | `?action=update&id=1` | Admin | Rename a category |
+| `DELETE` | `?action=delete&id=1` | Admin | Delete a category |
+
+### Help Requests (`api/help_requests.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | No | List requests (filter: `?tipi=`, `?statusi=`) |
+| `GET` | `?action=get&id=1` | No | Single request detail |
+| `POST` | `?action=create` | Yes | Submit a request or offer |
+| `PUT` | `?action=update&id=1` | Owner/Admin | Update request fields |
+| `PUT` | `?action=close&id=1` | Owner/Admin | Close a request |
+| `DELETE` | `?action=delete&id=1` | Admin | Delete a request |
+
+### User Management (`api/update_status.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=list` | Admin | List all users (filter: `?roli=`, `?statusi=`, `?search=`) |
+| `GET` | `?action=get&id=1` | Admin | User detail with stats |
+| `PUT` | `?action=block&id=1` | Admin | Block a user |
+| `PUT` | `?action=unblock&id=1` | Admin | Unblock a user |
+| `PUT` | `?action=change_role&id=1` | Admin | Change user role |
+| `DELETE` | `?action=delete&id=1` | Admin | Delete user and cascade data |
+
+### Statistics & Reports (`api/stats.php`)
+
+| Method | Action | Auth | Description |
+|--------|--------|------|-------------|
+| `GET` | `?action=overview` | Admin | Platform-wide dashboard stats |
+| `GET` | `?action=my_stats` | Yes | Personal volunteer stats |
+| `GET` | `?action=reports` | Admin | List generated reports |
+| `POST` | `?action=generate` | Admin | Generate a new report |
