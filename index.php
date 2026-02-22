@@ -1,4 +1,4 @@
 <?php
-// Landing Page (Redirects to views/login.php)
-header('Location: views/login.php');
+// Landing Page (Redirects to public/index.php)
+header('Location: public/');
 exit();
