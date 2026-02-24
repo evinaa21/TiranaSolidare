@@ -28,7 +28,7 @@ main{
 
 section{
   position: relative;
-  padding: 150px clamp(20px, 8%, 8%);
+  padding: 100px clamp(20px, 8%, 8%);
 }
 
 

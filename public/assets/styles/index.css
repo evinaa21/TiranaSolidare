@@ -22,7 +22,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 50px;
   min-height: calc(100vh - 0px);
-  padding-block: 40px 120px;
+  padding-block: 40px 100px;
   
   background: #ffffff;
   
@@ -381,14 +381,28 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-top: 120px;
-  padding-bottom: 120px;
+  padding-top: 100px;
+  padding-bottom: 100px;
   background: linear-gradient(180deg, #eee8e0 0%, #f2ece5 20%, #f7f3ef 50%, #faf8f6 80%, #ffffff 100%);
   position: relative;
 }
 
 #si-funksionon > h2{
   margin-bottom: 8px;
+  position: relative;
+  padding-bottom: 16px;
+}
+
+#si-funksionon > h2::after{
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #00715D, #E17254);
 }
 
 #si-funksionon > p{
@@ -506,7 +520,8 @@
 
 #kerkesat{
   padding-inline: 0;
-  padding-bottom: 80px;
+  padding-block: 80px;
+  background: #ffffff;
 }
 
 #kerkesat-title{
@@ -516,6 +531,22 @@
   align-items: center;
   gap: 50px;
   margin-bottom: 40px;
+}
+
+#kerkesat-title h2{
+  position: relative;
+  padding-bottom: 16px;
+}
+
+#kerkesat-title h2::after{
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #00715D, #E17254);
 }
 
 @media screen and (max-width: 680px) {
@@ -543,12 +574,47 @@
   margin-bottom: 40px;
 }
 
+#eventet-title h2{
+  position: relative;
+  padding-bottom: 16px;
+}
+
+#eventet-title h2::after{
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #E17254, #00715D);
+}
+
 @media screen and (max-width: 680px) {
   #eventet-title{
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
+}
+
+/* Eventet cards – green-accented variant */
+#eventet .help_card{
+  border: 1px solid rgba(0,113,93,0.08);
+  background: #fff;
+}
+
+#eventet .help_card:hover{
+  border-color: rgba(0,113,93,0.2);
+  box-shadow: 0 16px 40px rgba(0,113,93,0.12);
+}
+
+#eventet .help_card_status.request{
+  background-color: #00715D;
+}
+
+#eventet .help_card_btn{
+  color: #00715D;
 }
 
 
