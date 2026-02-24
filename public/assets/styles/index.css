@@ -21,17 +21,6 @@
   padding-block: 100px;
 }
 
-#main:before{
-  content: "";
-  position: absolute;
-  top: -100px;
-  right: 0;
-  width: 40%;
-  height: 75%;
-  border-bottom-left-radius: 64px;
-  background-color: #00715D;
-  z-index: -1000;
-}
 
 #main-content{
   display: flex;
@@ -57,14 +46,16 @@
   margin-top: auto;
 }
 
+
 #main-stats:before{
   content: "";
   position: absolute;
-  top: -60px;
-  right: -70px;
-  width: calc(100% + 8vw + 70px);
-  height: calc(100% + 100px + 60px + 64px);
-  background-color: #00715D;
+  top: 20px;        
+  left: -100px;
+  right: 20px;       
+  width: calc(100% + 80px); 
+  height: calc(100% + 40px); 
+  background: #00715D;
   border-radius: 0 64px 64px 0;
   z-index: -1;
 }
@@ -76,8 +67,7 @@
   justify-content: flex-start;
   align-items: flex-start;
   gap: 8px;
-  padding: 20px;
-  margin-top: auto;
+   padding: 40px 20px 20px; 
 }
 
 #main-stats span b{
@@ -90,23 +80,17 @@
 
 
 #main-help{
-  display: flex;
-  justify-content: center;
-  align-content: center;
-  gap: 32px;
+  position: relative;
 }
 
-#main-help > .help_card:nth-child(1){
-  transform: translateX(-100px);
-}
-
-#main-help > .help_card:nth-child(2){
-  scale: 0.8;
+.hero-img{
   position: absolute;
-  transform: translateX(200px);
-  z-index: -100;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 500px; 
+  z-index: 10;
 }
-
 
 
 @media screen and (max-width: 1280px) {
@@ -161,69 +145,101 @@
     font-size: 3rem;
   }
 }
-
-
-
-
-
-
-
-
-
-
+/* =========================
+   SI FUNKSIONON (FINAL)
+   ========================= */
 
 #si-funksionon{
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
   align-items: center;
   text-align: center;
-  flex-flow: column;
-  padding-top: 200px;
+  padding-top: 120px;
 }
 
+/* GRID 2x2 */
 #si-funksionon-grid{
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 50px;
-  margin-top: 100px;
-}
-
-#si-funksionon-grid > .card{
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  flex-flow: column;
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
-  padding: 20px;
+  margin-top: 60px;
+  width: 100%;
+  max-width: 1100px;
 }
 
-#si-funksionon-grid > .card .lucide{
-  width: 76px;
-  height: 76px;
-  border-radius: 8px;
-  background-color: #E17254;
-  padding: 12px;
-  color: #fff;
+/* CARD */
+#si-funksionon-grid > .card{
+  background: #fff;
+  border: 1px solid #00000010;
+  border-radius: 18px;
+  padding: 20px 22px;
+
   display: flex;
-  justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
+
+  text-align: left;
+
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  transition: all 0.25s ease;
+}
+
+/* HOVER */
+#si-funksionon-grid > .card:hover{
+  transform: translateY(-5px);
+  box-shadow: 0 18px 35px rgba(0,0,0,0.08);
+}
+
+/* IKONA */
+#si-funksionon-grid > .card .lucide{
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background-color: #d84d27;
+  padding: 10px;
+  color: #fff;
+
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
   stroke-width: 1.5px;
 }
 
+/* FSHIH NUMRAT */
 #si-funksionon-grid > .card .card_number{
   display: none;
 }
 
-#si-funksionon-grid > .card p{
-  margin-top: auto;
+/* WRAPPER TEKSTI */
+#si-funksionon-grid > .card > div{
+  display: flex;
+  flex-direction: column;
 }
 
+/* TITULLI */
+#si-funksionon-grid > .card h3{
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.3;
+  color: #003229;
+}
 
-@media screen and (max-width: 1050px) {
+/* PERSHKRIMI */
+#si-funksionon-grid > .card p{
+  margin: 6px 0 0;
+  color: #202020aa;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* RESPONSIVE */
+@media screen and (max-width: 768px){
   #si-funksionon-grid{
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 }
+
 
 @media screen and (max-width: 480px) {
   #si-funksionon-grid{
