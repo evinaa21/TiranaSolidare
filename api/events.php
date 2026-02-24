@@ -1,6 +1,6 @@
 <?php
 /**
- * api/get_events.php
+ * api/events.php
  * ---------------------------------------------------
  * Events REST API – full CRUD
  *

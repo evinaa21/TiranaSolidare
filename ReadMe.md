@@ -77,17 +77,17 @@ A lightweight polling mechanism that checks for state changes in the `Njoftimi` 
 ```text
 TiranaSolidare/
 ├── api/                  # JSON REST API endpoints
-│   ├── api_helpers.php   # Shared middleware (auth, CORS, JSON helpers)
+│   ├── helpers.php       # Shared middleware (auth, CORS, JSON helpers)
 │   ├── auth.php          # Login, register, logout, current-user
-│   ├── get_events.php    # Event CRUD (list/get/create/update/delete)
+│   ├── events.php        # Event CRUD (list/get/create/update/delete)
 │   ├── applications.php  # Volunteer application management
-│   ├── check_notifs.php  # Notification list, mark-read, delete
+│   ├── notifications.php # Notification list, mark-read, delete
 │   ├── categories.php    # Category CRUD
 │   ├── help_requests.php # Aid request/offer management
-│   ├── update_status.php # Admin user management (block/role/delete)
+│   ├── users.php         # Admin user management (block/role/delete)
 │   └── stats.php         # Dashboard & report statistics
 ├── assets/
-│   ├── css/              # Bootstrap + custom styles
+│   ├── css/              # Custom styles (Bootstrap loaded via CDN)
 │   └── js/
 │       ├── ajax-polling.js # AJAX polling for notifications & events
 │       └── main.js         # Admin panel & UI interactions
@@ -97,13 +97,12 @@ TiranaSolidare/
 │   ├── functions.php     # View helpers (auth check, flash, XSS)
 │   ├── header.php        # HTML head + navbar
 │   └── footer.php        # Footer + script includes
+├── public/               # Public-facing landing page
 ├── src/actions/          # Form-based POST handlers
 │   ├── login_action.php
 │   ├── register_action.php
-│   ├── signup_action.php
-│   ├── create_event.php
 │   └── logout.php
-├── views/                # PHP view pages
+├── views/                # Admin/auth PHP view pages
 ├── TiranaSolidare.sql    # Database schema
 ├── index.php             # Entry point (redirect)
 └── README.md
@@ -143,7 +142,7 @@ curl -X POST http://localhost/TiranaSolidare/api/auth.php?action=login \
   -d '{"email":"user@example.com","password":"secret"}'
 ```
 
-### Events (`api/get_events.php`)
+### Events (`api/events.php`)
 
 | Method | Action | Auth | Description |
 |--------|--------|------|-------------|
@@ -165,7 +164,7 @@ curl -X POST http://localhost/TiranaSolidare/api/auth.php?action=login \
 | `PUT` | `?action=update_status&id=1` | Admin | Accept/Reject an application |
 | `DELETE` | `?action=withdraw&id=1` | Volunteer | Withdraw a pending application |
 
-### Notifications (`api/check_notifs.php`)
+### Notifications (`api/notifications.php`)
 
 | Method | Action | Auth | Description |
 |--------|--------|------|-------------|
@@ -195,7 +194,7 @@ curl -X POST http://localhost/TiranaSolidare/api/auth.php?action=login \
 | `PUT` | `?action=close&id=1` | Owner/Admin | Close a request |
 | `DELETE` | `?action=delete&id=1` | Admin | Delete a request |
 
-### User Management (`api/update_status.php`)
+### User Management (`api/users.php`)
 
 | Method | Action | Auth | Description |
 |--------|--------|------|-------------|

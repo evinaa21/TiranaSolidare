@@ -1,6 +1,6 @@
 <?php
 /**
- * api/check_notifs.php
+ * api/notifications.php
  * ---------------------------------------------------
  * Notification API – list, mark read, count unread
  *

@@ -1,6 +1,6 @@
 <?php
 /**
- * api/api_helpers.php
+ * api/helpers.php
  * ---------------------------------------------------
  * Shared helper functions for all API endpoints.
  * Handles JSON responses, authentication, RBAC,

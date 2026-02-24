@@ -25,7 +25,7 @@ function initNotificationPolling() {
 
 async function fetchUnreadCount() {
     try {
-        const res = await fetch(`${API_BASE}/check_notifs.php?action=unread_count`);
+        const res = await fetch(`${API_BASE}/notifications.php?action=unread_count`);
         const json = await res.json();
 
         if (json.success && notifBadge) {
@@ -141,7 +141,7 @@ async function fetchEvents(page = 1, filters = {}) {
     const params = new URLSearchParams({ action: 'list', page, limit: 12, ...filters });
 
     try {
-        const res = await fetch(`${API_BASE}/get_events.php?${params}`);
+        const res = await fetch(`${API_BASE}/events.php?${params}`);
         const json = await res.json();
 
         if (json.success && eventListContainer) {
