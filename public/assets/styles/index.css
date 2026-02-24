@@ -145,9 +145,6 @@
     font-size: 3rem;
   }
 }
-/* =========================
-   SI FUNKSIONON (FINAL)
-   ========================= */
 
 #si-funksionon{
   display: flex;
@@ -157,7 +154,6 @@
   padding-top: 120px;
 }
 
-/* GRID 2x2 */
 #si-funksionon-grid{
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -167,7 +163,6 @@
   max-width: 1100px;
 }
 
-/* CARD */
 #si-funksionon-grid > .card{
   background: #fff;
   border: 1px solid #00000010;
@@ -179,67 +174,55 @@
   gap: 16px;
 
   text-align: left;
-
-  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.5) 0px 0px 0px 0.5px;
   transition: all 0.25s ease;
 }
 
-/* HOVER */
 #si-funksionon-grid > .card:hover{
   transform: translateY(-5px);
   box-shadow: 0 18px 35px rgba(0,0,0,0.08);
 }
 
-/* IKONA */
-#si-funksionon-grid > .card .lucide{
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
-  background-color: #d84d27;
-  padding: 10px;
-  color: #fff;
-
+#si-funksionon-grid .card_icon{
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: #d84d27;
   display: grid;
   place-items: center;
-
-  flex-shrink: 0;
-  stroke-width: 1.5px;
+  flex: 0 0 54px;
 }
 
-/* FSHIH NUMRAT */
-#si-funksionon-grid > .card .card_number{
-  display: none;
+#si-funksionon-grid .card_icon .lucide{
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  stroke-width: 2;
 }
 
-/* WRAPPER TEKSTI */
-#si-funksionon-grid > .card > div{
-  display: flex;
-  flex-direction: column;
-}
-
-/* TITULLI */
-#si-funksionon-grid > .card h3{
+/* titulli bold lart */
+#si-funksionon-grid .card_text h3{
   margin: 0;
   font-size: 1.2rem;
-  line-height: 1.3;
+  line-height: 1.2;
+  font-weight: 800;
   color: #003229;
 }
 
-/* PERSHKRIMI */
-#si-funksionon-grid > .card p{
+/* paragrafi poshte (lart, jo ne fund) */
+#si-funksionon-grid .card_text p{
   margin: 6px 0 0;
   color: #202020aa;
   font-size: 0.95rem;
   line-height: 1.4;
 }
-
-/* RESPONSIVE */
-@media screen and (max-width: 768px){
-  #si-funksionon-grid{
-    grid-template-columns: 1fr;
-  }
+.card_number{
+  display:none;
 }
-
+/* responsive */
+@media (max-width: 900px){
+  #si-funksionon-grid{ grid-template-columns: 1fr; }
+}
 
 @media screen and (max-width: 480px) {
   #si-funksionon-grid{
