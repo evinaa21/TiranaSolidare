@@ -48,6 +48,7 @@ CREATE TABLE `Kerkesa_per_Ndihme` (
   `titulli` varchar(150),
   `pershkrimi` text,
   `statusi` varchar(50) COMMENT 'Open/Closed',
+  `imazhi` varchar(500) COMMENT 'URL to image storage',
   `krijuar_me` timestamp DEFAULT (now())
 );
 

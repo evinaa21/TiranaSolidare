@@ -98,3 +98,30 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 })();
+
+
+/* ===========================
+   EQUAL-HEIGHT CARDS IN SCROLLERS
+   =========================== */
+(function () {
+  function equalizeCards() {
+    document.querySelectorAll('.hs_Wrapper').forEach(wrapper => {
+      const cards = wrapper.querySelectorAll('.help_card');
+      if (cards.length < 2) return;
+      // Reset heights first
+      cards.forEach(c => c.style.minHeight = '');
+      // Find the tallest card
+      let maxH = 0;
+      cards.forEach(c => {
+        if (c.offsetHeight > maxH) maxH = c.offsetHeight;
+      });
+      // Apply to all
+      cards.forEach(c => c.style.minHeight = maxH + 'px');
+    });
+  }
+
+  // Run after DOM + images loaded
+  document.addEventListener('DOMContentLoaded', equalizeCards);
+  window.addEventListener('load', equalizeCards);
+  window.addEventListener('resize', equalizeCards);
+})();

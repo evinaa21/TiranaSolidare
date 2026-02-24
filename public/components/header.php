@@ -2,24 +2,24 @@
 // Navigation bar and opening <body>
 ?>
 <header id="header" class="header">
-  <a href="/" class="header-logo">
-    <img src="assets/images/logo.png" alt="Tirana Solidare">
+  <a href="/TiranaSolidare/public/" class="header-logo">
+    <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare">
     <span>Tirana<b>Solidare</b></span>
   </a>
   <nav class="header-nav">
     <button onclick="toggleMenu()">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
-    <a href="/">Kreu</a>
-    <a href="/si-funksionon">Si Funksionon</a>
-    <a href="/kerkesat">Kërkesat</a>
-    <a href="/evente">Evente</a>
-    <a href="/misioni">Misioni</a>
+    <a href="/TiranaSolidare/public/">Kreu</a>
+    <a href="/TiranaSolidare/public/#si-funksionon">Si Funksionon</a>
+    <a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a>
+    <a href="/TiranaSolidare/views/events.php">Evente</a>
+    <a href="/TiranaSolidare/public/#regjistrohu">Misioni</a>
     <span></span>
-    <a href="/sign-in" class="btn_primary">
+    <a href="/TiranaSolidare/views/register.php" class="btn_primary">
       Bëhu Vullnetar 
     </a>
-    <a href="/log-in" class="btn_secondary">
+    <a href="/TiranaSolidare/views/login.php" class="btn_secondary">
       Kyçu
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in-icon lucide-log-in"><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
     </a>

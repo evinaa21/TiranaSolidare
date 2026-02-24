@@ -6,7 +6,7 @@
   <div class="footer-main">
     <div class="footer-content">
       <div class="footer-logo">
-        <img src="assets/images/logo.png" alt="Tirana Solidare">
+        <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare">
         <span>Tirana<b>Solidare</b></span>
       </div>
       <p>Ne besojmë se çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt. Platforma jonë është krijuar për të afruar njerëzit dhe për të ndërtuar një komunitet më të kujdesshëm dhe mbështetës.</p>
@@ -14,11 +14,11 @@
     <div class="footer-links">
       <ul>
         <li>Navigim</li>
-        <li><a href="">Kreu</a></li>
-        <li><a href="/si-funksionon">Si Funksionon</a></li>
-        <li><a href="/kerkesat">Kërkesat</a></li>
-        <li><a href="/evente">Evente</a></li>
-        <li><a href="/misioni">Misioni</a></li>
+        <li><a href="/TiranaSolidare/public/">Kreu</a></li>
+        <li><a href="/TiranaSolidare/public/#si-funksionon">Si Funksionon</a></li>
+        <li><a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a></li>
+        <li><a href="/TiranaSolidare/views/events.php">Evente</a></li>
+        <li><a href="/TiranaSolidare/public/#regjistrohu">Misioni</a></li>
       </ul>
       <ul>
         <li>Legal</li>
