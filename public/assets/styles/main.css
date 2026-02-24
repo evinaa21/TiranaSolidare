@@ -15,8 +15,8 @@ html, body {
 }
 
 main{
-  margin-top: -100px;
-  padding-block: 100px;
+  margin-top: 0px;
+  padding-top: 80px;
   overflow-y: hidden;
 }
 
@@ -28,7 +28,7 @@ main{
 
 section{
   position: relative;
-  padding: 150px clamp(20px, 8%, 8%);
+  padding: 100px clamp(20px, 8%, 8%);
 }
 
 
@@ -154,15 +154,22 @@ button{
   width: 100%;
   max-width: 400px;
   height: min-content;
-  padding: 30px;
+  padding: 20px;
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
   flex-flow: column;
   gap: 10px;
-  border-radius: 20px;
+  border-radius: 16px;
   background-color: #fff;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.5) 0px 0px 0px 0.5px;
+  border: 1px solid #00000008;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.help_card:hover{
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
 }
 
 .help_card > img{
@@ -253,22 +260,21 @@ button{
   align-self: stretch;
   width: 100%;
   position: relative;
+  padding-inline: max(20px, 8vw);
 }
 
 .hs_Wrapper{
-  position: absolute;
-  width: calc(100%);
-  display: inline-grid;
-  padding-inline: clamp(20px, 8vw, 8vw);
-  padding-block: 2px;
-  grid-auto-flow: column;
-  gap: 30px;
+  width: 100%;
+  display: flex;
+  padding-block: 10px;
+  gap: 24px;
   scroll-snap-type: x mandatory;
-  overflow: auto;
-  scroll-padding-left: clamp(20px, 8vw, 8vw);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
   
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .hs_Wrapper::-webkit-scrollbar {
@@ -278,23 +284,29 @@ button{
 .hs_Wrapper > *{
   white-space: initial;
   scroll-snap-align: start;
-  width: 400px !important;
+  /* Show exactly 3 cards with a tiny peek of the 4th */
+  flex: 0 0 calc((100% - 2 * 24px) / 3);
+  width: calc((100% - 2 * 24px) / 3) !important;
+  min-width: 280px;
 }
 
+/* Navigation buttons */
 .hs_Btn{
   position: absolute;
-  top: calc(50%);
-  width: 3rem;
-  height: 3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 50px;
-  background-color: #00715D;
-  backdrop-filter: blur(2px);
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   cursor: pointer;
-  z-index: 100000;
-  transition: 0.2s ease;
+  z-index: 100;
+  transition: all 0.25s ease;
+  color: #00715D;
 }
 
 .hs_BtnHide{
@@ -303,63 +315,58 @@ button{
 
 .hs_Btn:hover{
   background-color: #00715D;
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(0,113,93,0.3);
+  transform: translateY(-50%) scale(1.05);
 }
 
 .hs_Btn > svg{
-  width: 1.6rem;
-  height: 1.6rem;
-  color: #fff;
+  width: 1.4rem;
+  height: 1.4rem;
+  color: inherit;
 }
 
 .hs_Btn:nth-of-type(1){
-  left: calc(clamp(20px, 8vw, 8vw) + 20px);
+  left: calc(max(20px, 8vw) - 24px);
 }
 .hs_Btn:nth-of-type(2){
-  right: calc(clamp(20px, 8vw, 8vw) + 20px);
+  right: calc(max(20px, 8vw) - 24px);
 }
 
-
+@media screen and (max-width: 900px) {
+  .hs_Wrapper > *{
+    flex: 0 0 calc((100% - 24px) / 2);
+    width: calc((100% - 24px) / 2) !important;
+    min-width: 260px;
+  }
+}
 
 @media screen and (max-width: 680px) {
   .hs_Btn{
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 40px;
+    height: 40px;
   }
   .hs_Wrapper > *{
     scroll-snap-align: center;
+    flex: 0 0 80%;
+    width: 80% !important;
+    min-width: 0;
   }
   .hs_Btn:nth-of-type(1){
-    left: calc(clamp(20px, 8vw, 8vw) + 8px);
+    left: -4px;
   }
   .hs_Btn:nth-of-type(2){
-    right: calc(clamp(20px, 8vw, 8vw) + 8px);
+    right: -4px;
   }
 }
-
-
-
-
-@media screen and (max-width: 680px) {
-  
-  .hs_Btn{
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  .hs_Wrapper > *{
-    scroll-snap-align: center;
-  }
-  .hs_Btn:nth-of-type(1){
-    left: calc(clamp(20px, 8vw, 8vw) + 8px);
-  }
-  .hs_Btn:nth-of-type(2){
-    right: calc(clamp(20px, 8vw, 8vw) + 8px);
-  }
-}
-
 
 @media screen and (max-width: 450px) {
   .hs_Btn{
     display: none;
+  }
+  .hs_Wrapper > *{
+    flex: 0 0 85vw;
+    width: 85vw !important;
   }
 }
 
@@ -378,13 +385,26 @@ button{
 /*-- NAVIGATION --*/
 
 .header{
-  position: relative;
-  padding: 0px clamp(8%, 8%, 20px);
-  height: 100px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0px max(20px, 8%);
+  height: 80px;
   display: flex;
   justify-content: flex-start;
   align-items: center;
   gap: 32px;
+  z-index: 10000;
+  transition: all 0.35s ease;
+}
+
+.header.scrolled{
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
+  height: 70px;
 }
 
 .header-logo{
@@ -502,7 +522,7 @@ button{
   }
 
   .header-nav{
-    position: absolute;
+    position: fixed;
     top: 0;
     right: -400px;
     width: 100%;

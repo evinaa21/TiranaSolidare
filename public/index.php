@@ -13,29 +13,41 @@
 <main>
 
   <section id="main">
+    <!-- Decorative SVG blob top-right -->
+    <svg class="hero-blob-tr" viewBox="0 0 600 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M600,0 L600,550 Q540,620 430,580 Q280,530 220,400 Q160,270 280,190 Q370,130 420,60 Q450,10 600,0 Z" fill="#00715D" opacity="0.06"/>
+      <path d="M600,0 L600,450 Q550,520 460,490 Q340,450 300,350 Q260,250 350,180 Q420,120 460,50 Q480,10 600,0 Z" fill="#00715D" opacity="0.04"/>
+      <path d="M600,0 L600,320 Q570,380 500,360 Q400,330 380,260 Q360,190 420,140 Q470,100 500,40 Q520,0 600,0 Z" fill="#00715D" opacity="0.03"/>
+    </svg>
+
     <div id="main-content">
+      <span class="hero-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/></svg>
+        Platforma Zyrtare e Vullnetarizmit — Bashkia Tiranë
+      </span>
       <h1>Bashkohu me komunitetin<br> që ndryshon jetë</h1>
-      <p>Së bashku mund të bëjmë më shumë. Ndihmo dikë sot dhe bëhu ndryshimi që dëshiron të shohësh.</p>
-      <br><br>
+      <p class="hero-subtitle">Së bashku mund të bëjmë më shumë. Ndihmo dikë sot dhe bëhu ndryshimi që dëshiron të shohësh.</p>
     
       <div id="main-stats">
         <span>
-          <b>2000+</b>
+          <b data-count="2000">0</b>
           <i>Vullnetarë aktivë</i>
         </span>
         <span>
-          <b>150+</b>
+          <b data-count="150">0</b>
           <i>Evente të realizuara</i>
         </span>
         <span>
-          <b>7000+</b>
+          <b data-count="7000">0</b>
           <i>Qytetarë të ndihmuar</i>
         </span>
       </div>
     </div>
     <div id="main-help">
-  <img src="assets/images/logo.png" class="hero-img">
-</div>
+      <div class="hero-img-wrapper">
+        <img src="assets/images/hero_img_nobg.png" class="hero-img" alt="Tirana Solidare">
+      </div>
+    </div>
     
   </section>
 
@@ -409,6 +421,6 @@
 
 <?php include 'components/footer.php' ?>
 
-</body>
 <script src="assets/scripts/main.js"></script>
+</body>
 </html>
