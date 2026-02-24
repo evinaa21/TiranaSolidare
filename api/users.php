@@ -1,6 +1,6 @@
 <?php
 /**
- * api/update_status.php
+ * api/users.php
  * ---------------------------------------------------
  * Admin User Management API
  *

@@ -1,6 +1,6 @@
 <?php
 // Event catalog
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 <h1>Event Catalog</h1>
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

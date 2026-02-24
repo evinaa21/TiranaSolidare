@@ -12,7 +12,7 @@
  * DELETE ?action=delete&id=<id>    – Delete a request (Admin)
  * ---------------------------------------------------
  */
-require_once __DIR__ . '/api_helpers.php';
+require_once __DIR__ . '/helpers.php';
 
 $action = $_GET['action'] ?? 'list';
 

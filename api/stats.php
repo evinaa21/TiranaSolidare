@@ -10,7 +10,7 @@
  * POST ?action=generate    – Generate a simple report (Admin)
  * ---------------------------------------------------
  */
-require_once __DIR__ . '/api_helpers.php';
+require_once __DIR__ . '/helpers.php';
 
 $action = $_GET['action'] ?? 'overview';
 

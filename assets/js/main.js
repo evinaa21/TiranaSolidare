@@ -29,7 +29,7 @@ async function loadAdminEvents(page = 1) {
     const container = document.getElementById('admin-event-list');
     if (!container) return;
 
-    const json = await apiCall(`get_events.php?action=list&page=${page}&limit=10`);
+    const json = await apiCall(`events.php?action=list&page=${page}&limit=10`);
     if (!json.success) return;
 
     const { events, total, total_pages } = json.data;
@@ -63,7 +63,7 @@ async function loadAdminEvents(page = 1) {
 
 async function deleteEvent(id) {
     if (!confirm('Fshi këtë event?')) return;
-    const json = await apiCall(`get_events.php?action=delete&id=${id}`, 'DELETE');
+    const json = await apiCall(`events.php?action=delete&id=${id}`, 'DELETE');
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadAdminEvents();
 }
@@ -72,7 +72,7 @@ async function editEventPrompt(id, currentTitle) {
     const newTitle = prompt('Titulli i ri:', currentTitle);
     if (!newTitle || newTitle === currentTitle) return;
 
-    const json = await apiCall(`get_events.php?action=update&id=${id}`, 'PUT', { titulli: newTitle });
+    const json = await apiCall(`events.php?action=update&id=${id}`, 'PUT', { titulli: newTitle });
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadAdminEvents();
 }
@@ -88,7 +88,7 @@ function initCreateEventForm() {
         const fd = new FormData(form);
         const body = Object.fromEntries(fd);
 
-        const json = await apiCall('get_events.php?action=create', 'POST', body);
+        const json = await apiCall('events.php?action=create', 'POST', body);
 
         if (json.success) {
             showToast('Eventi u krijua!', 'success');
@@ -113,6 +113,10 @@ async function viewEventApps(eventId) {
         alert(`Aplikime: ${json.data.summary.total} (Pranuar: ${json.data.summary.pranuar}, Në pritje: ${json.data.summary.ne_pritje})`);
         return;
     }
+
+    // Show the card wrapper
+    const card = document.getElementById('event-applications-card');
+    if (card) card.style.display = 'block';
 
     const json = await apiCall(`applications.php?action=by_event&id=${eventId}`);
     if (!json.success) return;
@@ -156,7 +160,7 @@ async function loadUsers(page = 1) {
     const container = document.getElementById('admin-user-list');
     if (!container) return;
 
-    const json = await apiCall(`update_status.php?action=list&page=${page}&limit=15`);
+    const json = await apiCall(`users.php?action=list&page=${page}&limit=15`);
     if (!json.success) return;
 
     const { users, total, total_pages } = json.data;
@@ -190,14 +194,14 @@ async function loadUsers(page = 1) {
 }
 
 async function toggleBlock(userId, action) {
-    const json = await apiCall(`update_status.php?action=${action}&id=${userId}`, 'PUT');
+    const json = await apiCall(`users.php?action=${action}&id=${userId}`, 'PUT');
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadUsers();
 }
 
 async function deleteUser(userId) {
     if (!confirm('Fshi këtë përdorues?')) return;
-    const json = await apiCall(`update_status.php?action=delete&id=${userId}`, 'DELETE');
+    const json = await apiCall(`users.php?action=delete&id=${userId}`, 'DELETE');
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadUsers();
 }
@@ -248,7 +252,7 @@ async function loadNotifications() {
     const container = document.getElementById('notification-list');
     if (!container) return;
 
-    const json = await apiCall('check_notifs.php?action=list&limit=20');
+    const json = await apiCall('notifications.php?action=list&limit=20');
     if (!json.success) return;
 
     const notifs = json.data.notifications;
@@ -277,19 +281,19 @@ async function loadNotifications() {
 }
 
 async function markRead(id) {
-    await apiCall(`check_notifs.php?action=mark_read&id=${id}`, 'PUT');
+    await apiCall(`notifications.php?action=mark_read&id=${id}`, 'PUT');
     loadNotifications();
     fetchUnreadCount();
 }
 
 async function markAllRead() {
-    await apiCall('check_notifs.php?action=mark_all_read', 'PUT');
+    await apiCall('notifications.php?action=mark_all_read', 'PUT');
     loadNotifications();
     fetchUnreadCount();
 }
 
 async function deleteNotif(id) {
-    await apiCall(`check_notifs.php?action=delete&id=${id}`, 'DELETE');
+    await apiCall(`notifications.php?action=delete&id=${id}`, 'DELETE');
     loadNotifications();
 }
 
