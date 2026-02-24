@@ -577,6 +577,7 @@ button{
   display: grid;
   grid-template-columns: 350px 1fr;
   gap: 50px;
+ text-align: justify;
 }
 
 .footer-content{

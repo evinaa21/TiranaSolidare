@@ -9,7 +9,7 @@
         <img src="assets/images/logo.png" alt="Tirana Solidare">
         <span>Tirana<b>Solidare</b></span>
       </div>
-      <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Assumenda aliquid sapiente exercitationem ipsam atque veritatis quasi libero voluptates obcaecati sunt.</p>
+      <p>Ne besojmë se çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt. Platforma jonë është krijuar për të afruar njerëzit dhe për të ndërtuar një komunitet më të kujdesshëm dhe mbështetës.</p>
     </div>
     <div class="footer-links">
       <ul>
