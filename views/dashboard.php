@@ -112,7 +112,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <section class="db-welcome">
     <svg class="db-welcome__blob" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.06)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
     <div class="db-welcome__text">
-      <h2>Mirësevini, <?= $userEmri ?>! 👋</h2>
+      <h2>Mirësevini, <?= $userEmri ?>!</h2>
       <p><?= $isAdmin ? 'Menaxhoni platformën nga paneli juaj admin.' : 'Shikoni eventet, aplikimet dhe kërkesat tuaja.' ?></p>
     </div>
   </section>
