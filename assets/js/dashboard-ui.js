@@ -256,7 +256,7 @@ window.viewEventApps = async function (eventId) {
 
 
 // ═══════════════════════════════════════════════════════
-//  OVERRIDE: User Management (NO DELETE — Block/Role)
+//  OVERRIDE: User Management (Detail Panel approach)
 // ═══════════════════════════════════════════════════════
 
 window.loadUsers = async function (page = 1) {
@@ -275,10 +275,11 @@ window.loadUsers = async function (page = 1) {
 
     users.forEach(u => {
         const isBlocked = u.statusi_llogarise === 'Bllokuar';
+        const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
         const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
-        const statusClass = isBlocked ? 'blocked' : 'active';
+        const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
 
-        html += `<tr class="${isBlocked ? 'db-row--blocked' : ''}">
+        html += `<tr class="${isBlocked ? 'db-row--blocked' : ''} ${isDeactivated ? 'db-row--deactivated' : ''}">
             <td><strong>#${u.id_perdoruesi}</strong></td>
             <td>${escapeHtml(u.emri)}</td>
             <td>${escapeHtml(u.email)}</td>
@@ -286,14 +287,18 @@ window.loadUsers = async function (page = 1) {
             <td><span class="db-badge db-badge--${statusClass}">${u.statusi_llogarise}</span></td>
             <td>
                 <div class="db-table__actions">
+                    <button class="db-btn db-btn--info db-btn--sm" onclick="openUserDetail(${u.id_perdoruesi})">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Shiko
+                    </button>
                     ${isBlocked
                         ? `<button class="db-btn db-btn--success db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">
                              Zhblloko</button>`
+                        : isDeactivated
+                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="reactivateUser(${u.id_perdoruesi})">
+                             Riaktivizo</button>`
                         : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">
                              Blloko</button>`}
-                    <button class="db-btn db-btn--info db-btn--sm" onclick="changeUserRole(${u.id_perdoruesi}, '${u.roli}')">
-                        Ndrysho Rolin
-                    </button>
                 </div>
             </td>
         </tr>`;
@@ -307,14 +312,231 @@ window.loadUsers = async function (page = 1) {
     container.innerHTML = html;
 };
 
-// Role change function (replaces delete)
-window.changeUserRole = async function (userId, currentRole) {
-    const newRole = currentRole === 'Admin' ? 'Vullnetar' : 'Admin';
-    if (!confirm(`Ndrysho rolin e këtij përdoruesi në "${newRole}"?`)) return;
+
+// ═══════════════════════════════════════════════════════
+//  User Detail Panel
+// ═══════════════════════════════════════════════════════
+
+window.openUserDetail = async function (userId) {
+    // Switch to user-detail panel
+    document.querySelectorAll('.db-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('panel-user-detail');
+    if (panel) {
+        panel.classList.add('active');
+        panel.style.animation = 'none';
+        panel.offsetHeight;
+        panel.style.animation = '';
+    }
+    // Keep users nav item highlighted
+    document.querySelectorAll('.db-nav-item').forEach(n => n.classList.remove('active'));
+    const usersNav = document.querySelector('[data-panel="users"]');
+    if (usersNav) usersNav.classList.add('active');
+
+    const container = document.getElementById('user-detail-content');
+    if (!container) return;
+    container.innerHTML = '<div class="db-loading">Duke ngarkuar detajet…</div>';
+
+    const json = await apiCall(`users.php?action=get&id=${userId}`);
+    if (!json.success) {
+        container.innerHTML = '<div class="db-loading">Gabim gjatë ngarkimit.</div>';
+        return;
+    }
+
+    const u = json.data;
+    const isBlocked = u.statusi_llogarise === 'Bllokuar';
+    const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
+    const isActive = u.statusi_llogarise === 'Aktiv';
+    const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
+    const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
+    const initial = (u.emri || 'P').charAt(0).toUpperCase();
+
+    container.innerHTML = `
+        <!-- User Profile Header -->
+        <div class="ud-header">
+            <div class="ud-avatar ud-avatar--${statusClass}">${escapeHtml(initial)}</div>
+            <div class="ud-header__info">
+                <h2 class="ud-header__name">${escapeHtml(u.emri)}</h2>
+                <p class="ud-header__email">${escapeHtml(u.email)}</p>
+                <div class="ud-header__badges">
+                    <span class="db-badge db-badge--${roleClass}">${u.roli}</span>
+                    <span class="db-badge db-badge--${statusClass}">${u.statusi_llogarise}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="ud-stats">
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_aplikime}</div>
+                <div class="ud-stat-card__label">Aplikime</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_kerkesa}</div>
+                <div class="ud-stat-card__label">Kërkesa</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_evente || 0}</div>
+                <div class="ud-stat-card__label">Evente</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
+                <div class="ud-stat-card__label">Regjistruar më</div>
+            </div>
+        </div>
+
+        ${isDeactivated && u.deaktivizuar_me ? `
+            <div class="ud-deactivation-notice">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <span>Llogaria u çaktivizua më <strong>${formatDate(u.deaktivizuar_me)}</strong></span>
+            </div>` : ''}
+
+        <!-- Action Cards Grid -->
+        <div class="ud-actions-grid">
+
+            <!-- Change Role Card -->
+            <div class="ud-card">
+                <div class="ud-card__header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <h4>Ndrysho Rolin</h4>
+                </div>
+                <p class="ud-card__desc">Roli aktual: <strong>${u.roli}</strong></p>
+                <div class="ud-card__body">
+                    <select id="ud-role-select" class="ud-select">
+                        <option value="Admin" ${u.roli === 'Admin' ? 'selected' : ''}>Admin</option>
+                        <option value="Vullnetar" ${u.roli === 'Vullnetar' ? 'selected' : ''}>Vullnetar</option>
+                    </select>
+                    <button class="db-btn db-btn--primary" onclick="changeUserRoleFromDetail(${u.id_perdoruesi})">
+                        Ruaj Rolin
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Password Card -->
+            <div class="ud-card">
+                <div class="ud-card__header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <h4>Rivendos Fjalëkalimin</h4>
+                </div>
+                <p class="ud-card__desc">Vendosni fjalëkalim të ri nëse përdoruesi ka harruar fjalëkalimin.</p>
+                <div class="ud-card__body">
+                    <div class="ud-password-wrap">
+                        <input type="password" id="ud-new-password" class="ud-input" placeholder="Fjalëkalimi i ri (min. 6 karaktere)" minlength="6">
+                        <button class="ud-password-toggle" onclick="togglePasswordVisibility()" type="button" title="Shfaq/Fshih">
+                            <svg id="ud-eye-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <button class="db-btn db-btn--primary" onclick="adminResetPassword(${u.id_perdoruesi})">
+                        Rivendos Fjalëkalimin
+                    </button>
+                </div>
+            </div>
+
+            <!-- Account Status Card -->
+            <div class="ud-card ud-card--full">
+                <div class="ud-card__header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                    <h4>Statusi i Llogarisë</h4>
+                </div>
+                <p class="ud-card__desc">Menaxhoni statusin e llogarisë. Çaktivizimi (soft-delete) ruan të dhënat si në Facebook/Instagram.</p>
+                <div class="ud-card__body ud-card__body--row">
+                    ${isActive ? `
+                        <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            Blloko
+                        </button>
+                        <button class="db-btn db-btn--danger" onclick="deactivateUser(${u.id_perdoruesi})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Çaktivizo Llogarinë
+                        </button>
+                    ` : isBlocked ? `
+                        <button class="db-btn db-btn--success" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
+                            Zhblloko
+                        </button>
+                        <button class="db-btn db-btn--danger" onclick="deactivateUser(${u.id_perdoruesi})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Çaktivizo Llogarinë
+                        </button>
+                    ` : `
+                        <button class="db-btn db-btn--success" onclick="reactivateUser(${u.id_perdoruesi})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                            Riaktivizo Llogarinë
+                        </button>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+
+// Toggle password field visibility
+window.togglePasswordVisibility = function () {
+    const inp = document.getElementById('ud-new-password');
+    if (!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+};
+
+// Change role from detail panel
+window.changeUserRoleFromDetail = async function (userId) {
+    const sel = document.getElementById('ud-role-select');
+    if (!sel) return;
+    const newRole = sel.value;
 
     const json = await apiCall(`users.php?action=change_role&id=${userId}`, 'PUT', { roli: newRole });
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
-    loadUsers();
+
+    if (json.success) {
+        // Refresh detail
+        setTimeout(() => openUserDetail(userId), 300);
+    }
+};
+
+// Admin password reset
+window.adminResetPassword = async function (userId) {
+    const inp = document.getElementById('ud-new-password');
+    if (!inp) return;
+    const pw = inp.value.trim();
+
+    if (pw.length < 6) {
+        dbToast('Fjalëkalimi duhet të ketë të paktën 6 karaktere.', 'danger');
+        return;
+    }
+
+    if (!confirm('Jeni të sigurt që doni të rivendosni fjalëkalimin e këtij përdoruesi?')) return;
+
+    const json = await apiCall(`users.php?action=reset_password&id=${userId}`, 'PUT', { password: pw });
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+
+    if (json.success) {
+        inp.value = '';
+    }
+};
+
+// Deactivate (soft-delete)
+window.deactivateUser = async function (userId) {
+    if (!confirm('Çaktivizo këtë llogari? (Soft-delete — të dhënat do të ruhen si në Facebook/Instagram)')) return;
+
+    const json = await apiCall(`users.php?action=deactivate&id=${userId}`, 'PUT');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+
+    if (json.success) {
+        setTimeout(() => openUserDetail(userId), 300);
+    }
+};
+
+// Reactivate
+window.reactivateUser = async function (userId) {
+    if (!confirm('Riaktivizo këtë llogari?')) return;
+
+    const json = await apiCall(`users.php?action=reactivate&id=${userId}`, 'PUT');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+
+    if (json.success) {
+        setTimeout(() => {
+            openUserDetail(userId);
+            loadUsers();
+        }, 300);
+    }
 };
 
 

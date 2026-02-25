@@ -45,6 +45,10 @@ switch ($action) {
             json_error('Llogaria juaj është bllokuar. Kontaktoni administratorin.', 403);
         }
 
+        if ($user['statusi_llogarise'] === 'Çaktivizuar') {
+            json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
+        }
+
         // Set session
         $_SESSION['user_id'] = $user['id_perdoruesi'];
         $_SESSION['emri']    = $user['emri'];

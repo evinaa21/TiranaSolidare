@@ -197,8 +197,9 @@ CREATE TABLE `perdoruesi` (
   `email` varchar(150) NOT NULL,
   `fjalekalimi` varchar(255) NOT NULL,
   `roli` enum('Admin','Vullnetar') DEFAULT 'Vullnetar',
-  `statusi_llogarise` enum('Aktiv','Bllokuar') DEFAULT 'Aktiv',
-  `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
+  `statusi_llogarise` enum('Aktiv','Bllokuar','Çaktivizuar') DEFAULT 'Aktiv',
+  `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp(),
+  `deaktivizuar_me` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Main user table storing auth details';
 
 --

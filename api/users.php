@@ -9,7 +9,9 @@
  * PUT    ?action=block&id=<id>            – Block a user (Admin)
  * PUT    ?action=unblock&id=<id>          – Unblock a user (Admin)
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
- * DELETE ?action=delete&id=<id>           – Delete a user (Admin)
+ * PUT    ?action=deactivate&id=<id>       – Soft-delete / deactivate (Admin)
+ * PUT    ?action=reactivate&id=<id>       – Undo deactivation (Admin)
+ * PUT    ?action=reset_password&id=<id>   – Admin password reset (Admin)
  * ---------------------------------------------------
  */
 require_once __DIR__ . '/helpers.php';
@@ -52,7 +54,7 @@ switch ($action) {
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        $sql = "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me
+        $sql = "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me, deaktivizuar_me
                 FROM Perdoruesi $whereSQL
                 ORDER BY krijuar_me DESC
                 LIMIT ? OFFSET ?";
@@ -84,7 +86,7 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me
+            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me, deaktivizuar_me
              FROM Perdoruesi WHERE id_perdoruesi = ?"
         );
         $stmt->execute([$id]);
@@ -101,8 +103,13 @@ switch ($action) {
         $helpCount = $pdo->prepare('SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?');
         $helpCount->execute([$id]);
 
+        // Count events created by user
+        $eventCount = $pdo->prepare('SELECT COUNT(*) FROM Eventi WHERE id_perdoruesi = ?');
+        $eventCount->execute([$id]);
+
         $user['total_aplikime']    = (int) $appCount->fetchColumn();
         $user['total_kerkesa']     = (int) $helpCount->fetchColumn();
+        $user['total_evente']      = (int) $eventCount->fetchColumn();
 
         json_success($user);
         break;
@@ -181,9 +188,9 @@ switch ($action) {
         json_success(['message' => "Roli u ndryshua në '$newRole'."]);
         break;
 
-    // ── DELETE USER ────────────────────────────────
-    case 'delete':
-        require_method('DELETE');
+    // ── DEACTIVATE USER (Soft-Delete) ──────────────
+    case 'deactivate':
+        require_method('PUT');
         $admin = require_admin();
         $id    = (int) ($_GET['id'] ?? 0);
 
@@ -192,25 +199,89 @@ switch ($action) {
         }
 
         if ($id === $admin['id']) {
-            json_error('Nuk mund të fshini llogarinë tuaj.', 400);
+            json_error('Nuk mund të çaktivizoni llogarinë tuaj.', 400);
         }
 
-        // Cascade delete related data
-        $pdo->prepare('DELETE FROM Njoftimi WHERE id_perdoruesi = ?')->execute([$id]);
-        $pdo->prepare('DELETE FROM Aplikimi WHERE id_perdoruesi = ?')->execute([$id]);
-        $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?')->execute([$id]);
-        $pdo->prepare('DELETE FROM Raporti WHERE id_perdoruesi = ?')->execute([$id]);
+        // Check user exists and is not already deactivated
+        $check = $pdo->prepare('SELECT statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $check->execute([$id]);
+        $current = $check->fetchColumn();
 
-        $stmt = $pdo->prepare('DELETE FROM Perdoruesi WHERE id_perdoruesi = ?');
+        if ($current === false) {
+            json_error('Përdoruesi nuk u gjet.', 404);
+        }
+        if ($current === 'Çaktivizuar') {
+            json_error('Llogaria është tashmë e çaktivizuar.', 400);
+        }
+
+        $stmt = $pdo->prepare(
+            "UPDATE Perdoruesi SET statusi_llogarise = 'Çaktivizuar', deaktivizuar_me = NOW() WHERE id_perdoruesi = ?"
+        );
         $stmt->execute([$id]);
 
-        if ($stmt->rowCount() === 0) {
+        json_success(['message' => 'Llogaria u çaktivizua (soft-delete). Të dhënat ruhen.']);
+        break;
+
+    // ── REACTIVATE USER ────────────────────────────
+    case 'reactivate':
+        require_method('PUT');
+        require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
+        }
+
+        // Check user exists and is deactivated
+        $check = $pdo->prepare('SELECT statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $check->execute([$id]);
+        $current = $check->fetchColumn();
+
+        if ($current === false) {
+            json_error('Përdoruesi nuk u gjet.', 404);
+        }
+        if ($current !== 'Çaktivizuar') {
+            json_error('Llogaria nuk është e çaktivizuar.', 400);
+        }
+
+        $stmt = $pdo->prepare(
+            "UPDATE Perdoruesi SET statusi_llogarise = 'Aktiv', deaktivizuar_me = NULL WHERE id_perdoruesi = ?"
+        );
+        $stmt->execute([$id]);
+
+        json_success(['message' => 'Llogaria u riaktivizua me sukses.']);
+        break;
+
+    // ── RESET PASSWORD (Admin) ─────────────────────
+    case 'reset_password':
+        require_method('PUT');
+        $admin = require_admin();
+        $id    = (int) ($_GET['id'] ?? 0);
+        $body  = get_json_body();
+
+        if ($id <= 0) {
+            json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
+        }
+
+        $newPassword = $body['password'] ?? '';
+        if (strlen($newPassword) < 6) {
+            json_error('Fjalëkalimi duhet të ketë të paktën 6 karaktere.', 422);
+        }
+
+        // Verify user exists
+        $check = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $check->execute([$id]);
+        if (!$check->fetch()) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
 
-        json_success(['message' => 'Përdoruesi u fshi.']);
+        $hashed = password_hash($newPassword, PASSWORD_DEFAULT);
+        $stmt   = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ? WHERE id_perdoruesi = ?');
+        $stmt->execute([$hashed, $id]);
+
+        json_success(['message' => 'Fjalëkalimi u rivendos me sukses.']);
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, block, unblock, change_role, delete.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, block, unblock, change_role, deactivate, reactivate, reset_password.', 400);
 }

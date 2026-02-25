@@ -750,6 +750,16 @@
   background: rgba(239,68,68,0.07);
 }
 
+.db-table tbody tr.db-row--deactivated {
+  background: rgba(107,114,128,0.04);
+  opacity: 0.7;
+}
+
+.db-table tbody tr.db-row--deactivated:hover {
+  background: rgba(107,114,128,0.08);
+  opacity: 1;
+}
+
 .db-table__actions {
   display: flex;
   gap: 6px;
@@ -775,6 +785,7 @@
 .db-badge--vol     { background: var(--db-primary-lt); color: var(--db-primary); }
 .db-badge--active  { background: rgba(34,197,94,0.1); color: #16a34a; }
 .db-badge--blocked { background: rgba(239,68,68,0.1); color: #dc2626; }
+.db-badge--deactivated { background: rgba(107,114,128,0.12); color: #6b7280; }
 .db-badge--pending { background: rgba(245,158,11,0.1); color: #d97706; }
 .db-badge--open    { background: rgba(34,197,94,0.1); color: #16a34a; }
 .db-badge--closed  { background: rgba(107,114,128,0.1); color: #6b7280; }
@@ -1230,4 +1241,277 @@
 .db-table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   USER DETAIL PANEL
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Profile Header ─── */
+
+.ud-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px;
+  background: var(--db-surface);
+  border-radius: var(--db-radius);
+  box-shadow: var(--db-shadow);
+  animation: dbFadeIn 0.4s ease-out;
+  margin-bottom: 24px;
+}
+
+.ud-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: var(--db-font-head);
+  color: #fff;
+  background: var(--db-primary);
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,113,93,0.25);
+}
+
+.ud-avatar--blocked {
+  background: #dc2626;
+  box-shadow: 0 4px 16px rgba(220,38,38,0.25);
+}
+
+.ud-avatar--deactivated {
+  background: #6b7280;
+  box-shadow: 0 4px 16px rgba(107,114,128,0.25);
+}
+
+.ud-header__info {
+  flex: 1;
+}
+
+.ud-header__name {
+  font-family: var(--db-font-head);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--db-text);
+  margin: 0 0 2px;
+}
+
+.ud-header__email {
+  font-size: 0.9rem;
+  color: var(--db-text-muted);
+  margin: 0 0 10px;
+}
+
+.ud-header__badges {
+  display: flex;
+  gap: 8px;
+}
+
+
+/* ─── Stats Row ─── */
+
+.ud-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+  animation: dbFadeIn 0.5s ease-out 0.1s both;
+}
+
+.ud-stat-card {
+  background: var(--db-surface);
+  border-radius: var(--db-radius-sm);
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--db-shadow);
+  transition: var(--db-transition);
+}
+
+.ud-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--db-shadow-lg);
+}
+
+.ud-stat-card__value {
+  font-family: var(--db-font-head);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--db-primary);
+}
+
+.ud-stat-card__label {
+  font-size: 0.78rem;
+  color: var(--db-text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+
+/* ─── Deactivation Notice ─── */
+
+.ud-deactivation-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-left: 4px solid #d97706;
+  border-radius: var(--db-radius-sm);
+  margin-bottom: 24px;
+  color: #92400e;
+  font-size: 0.88rem;
+  animation: dbFadeIn 0.5s ease-out 0.15s both;
+}
+
+.ud-deactivation-notice svg {
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+
+/* ─── Action Cards Grid ─── */
+
+.ud-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  animation: dbFadeIn 0.5s ease-out 0.2s both;
+}
+
+.ud-card {
+  background: var(--db-surface);
+  border-radius: var(--db-radius);
+  padding: 24px;
+  box-shadow: var(--db-shadow);
+  transition: var(--db-transition);
+}
+
+.ud-card:hover {
+  box-shadow: var(--db-shadow-lg);
+}
+
+.ud-card--full {
+  grid-column: 1 / -1;
+}
+
+.ud-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ud-card__header svg {
+  color: var(--db-primary);
+}
+
+.ud-card__header h4 {
+  font-family: var(--db-font-head);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--db-text);
+  margin: 0;
+}
+
+.ud-card__desc {
+  font-size: 0.85rem;
+  color: var(--db-text-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.ud-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ud-card__body--row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+
+/* ─── Detail Inputs ─── */
+
+.ud-select,
+.ud-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-family: var(--db-font);
+  color: var(--db-text);
+  background: var(--db-bg);
+  border: 1.5px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  outline: none;
+  transition: var(--db-transition);
+}
+
+.ud-select:focus,
+.ud-input:focus {
+  border-color: var(--db-primary);
+  box-shadow: 0 0 0 3px rgba(0,113,93,0.1);
+}
+
+.ud-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ud-password-wrap .ud-input {
+  padding-right: 42px;
+}
+
+.ud-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--db-text-muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.ud-password-toggle:hover {
+  color: var(--db-text);
+}
+
+
+/* ─── Responsive Detail ─── */
+
+@media (max-width: 768px) {
+  .ud-header {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .ud-header__badges {
+    justify-content: center;
+  }
+
+  .ud-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ud-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ud-card__body--row {
+    flex-direction: column;
+  }
 }

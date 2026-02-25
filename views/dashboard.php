@@ -201,10 +201,26 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <div class="db-panel" id="panel-users">
     <div class="db-panel__header">
       <h3>Menaxho Përdoruesit</h3>
-      <p class="db-panel__subtitle">Bllokoni, zhbllokoni ose ndryshoni rolin e përdoruesve.</p>
+      <p class="db-panel__subtitle">Shikoni, bllokoni ose menaxhoni llogaritë e përdoruesve.</p>
     </div>
     <div class="db-table-wrap" id="admin-user-list">
       <div class="db-loading">Duke ngarkuar përdoruesit…</div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════ PANEL: USER DETAIL (Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-user-detail">
+    <div class="db-panel__header">
+      <button class="db-btn db-btn--ghost" onclick="switchPanel('users', document.querySelector('[data-panel=users]'))">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Kthehu te Lista
+      </button>
+    </div>
+
+    <!-- User detail content (injected by JS) -->
+    <div id="user-detail-content">
+      <div class="db-loading">Duke ngarkuar…</div>
     </div>
   </div>
 
