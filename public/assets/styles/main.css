@@ -470,6 +470,12 @@ button{
   margin-left: auto;
 }
 
+.header-user {
+  font-weight: 600;
+  color: #00715D;
+  font-size: 0.95rem;
+}
+
 .header-nav button{
   display: flex;
   justify-content: center;

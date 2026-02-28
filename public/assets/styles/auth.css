@@ -180,4 +180,28 @@
   }
 }
 
+/* Profile page extensions */
+.profile-panels { display: grid; gap: 14px; }
+.profile-card-ui {
+  background: #f9fbfa;
+  border: 1px solid #e5ece9;
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.profile-card-ui h3 { margin: 0; color: #003229; font-size: 1.1rem; }
+.profile-meta { display: grid; gap: 8px; color: #425451; font-size: 0.97rem; }
+.profile-meta strong { color: #003229; }
+.profile-meta__item { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #e9ecef; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.stat-chip { background: linear-gradient(135deg, rgba(0,113,93,0.08), rgba(225,114,84,0.08)); border: 1px solid #e9ecef; border-radius: 12px; padding: 14px; display: grid; gap: 6px; }
+.stat-chip span { color: #425451; font-size: 0.95rem; }
+.stat-chip strong { color: #003229; font-size: 1.2rem; }
+.form-card { background: #fff; border: 1px solid #e9ecef; border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.form-card h3 { margin: 0; color: #003229; font-size: 1.05rem; }
+.form-divider { height: 1px; background: #e5ece9; margin: 4px 0; }
+.inline-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.muted { color: #425451; font-size: 0.95rem; }
+
 

@@ -7,6 +7,7 @@
  * POST   /api/auth.php?action=login      – Log in
  * POST   /api/auth.php?action=register   – Register
  * POST   /api/auth.php?action=logout     – Log out
+ * PUT    /api/auth.php?action=change_password – Change password
  * GET    /api/auth.php?action=me         – Current user
  * ---------------------------------------------------
  */
@@ -123,6 +124,49 @@ switch ($action) {
         json_success(['message' => 'U shkëputët me sukses.']);
         break;
 
+         // ── CHANGE PASSWORD ──────────────────────────
+    case 'change_password':
+        require_method('PUT');
+        $user   = require_auth();
+        $body   = get_json_body();
+        $errors = [];
+
+        $currentPassword  = required_field($body, 'current_password', $errors);
+        $newPassword      = required_field($body, 'new_password', $errors);
+        $confirmPassword  = required_field($body, 'confirm_password', $errors);
+
+        if (!empty($errors)) {
+            json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        if (strlen($newPassword) < 6) {
+            json_error('Fjalëkalimi duhet të jetë të paktën 6 karaktere.', 422);
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            json_error('Fjalëkalimet nuk përputhen.', 422);
+        }
+
+        $stmt = $pdo->prepare('SELECT fjalekalimi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $stmt->execute([$user['id']]);
+        $existingHash = $stmt->fetchColumn();
+
+        if ($existingHash === false) {
+            json_error('Përdoruesi nuk u gjet.', 404);
+        }
+
+        if (!password_verify($currentPassword, $existingHash)) {
+            json_error('Fjalëkalimi aktual është i pasaktë.', 401);
+        }
+
+        $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
+
+        $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ? WHERE id_perdoruesi = ?');
+        $update->execute([$newHash, $user['id']]);
+
+        json_success(['message' => 'Fjalëkalimi u përditësua me sukses.']);
+        break;
+
     // ── ME (current user) ──────────────────────────
     case 'me':
         require_method('GET');
@@ -143,5 +187,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: login, register, logout, me.', 400);
+        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, me.', 400);
 }

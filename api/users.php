@@ -6,6 +6,7 @@
  *
  * GET    ?action=list                     – List all users (Admin)
  * GET    ?action=get&id=<id>              – User detail (Admin)
+ * PUT    ?action=update_profile           – Update own profile (Auth)
  * PUT    ?action=block&id=<id>            – Block a user (Admin)
  * PUT    ?action=unblock&id=<id>          – Unblock a user (Admin)
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
@@ -19,6 +20,28 @@ require_once __DIR__ . '/helpers.php';
 $action = $_GET['action'] ?? 'list';
 
 switch ($action) {
+
+    // ── UPDATE OWN PROFILE (Auth) ───────────────
+    case 'update_profile':
+        require_method('PUT');
+        $user   = require_auth();
+        $body   = get_json_body();
+        $errors = [];
+
+        $emri = required_field($body, 'emri', $errors);
+
+        if (!empty($errors)) {
+            json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        $stmt = $pdo->prepare('UPDATE Perdoruesi SET emri = ? WHERE id_perdoruesi = ?');
+        $stmt->execute([$emri, $user['id']]);
+
+        // Keep session name in sync for UI consistency
+        $_SESSION['emri'] = $emri;
+
+        json_success(['message' => 'Profili u përditësua me sukses.']);
+        break;
 
     // ── LIST USERS ─────────────────────────────────
     case 'list':
@@ -283,5 +306,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, block, unblock, change_role, deactivate, reactivate, reset_password.', 400);
+        json_error('Veprim i panjohur. Përdorni: update_profile, list, get, block, unblock, change_role, deactivate, reactivate, reset_password.', 400);
 }
