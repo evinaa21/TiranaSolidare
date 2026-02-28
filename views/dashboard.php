@@ -81,7 +81,9 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
   <!-- Sidebar user card -->
   <div class="db-sidebar__user">
-    <div class="db-sidebar__avatar"><?= $userInitial ?></div>
+    <div class="db-sidebar__avatar" onclick="window.location.href='/TiranaSolidare/views/profile.php'" style="cursor:pointer;">
+      <?= $userInitial ?>
+    </div>
     <div class="db-sidebar__user-info">
       <strong><?= $userEmri ?></strong>
       <span><?= $userRoli ?></span>
