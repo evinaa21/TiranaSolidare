@@ -29,6 +29,8 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <title>Paneli — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
 </head>
 <body class="db-body">
 
@@ -172,6 +174,18 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           <label>Banner URL</label>
           <input type="text" name="banner" placeholder="https://images.unsplash.com/...">
         </div>
+        <div class="db-form__group">
+          <div class="ts-map-wrapper">
+            <label>Vendndodhja në hartë (opsionale)</label>
+            <div id="event-map-picker" class="ts-map-picker"></div>
+            <input type="hidden" name="latitude" id="event-lat-input">
+            <input type="hidden" name="longitude" id="event-lng-input">
+            <div class="ts-map-coord-display" id="event-coord-display" style="display:none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <span id="event-coord-text"></span>
+            </div>
+          </div>
+        </div>
         <div class="db-form__actions">
           <button type="submit" class="db-btn db-btn--primary">Krijo</button>
           <button type="button" class="db-btn db-btn--ghost" onclick="toggleCreateEvent()">Anulo</button>
@@ -255,8 +269,49 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <!-- Toast container -->
 <div id="db-toast-container"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js"></script>
 <script src="/TiranaSolidare/assets/js/main.js"></script>
 <script src="/TiranaSolidare/assets/js/ajax-polling.js"></script>
 <script src="/TiranaSolidare/assets/js/dashboard-ui.js"></script>
+<script>
+// Initialize map picker for event creation
+document.addEventListener('DOMContentLoaded', function() {
+  let eventMapPicker = null;
+
+  // Observe when the create event form becomes visible
+  const createWrapper = document.getElementById('create-event-wrapper');
+  if (createWrapper) {
+    const observer = new MutationObserver(function() {
+      if (createWrapper.style.display !== 'none' && !eventMapPicker) {
+        setTimeout(() => {
+          eventMapPicker = TSMap.picker('event-map-picker', {
+            latInput: 'event-lat-input',
+            lngInput: 'event-lng-input',
+            addressInput: 'create-event-form' && document.querySelector('#create-event-form [name="vendndodhja"]') ? document.querySelector('#create-event-form [name="vendndodhja"]').id || null : null,
+            onSelect: function(lat, lng) {
+              const coordDisplay = document.getElementById('event-coord-display');
+              const coordText = document.getElementById('event-coord-text');
+              if (coordDisplay && coordText) {
+                coordDisplay.style.display = 'flex';
+                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+              }
+              // Auto-fill vendndodhja input if empty
+              const vendInput = document.querySelector('#create-event-form [name="vendndodhja"]');
+              if (vendInput && !vendInput.value.trim()) {
+                vendInput.value = 'Tiranë';
+              }
+            }
+          });
+          if (eventMapPicker && eventMapPicker.map) {
+            eventMapPicker.map.invalidateSize();
+          }
+        }, 200);
+      }
+    });
+    observer.observe(createWrapper, { attributes: true, attributeFilter: ['style'] });
+  }
+});
+</script>
 </body>
 </html>

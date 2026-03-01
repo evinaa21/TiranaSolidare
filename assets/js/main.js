@@ -102,11 +102,20 @@ function initCreateEventForm() {
         const fd = new FormData(form);
         const body = Object.fromEntries(fd);
 
+        // Convert lat/lng to numbers if present
+        if (body.latitude) body.latitude = parseFloat(body.latitude);
+        else delete body.latitude;
+        if (body.longitude) body.longitude = parseFloat(body.longitude);
+        else delete body.longitude;
+
         const json = await apiCall('events.php?action=create', 'POST', body);
 
         if (json.success) {
             showToast('Eventi u krijua!', 'success');
             form.reset();
+            // Clear map coordinate display
+            const coordDisplay = document.getElementById('event-coord-display');
+            if (coordDisplay) coordDisplay.style.display = 'none';
             loadAdminEvents();
         } else {
             showToast(json.message || 'Gabim.', 'danger');

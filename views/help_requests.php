@@ -77,6 +77,8 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -127,6 +129,16 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <h2>Përshkrimi i kërkesës</h2>
         <p><?= nl2br(htmlspecialchars($request['pershkrimi'] ?? 'Nuk ka përshkrim.')) ?></p>
       </div>
+
+      <?php if (!empty($request['latitude']) && !empty($request['longitude'])): ?>
+      <div class="map-detail-card">
+        <div class="map-detail-card__header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+          Vendndodhja në hartë
+        </div>
+        <div id="request-detail-map" class="ts-map-display"></div>
+      </div>
+      <?php endif; ?>
     </div>
 
     <!-- Sidebar -->
@@ -350,6 +362,21 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 </main>
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const mapEl = document.getElementById('request-detail-map');
+  if (mapEl) {
+    TSMap.display('request-detail-map', {
+      lat: <?= json_encode($request['latitude'] ?? null) ?>,
+      lng: <?= json_encode($request['longitude'] ?? null) ?>,
+      label: <?= json_encode($request['titulli'] ?? '') ?>,
+      type: <?= json_encode(($request['tipi'] ?? '') === 'Ofertë' ? 'offer' : 'request') ?>
+    });
+  }
+});
+</script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
 </body>
 </html>

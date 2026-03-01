@@ -19,6 +19,7 @@ $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
     <a href="/TiranaSolidare/public/#si-funksionon">Si Funksionon</a>
     <a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a>
     <a href="/TiranaSolidare/views/events.php">Evente</a>
+    <a href="/TiranaSolidare/views/map.php">Harta</a>
     <a href="/TiranaSolidare/public/#regjistrohu">Misioni</a>
     <span></span>
     <?php if ($isLoggedIn): ?>

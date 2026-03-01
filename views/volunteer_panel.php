@@ -66,6 +66,8 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -362,6 +364,18 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
             <input type="text" id="vp-req-image" name="imazhi" placeholder="https://example.com/image.jpg (opsionale)" class="vp-input">
           </div>
         </div>
+        <div class="vp-field">
+          <div class="ts-map-wrapper">
+            <label>Zgjidh vendndodhjen në hartë</label>
+            <div id="request-map-picker" class="ts-map-picker"></div>
+            <input type="hidden" name="latitude" id="req-lat-input">
+            <input type="hidden" name="longitude" id="req-lng-input">
+            <div class="ts-map-coord-display" id="req-coord-display" style="display:none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <span id="req-coord-text"></span>
+            </div>
+          </div>
+        </div>
         <button type="submit" class="btn_primary">Dërgo kërkesën</button>
         <div id="vp-req-status" class="vp-status" style="display:none"></div>
       </form>
@@ -463,6 +477,11 @@ if (reqForm) {
     e.preventDefault();
     const fd = new FormData(reqForm);
     const body = Object.fromEntries(fd);
+    // Convert lat/lng to numbers if present
+    if (body.latitude) body.latitude = parseFloat(body.latitude);
+    else delete body.latitude;
+    if (body.longitude) body.longitude = parseFloat(body.longitude);
+    else delete body.longitude;
     try {
       const res = await fetch(API + '/help_requests.php?action=create', {
         method: 'POST',
@@ -473,6 +492,8 @@ if (reqForm) {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
       reqForm.reset();
+      const coordDisplay = document.getElementById('req-coord-display');
+      if (coordDisplay) coordDisplay.style.display = 'none';
       vpStatus('vp-req-status', 'success', 'Kërkesa u dërgua me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
     } catch (err) { vpStatus('vp-req-status', 'error', err.message); }
   });
@@ -575,6 +596,29 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(updateNotifBadge, 15000);
 });
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js"></script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script>
+// Initialize map picker for help request form
+document.addEventListener('DOMContentLoaded', function() {
+  const mapContainer = document.getElementById('request-map-picker');
+  if (mapContainer) {
+    const reqMap = TSMap.picker('request-map-picker', {
+      latInput: 'req-lat-input',
+      lngInput: 'req-lng-input',
+      addressInput: 'vp-req-location',
+      onSelect: function(lat, lng) {
+        const coordDisplay = document.getElementById('req-coord-display');
+        const coordText = document.getElementById('req-coord-text');
+        if (coordDisplay && coordText) {
+          coordDisplay.style.display = 'flex';
+          coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+        }
+      }
+    });
+  }
+});
+</script>
 </body>
 </html>
