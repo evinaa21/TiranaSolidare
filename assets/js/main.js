@@ -200,8 +200,8 @@ async function toggleBlock(userId, action) {
 }
 
 async function deleteUser(userId) {
-    if (!confirm('Fshi këtë përdorues?')) return;
-    const json = await apiCall(`users.php?action=delete&id=${userId}`, 'DELETE');
+    if (!confirm('\u00c7aktivizo k\u00ebt\u00eb p\u00ebrdorues? (Soft-delete \u2014 t\u00eb dh\u00ebnat do t\u00eb ruhen)')) return;
+    const json = await apiCall(`users.php?action=deactivate&id=${userId}`, 'PUT');
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadUsers();
 }

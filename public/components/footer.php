@@ -22,17 +22,17 @@
       </ul>
       <ul>
         <li>Legal</li>
-        <li><a href="">Termat dhe Kushtet</a></li>
-        <li><a href="">Politika e Privatësisë</a></li>
-        <li><a href="">Politika e Cookies</a></li>
-        <li><a href="">Rregullat e Përdorimit</a></li>
-        <li><a href="">Politika e Sigurisë</a></li>
+        <li><a href="#">Termat dhe Kushtet</a></li>
+        <li><a href="#">Politika e Privatësisë</a></li>
+        <li><a href="#">Politika e Cookies</a></li>
+        <li><a href="#">Rregullat e Përdorimit</a></li>
+        <li><a href="#">Politika e Sigurisë</a></li>
       </ul>
       <ul>
         <li>Kontakt</li>
-        <li><a href="">info@tiranasolidare.al</a></li>
-        <li><a href="">+355 69 123 4567</a></li>
-        <li><a href="">Bashkia Tiranë, Tiranë</a></li>
+        <li><a href="mailto:info@tiranasolidare.al">info@tiranasolidare.al</a></li>
+        <li><a href="tel:+355691234567">+355 69 123 4567</a></li>
+        <li><a href="#">Bashkia Tiranë, Tiranë</a></li>
       </ul>
     </div>
   </div>

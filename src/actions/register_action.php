@@ -27,6 +27,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
+    if (strlen($password) < 6) {
+        header("Location: /TiranaSolidare/views/register.php?error=password_too_short");
+        exit();
+    }
+
     // 3. Check if Email Already Exists
     $sql_check = "SELECT id_perdoruesi FROM Perdoruesi WHERE email = ?";
     $stmt = $pdo->prepare($sql_check);

@@ -105,9 +105,11 @@ switch ($action) {
         $body   = get_json_body();
         $errors = [];
 
-        $titulli    = required_field($body, 'titulli', $errors);
-        $pershkrimi = $body['pershkrimi'] ?? '';
-        $tipi       = $body['tipi'] ?? '';
+        $titulli      = required_field($body, 'titulli', $errors);
+        $pershkrimi   = $body['pershkrimi'] ?? '';
+        $tipi         = $body['tipi'] ?? '';
+        $vendndodhja  = $body['vendndodhja'] ?? null;
+        $imazhi       = $body['imazhi'] ?? null;
 
         if (!in_array($tipi, ['Kërkesë', 'Ofertë'], true)) {
             $errors[] = "Tipi duhet të jetë 'Kërkesë' ose 'Ofertë'.";
@@ -118,10 +120,10 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi)
-             VALUES (?, ?, ?, ?, 'Open')"
+            "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, vendndodhja, imazhi)
+             VALUES (?, ?, ?, ?, 'Open', ?, ?)"
         );
-        $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi]);
+        $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $vendndodhja, $imazhi]);
 
         json_success([
             'id_kerkese_ndihme' => (int) $pdo->lastInsertId(),
@@ -153,7 +155,7 @@ switch ($action) {
             json_error('Nuk keni leje për të ndryshuar këtë kërkesë.', 403);
         }
 
-        $allowed = ['titulli', 'pershkrimi', 'tipi'];
+        $allowed = ['titulli', 'pershkrimi', 'tipi', 'vendndodhja', 'imazhi'];
         $sets    = [];
         $params  = [];
 

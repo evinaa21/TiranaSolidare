@@ -61,3 +61,9 @@ git pull
 **Troubleshooting**
 *   **"Database connection failed"**: Check `config/db.php`. For XAMPP, user is usually `root` and password is empty `''`.
 *   **Styles look weird**: Press `Ctrl + F5` in your browser to force a refresh.
+
+## Migration Notes
+If your database was created before the latest changes, run this SQL in phpMyAdmin:
+```sql
+ALTER TABLE `kerkesa_per_ndihme` ADD COLUMN `vendndodhja` varchar(255) DEFAULT NULL AFTER `imazhi`;
+```

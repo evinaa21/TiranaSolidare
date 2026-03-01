@@ -9,6 +9,7 @@ $errorMessages = [
   'empty_fields'       => 'Ju lutem plotësoni të gjitha fushat.',
   'invalid_email'      => 'Formati i email-it nuk është i saktë.',
   'password_mismatch'  => 'Fjalëkalimet nuk përputhen.',
+  'password_too_short' => 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.',
   'email_taken'        => 'Ky email është regjistruar tashmë.',
 ];
 

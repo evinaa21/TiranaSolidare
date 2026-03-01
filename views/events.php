@@ -70,16 +70,18 @@ $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Helper: time-ago in Albanian
-function koheParapake(string $datetime): string {
-    $now  = new DateTime();
-    $then = new DateTime($datetime);
-    $diff = $now->diff($then);
-    if ($diff->y > 0)  return $diff->y . ' vit më parë';
-    if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-    if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-    if ($diff->h > 0)  return $diff->h . ' orë më parë';
-    if ($diff->i > 0)  return $diff->i . ' min më parë';
-    return 'tani';
+if (!function_exists('koheParapake')) {
+    function koheParapake(string $datetime): string {
+        $now  = new DateTime();
+        $then = new DateTime($datetime);
+        $diff = $now->diff($then);
+        if ($diff->y > 0)  return $diff->y . ' vit më parë';
+        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
+        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
+        if ($diff->h > 0)  return $diff->h . ' orë më parë';
+        if ($diff->i > 0)  return $diff->i . ' min më parë';
+        return 'tani';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -145,7 +147,7 @@ function koheParapake(string $datetime): string {
 
     <div class="page-content__actions">
       <?php if (!$isLoggedIn): ?>
-        <a href="/TiranaSolidare/views/login.php" class="btn_primary">Kyçu për të aplikuar</a>
+        <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="btn_primary">Kyçu për të aplikuar</a>
       <?php elseif ($alreadyApplied): ?>
         <span class="page-badge page-badge--status"><?= htmlspecialchars($existingApp['statusi']) ?></span>
         <p class="text-muted">Ju keni aplikuar tashmë për këtë event.</p>

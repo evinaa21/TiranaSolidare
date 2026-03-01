@@ -66,16 +66,18 @@ $statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE rol
 $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();
 
 // Helper: time-ago in Albanian
-function koheParapake(string $datetime): string {
-    $now  = new DateTime();
-    $then = new DateTime($datetime);
-    $diff = $now->diff($then);
-    if ($diff->y > 0)  return $diff->y . ' vit më parë';
-    if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-    if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-    if ($diff->h > 0)  return $diff->h . ' orë më parë';
-    if ($diff->i > 0)  return $diff->i . ' min më parë';
-    return 'tani';
+if (!function_exists('koheParapake')) {
+    function koheParapake(string $datetime): string {
+        $now  = new DateTime();
+        $then = new DateTime($datetime);
+        $diff = $now->diff($then);
+        if ($diff->y > 0)  return $diff->y . ' vit më parë';
+        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
+        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
+        if ($diff->h > 0)  return $diff->h . ' orë më parë';
+        if ($diff->i > 0)  return $diff->i . ' min më parë';
+        return 'tani';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -163,7 +165,7 @@ function koheParapake(string $datetime): string {
 
         <div class="rq-sidebar-cta">
           <?php if (!$isLoggedIn): ?>
-            <a href="/TiranaSolidare/views/login.php" class="btn_primary rq-btn-full">Kyçu për të kontaktuar</a>
+            <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/help_requests.php?id=' . $request['id_kerkese_ndihme']) ?>" class="btn_primary rq-btn-full">Kyçu për të kontaktuar</a>
             <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të kontaktuar postuesin</p>
           <?php elseif (!empty($request['krijuesi_email'])): ?>
             <a href="mailto:<?= htmlspecialchars($request['krijuesi_email']) ?>" class="btn_primary rq-btn-full">
@@ -345,7 +347,7 @@ function koheParapake(string $datetime): string {
     <h2>Ke nevojë për ndihmë?</h2>
     <p>Posto kërkesën tënde dhe komuniteti ynë do të të mbështesë. Regjistrimi është falas dhe i shpejtë.</p>
     <?php if ($isLoggedIn): ?>
-      <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary">Shko te paneli</a>
+      <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request" class="btn_primary">Shko te paneli</a>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">Regjistrohu tani</a>
     <?php endif; ?>

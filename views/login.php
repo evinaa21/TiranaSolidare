@@ -4,10 +4,13 @@ session_start();
 
 $errorKey   = $_GET['error']   ?? '';
 $successKey = $_GET['success'] ?? '';
+$redirect   = $_GET['redirect'] ?? '';
 
 $errorMessages = [
-  'empty_fields'      => 'Ju lutem plotësoni të gjitha fushat.',
-  'wrong_credentials' => 'Email ose fjalëkalim i pasaktë.',
+  'empty_fields'        => 'Ju lutem plotësoni të gjitha fushat.',
+  'wrong_credentials'   => 'Email ose fjalëkalim i pasaktë.',
+  'account_blocked'     => 'Llogaria juaj është bllokuar. Kontaktoni administratorin.',
+  'account_deactivated' => 'Llogaria juaj është çaktivizuar. Kontaktoni administratorin.',
 ];
 
 $successMessages = [
@@ -57,6 +60,7 @@ $successMessages = [
       </div>
 
       <form class="auth-form" action="/TiranaSolidare/src/actions/login_action.php" method="POST">
+        <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
         <div class="auth-field">
           <label for="email">Email</label>
           <input class="auth-input" type="email" id="email" name="email" placeholder="emri@shembull.com" required>
@@ -66,7 +70,7 @@ $successMessages = [
           <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
         </div>
         <button type="submit" class="btn_primary auth-submit">Hyr</button>
-        <p class="auth-meta">Nuk keni llogari? <a href="/TiranaSolidare/views/register.php">Krijo llogari</a></p>
+        <p class="auth-meta">Nuk keni llogari? <a href="/TiranaSolidare/views/register.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Krijo llogari</a></p>
       </form>
 
       <div class="auth-sidecard">

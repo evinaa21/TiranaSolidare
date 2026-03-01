@@ -136,6 +136,7 @@ CREATE TABLE `kerkesa_per_ndihme` (
   `pershkrimi` text DEFAULT NULL,
   `statusi` varchar(50) DEFAULT NULL COMMENT 'Open/Closed',
   `imazhi` varchar(500) DEFAULT NULL,
+  `vendndodhja` varchar(255) DEFAULT NULL,
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

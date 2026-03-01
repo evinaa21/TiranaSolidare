@@ -31,16 +31,18 @@ $totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi")->fetchColum
 $totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
 
 // Helper: time-ago in Albanian
-function koheParapake(string $datetime): string {
-    $now  = new DateTime();
-    $then = new DateTime($datetime);
-    $diff = $now->diff($then);
-    if ($diff->y > 0)  return $diff->y . ' vit më parë';
-    if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-    if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-    if ($diff->h > 0)  return $diff->h . ' orë më parë';
-    if ($diff->i > 0)  return $diff->i . ' min më parë';
-    return 'tani';
+if (!function_exists('koheParapake')) {
+    function koheParapake(string $datetime): string {
+        $now  = new DateTime();
+        $then = new DateTime($datetime);
+        $diff = $now->diff($then);
+        if ($diff->y > 0)  return $diff->y . ' vit më parë';
+        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
+        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
+        if ($diff->h > 0)  return $diff->h . ' orë më parë';
+        if ($diff->i > 0)  return $diff->i . ' min më parë';
+        return 'tani';
+    }
 }
 ?>
 <!DOCTYPE html>

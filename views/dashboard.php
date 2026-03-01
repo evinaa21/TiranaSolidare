@@ -1,5 +1,5 @@
 <?php
-// views/dashboard.php — Premium Admin Panel
+// views/dashboard.php — Admin Panel (Admin only)
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -7,7 +7,13 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$isAdmin = ($_SESSION['roli'] ?? '') === 'Admin';
+// Redirect volunteers to their own panel
+if (($_SESSION['roli'] ?? '') !== 'Admin') {
+    header("Location: /TiranaSolidare/views/volunteer_panel.php");
+    exit();
+}
+
+$isAdmin = true;
 $userEmri = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
 $userRoli = htmlspecialchars($_SESSION['roli'] ?? 'Vullnetar');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');

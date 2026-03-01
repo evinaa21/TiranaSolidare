@@ -63,8 +63,8 @@ async function loadCategoryDropdown() {
     if (!sel) return;
     try {
         const json = await apiCall('categories.php?action=list');
-        if (json.success) {
-            json.data.forEach(c => {
+        if (json.success && json.data.categories) {
+            json.data.categories.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id_kategoria;
                 opt.textContent = c.emri;
