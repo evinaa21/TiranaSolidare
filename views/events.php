@@ -88,8 +88,8 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
-</head>
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
 
@@ -374,35 +374,48 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js"></script>
 <script>
 // Apply for event (AJAX)
 document.addEventListener('DOMContentLoaded', function() {
   const btn = document.getElementById('apply-btn');
-  if (!btn) return;
-  
-  btn.addEventListener('click', async function() {
-    const eventId = this.dataset.event;
-    try {
-      const res = await fetch('/TiranaSolidare/api/applications.php?action=apply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': '<?= csrf_token() ?>'
-        },
-        body: JSON.stringify({ id_eventi: parseInt(eventId) })
-      });
-      const json = await res.json();
-      if (json.success) {
-        btn.textContent = 'Aplikimi u dërgua!';
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-      } else {
-        alert(json.message || 'Gabim gjatë aplikimit.');
+  if (btn) {
+    btn.addEventListener('click', async function() {
+      const eventId = this.dataset.event;
+      try {
+        const res = await fetch('/TiranaSolidare/api/applications.php?action=apply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': '<?= csrf_token() ?>'
+          },
+          body: JSON.stringify({ id_eventi: parseInt(eventId) })
+        });
+        const json = await res.json();
+        if (json.success) {
+          btn.textContent = 'Aplikimi u dërgua!';
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+        } else {
+          alert(json.message || 'Gabim gjatë aplikimit.');
+        }
+      } catch (err) {
+        alert('Gabim rrjeti.');
       }
-    } catch (err) {
-      alert('Gabim rrjeti.');
-    }
-  });
+    });
+  }
+
+  // Initialize read-only map for event detail
+  const mapEl = document.getElementById('event-detail-map');
+  if (mapEl) {
+    TSMap.display('event-detail-map', {
+      lat: <?= json_encode($event['latitude'] ?? null) ?>,
+      lng: <?= json_encode($event['longitude'] ?? null) ?>,
+      label: <?= json_encode($event['titulli'] ?? '') ?>,
+      type: 'event'
+    });
+  }
 });
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>

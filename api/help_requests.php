@@ -123,6 +123,8 @@ switch ($action) {
         $pershkrimi   = $body['pershkrimi'] ?? '';
         $tipi         = $body['tipi'] ?? '';
         $imazhi       = $body['imazhi'] ?? null;
+        $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
+        $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
 
         if (!in_array($tipi, ['Kërkesë', 'Ofertë'], true)) {
             $errors[] = "Tipi duhet të jetë 'Kërkesë' ose 'Ofertë'.";
@@ -177,7 +179,7 @@ switch ($action) {
             json_error('Nuk keni leje për të ndryshuar këtë kërkesë.', 403);
         }
 
-        $allowed = ['titulli', 'pershkrimi', 'tipi', 'vendndodhja', 'imazhi'];
+        $allowed = ['titulli', 'pershkrimi', 'tipi', 'vendndodhja', 'latitude', 'longitude', 'imazhi'];
         $sets    = [];
         $params  = [];
 

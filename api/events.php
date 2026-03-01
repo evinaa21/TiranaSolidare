@@ -121,6 +121,8 @@ switch ($action) {
         $vendndodhja  = required_field($body, 'vendndodhja', $errors);
         $id_kategoria = isset($body['id_kategoria']) ? (int) $body['id_kategoria'] : null;
         $banner       = $body['banner'] ?? null;
+        $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
+        $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
 
         if (!empty($errors)) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
@@ -145,12 +147,12 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, data, vendndodhja, banner)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, data, vendndodhja, latitude, longitude, banner)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $admin['id'], $id_kategoria, $titulli,
-            $pershkrimi, $data_eventi, $vendndodhja, $banner,
+            $pershkrimi, $data_eventi, $vendndodhja, $latitude, $longitude, $banner,
         ]);
 
         $newId = (int) $pdo->lastInsertId();
@@ -177,7 +179,7 @@ switch ($action) {
         }
 
         // Build dynamic SET clause
-        $allowed = ['titulli', 'pershkrimi', 'data', 'vendndodhja', 'id_kategoria', 'banner'];
+        $allowed = ['titulli', 'pershkrimi', 'data', 'vendndodhja', 'latitude', 'longitude', 'id_kategoria', 'banner'];
         $sets   = [];
         $params = [];
 

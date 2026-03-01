@@ -1,0 +1,341 @@
+/* ═══════════════════════════════════════════════════
+   MAP COMPONENTS — Tirana Solidare
+   Leaflet map styling for picker, display, overview
+   ═══════════════════════════════════════════════════ */
+
+/* ── Base map containers ── */
+.ts-map-picker,
+.ts-map-display,
+.ts-map-overview {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  position: relative;
+  z-index: 0;
+}
+
+.ts-map-picker {
+  height: 350px;
+  cursor: crosshair;
+}
+
+.ts-map-display {
+  height: 250px;
+}
+
+.ts-map-overview {
+  height: 500px;
+}
+
+@media (max-width: 768px) {
+  .ts-map-picker { height: 280px; }
+  .ts-map-display { height: 200px; }
+  .ts-map-overview { height: 380px; }
+}
+
+/* ── Custom marker icon ── */
+.ts-map-marker {
+  background: none !important;
+  border: none !important;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ts-map-marker svg {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  transition: transform 0.15s ease;
+}
+
+.ts-map-marker:hover svg {
+  transform: scale(1.15);
+}
+
+/* ── Instruction overlay ── */
+.ts-map-instruction {
+  background: rgba(0, 113, 93, 0.92);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.ts-map-instruction svg {
+  flex-shrink: 0;
+}
+
+/* ── Search control ── */
+.ts-map-search {
+  position: relative;
+  width: 280px;
+  max-width: calc(100vw - 120px);
+}
+
+.ts-map-search__inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  border: 1px solid #e5e7eb;
+}
+
+.ts-map-search__inner svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.ts-map-search__input {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  font-size: 13px;
+  width: 100%;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  height: auto !important;
+  line-height: normal !important;
+}
+
+.ts-map-search__input::placeholder {
+  color: #9ca3af;
+}
+
+.ts-map-search__results {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid #e5e7eb;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.ts-map-search__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ts-map-search__item:last-child {
+  border-bottom: none;
+}
+
+.ts-map-search__item:hover {
+  background: #f0fdf4;
+}
+
+.ts-map-search__item svg {
+  flex-shrink: 0;
+  color: #00715D;
+}
+
+.ts-map-search__empty {
+  color: #9ca3af;
+  cursor: default;
+  font-style: italic;
+}
+
+.ts-map-search__empty:hover {
+  background: transparent;
+}
+
+/* ── Form wrapper ── */
+.ts-map-wrapper {
+  margin-top: 8px;
+}
+
+.ts-map-wrapper label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.ts-map-wrapper .ts-map-coord-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ts-map-coord-display svg {
+  color: #00715D;
+  flex-shrink: 0;
+}
+
+.ts-map-coord-display span {
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+/* ── Detail page map card ── */
+.map-detail-card {
+  margin-top: 24px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.map-detail-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.map-detail-card__header svg {
+  color: #00715D;
+}
+
+/* ── Overview page ── */
+.map-page-hero {
+  background: linear-gradient(135deg, #00715D 0%, #005a48 100%);
+  color: white;
+  padding: 48px 24px 32px;
+  text-align: center;
+}
+
+.map-page-hero h1 {
+  font-size: 2rem;
+  margin: 0 0 8px;
+}
+
+.map-page-hero p {
+  opacity: 0.85;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.map-page-filters {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.map-page-filters .map-filter-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-filter-btn:hover {
+  border-color: #00715D;
+  color: #00715D;
+}
+
+.map-filter-btn.active {
+  background: #00715D;
+  color: white;
+  border-color: #00715D;
+}
+
+.map-filter-btn .filter-count {
+  background: rgba(0,0,0,0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.map-filter-btn.active .filter-count {
+  background: rgba(255,255,255,0.2);
+}
+
+.map-page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.map-page-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding: 16px 0;
+  flex-wrap: wrap;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.map-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.map-legend-dot--event { background-color: #00715D; }
+.map-legend-dot--request { background-color: #E17254; }
+.map-legend-dot--offer { background-color: #3B82F6; }
+
+/* ── Leaflet popup override ── */
+.leaflet-popup-content-wrapper {
+  border-radius: 10px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.leaflet-popup-content a {
+  text-decoration: none;
+}
+
+.leaflet-popup-content a:hover {
+  text-decoration: underline;
+}
