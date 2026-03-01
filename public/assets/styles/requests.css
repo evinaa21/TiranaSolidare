@@ -156,6 +156,7 @@
 .rq-hero h1 {
   font-family: 'Bitter', serif;
   font-size: clamp(2.2rem, 5vw, 3.8rem);
+  color: #fff;
   font-weight: 700;
   line-height: 1.15;
   margin: 0 0 20px;
