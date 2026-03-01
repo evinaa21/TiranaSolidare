@@ -163,6 +163,14 @@
   padding: 24px;
 }
 
+#vp-request-form > button{
+  z-index: 1000;
+}
+
+#vp-request-form > button::after{
+  display: none;
+}
+
 /* ── Profile Grid ──────────────────────────────────── */
 
 .vp-profile-grid {

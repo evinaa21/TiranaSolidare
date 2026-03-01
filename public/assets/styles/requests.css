@@ -523,6 +523,7 @@
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -536,6 +537,7 @@
   margin: 0 0 16px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1032,6 +1034,7 @@
   padding: 15px 24px !important;
   font-size: 0.95rem !important;
   border-radius: var(--rq-radius-sm) !important;
+  background-color: var(--rq-accent-dk);
 }
 
 .rq-sidebar-hint {
