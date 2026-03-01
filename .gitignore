@@ -6,3 +6,5 @@ vendor/
 *.log
 .venv/
 seed_data.sql
+uploads/
+public/assets/uploads
