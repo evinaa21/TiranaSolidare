@@ -119,7 +119,16 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     <div class="rq-detail-main">
       <?php if (!empty($request['imazhi'])): ?>
         <div class="rq-detail-banner">
-          <img src="<?= htmlspecialchars($request['imazhi']) ?>" alt="<?= htmlspecialchars($request['titulli']) ?>">
+          <img src="<?= htmlspecialchars(strpos($request['imazhi'], '/') === 0 ? $request['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $request['imazhi']) ?>" alt="<?= htmlspecialchars($request['titulli']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="rq-detail-banner--placeholder" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <p>Nuk ka imazh të ngarkuar</p>
+          </div>
+        </div>
+      <?php else: ?>
+        <div class="rq-detail-banner rq-detail-banner--placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <p>Nuk ka imazh të ngarkuar</p>
         </div>
       <?php endif; ?>
 
@@ -280,10 +289,13 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card" style="animation-delay: <?= $i * 0.05 ?>s">
           <div class="rq-card__visual">
             <?php if (!empty($req['imazhi'])): ?>
-              <img src="<?= htmlspecialchars($req['imazhi']) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img">
+              <img src="<?= htmlspecialchars(strpos($req['imazhi'], '/') === 0 ? $req['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $req['imazhi']) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+              <div class="rq-card__img rq-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>" style="display:none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
             <?php else: ?>
-              <div class="rq-card__img rq-card__img--fallback <?= $req['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <div class="rq-card__img rq-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
             <?php endif; ?>
             <div class="rq-card__overlay">

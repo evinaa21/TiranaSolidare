@@ -59,26 +59,140 @@ if (!isset($allowedMimes[$mimeType])) {
 
 $ext = $allowedMimes[$mimeType];
 
-// Generate unique token-based filename
-$filename = generate_upload_filename($ext);
+try {
+    // Check if GD library is available for image processing
+    $hasGD = extension_loaded('gd');
+    
+    if ($hasGD) {
+        // Process image with GD: resize to max 700px and convert to WebP
+        
+        // Load image using GD library with error suppression
+        $image = null;
+        switch ($mimeType) {
+            case 'image/jpeg':
+                $image = @imagecreatefromjpeg($file['tmp_name']);
+                break;
+            case 'image/png':
+                $image = @imagecreatefrompng($file['tmp_name']);
+                break;
+            case 'image/gif':
+                $image = @imagecreatefromgif($file['tmp_name']);
+                break;
+            case 'image/webp':
+                if (function_exists('imagecreatefromwebp')) {
+                    $image = @imagecreatefromwebp($file['tmp_name']);
+                } else {
+                    $hasGD = false; // Fall back to basic upload
+                }
+                break;
+        }
 
-// Ensure upload directory exists
-$uploadDir = __DIR__ . '/../uploads/images';
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
+        if ($hasGD && !$image) {
+            json_error('Gabim gjatë leximit të imazhit. Kontrollo formatin e skedarit.', 400);
+        }
+
+        if ($hasGD && function_exists('imagewebp')) {
+            // Get original dimensions
+            $origWidth = imagesx($image);
+            $origHeight = imagesy($image);
+
+            if ($origWidth === false || $origHeight === false) {
+                imagedestroy($image);
+                json_error('Nuk mund të lexohen përmasa të imazhit.', 400);
+            }
+
+            // Calculate new dimensions (max width 700px, maintain aspect ratio)
+            $maxWidth = 700;
+            $newWidth = min($origWidth, $maxWidth);
+            $newHeight = (int) round(($newWidth / $origWidth) * $origHeight);
+
+            // Create new image
+            $resized = @imagecreatetruecolor($newWidth, $newHeight);
+            if (!$resized) {
+                imagedestroy($image);
+                json_error('Nuk mund të krijohet imazha i ri.', 500);
+            }
+
+            // Preserve transparency for PNG and GIF
+            if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+                @imagealphablending($resized, false);
+                @imagesavealpha($resized, true);
+                $transparent = @imagecolorallocatealpha($resized, 255, 255, 255, 127);
+                if ($transparent === false) {
+                    imagedestroy($image);
+                    imagedestroy($resized);
+                    json_error('Nuk mund të përpunohet transparenca.', 500);
+                }
+                @imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+
+            // Resize image
+            $result = @imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+            if (!$result) {
+                imagedestroy($image);
+                imagedestroy($resized);
+                json_error('Gabim gjatë zmadhimit të imazhit.', 500);
+            }
+
+            // Clean up original
+            imagedestroy($image);
+
+            // Generate unique token-based filename (always .webp)
+            $filename = generate_upload_filename('webp');
+
+            // Ensure upload directory exists
+            $uploadDir = __DIR__ . '/../public/assets/uploads';
+            if (!is_dir($uploadDir)) {
+                if (!@mkdir($uploadDir, 0755, true)) {
+                    imagedestroy($resized);
+                    json_error('Nuk mund të krijohet dosja e ngarkimit.', 500);
+                }
+            }
+
+            $destination = "$uploadDir/$filename";
+
+            // Save as WebP with quality 80
+            $result = @imagewebp($resized, $destination, 80);
+            imagedestroy($resized);
+
+            if (!$result) {
+                json_error('Gabim gjatë ruajtjes të imazhit WebP.', 500);
+            }
+
+            $publicPath = "/TiranaSolidare/public/assets/uploads/$filename";
+            $finalMime = 'image/webp';
+        }
+    }
+
+    // Fall back to basic upload (store original image without processing)
+    if (!$hasGD || !isset($destination)) {
+        // Generate unique token-based filename with original extension
+        $filename = generate_upload_filename($ext);
+
+        // Ensure upload directory exists
+        $uploadDir = __DIR__ . '/../public/assets/uploads';
+        if (!is_dir($uploadDir)) {
+            if (!@mkdir($uploadDir, 0755, true)) {
+                json_error('Nuk mund të krijohet dosja e ngarkimit.', 500);
+            }
+        }
+
+        $destination = "$uploadDir/$filename";
+
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            json_error('Gabim gjatë ruajtjes të skedarit.', 500);
+        }
+
+        $publicPath = "/TiranaSolidare/public/assets/uploads/$filename";
+        $finalMime = $mimeType;
+    }
+
+    json_success([
+        'url'      => $publicPath,
+        'filename' => $filename,
+        'size'     => filesize($destination),
+        'mime'     => $finalMime,
+    ]);
+} catch (\Exception $e) {
+    json_error('Gabim gjatë ngarkimit të skedarit: ' . $e->getMessage(), 500);
 }
-
-$destination = "$uploadDir/$filename";
-
-if (!move_uploaded_file($file['tmp_name'], $destination)) {
-    json_error('Gabim gjatë ruajtjes së skedarit.', 500);
-}
-
-$publicPath = "/TiranaSolidare/uploads/images/$filename";
-
-json_success([
-    'url'      => $publicPath,
-    'filename' => $filename,
-    'size'     => $file['size'],
-    'mime'     => $mimeType,
-]);

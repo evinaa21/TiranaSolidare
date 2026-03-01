@@ -470,6 +470,19 @@
   background: linear-gradient(135deg, #00715D, #22a68a);
 }
 
+.rq-card__img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+  color: #8b9bb4;
+}
+
+.rq-card__img--placeholder.rq-card__img--offer {
+  background: linear-gradient(135deg, #e8f5f0 0%, #d1e7e0 100%);
+  color: #22a68a;
+}
+
 /* Badge overlay on image */
 .rq-card__overlay {
   position: absolute;
@@ -885,6 +898,28 @@
   display: block;
   max-height: 480px;
   object-fit: cover;
+}
+
+.rq-detail-banner--placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+  color: #8b9bb4;
+  gap: 16px;
+  padding: 40px;
+}
+
+.rq-detail-banner--placeholder svg {
+  opacity: 0.5;
+}
+
+.rq-detail-banner--placeholder p {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
 }
 
 .rq-detail-text {

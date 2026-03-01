@@ -131,7 +131,16 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
     <div class="rq-detail-main">
       <?php if (!empty($event['banner'])): ?>
         <div class="rq-detail-banner">
-          <img src="<?= htmlspecialchars($event['banner']) ?>" alt="<?= htmlspecialchars($event['titulli']) ?>">
+          <img src="<?= htmlspecialchars($event['banner']) ?>" alt="<?= htmlspecialchars($event['titulli']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="rq-detail-banner--placeholder" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <p>Nuk ka imazh të ngarkuar</p>
+          </div>
+        </div>
+      <?php else: ?>
+        <div class="rq-detail-banner rq-detail-banner--placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <p>Nuk ka imazh të ngarkuar</p>
         </div>
       <?php endif; ?>
 
@@ -292,10 +301,13 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
         <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card" style="animation-delay: <?= $i * 0.05 ?>s">
           <div class="rq-card__visual">
             <?php if (!empty($ev['banner'])): ?>
-              <img src="<?= htmlspecialchars($ev['banner']) ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img">
+              <img src="<?= htmlspecialchars($ev['banner']) ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+              <div class="rq-card__img rq-card__img--placeholder" style="display:none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
             <?php else: ?>
-              <div class="rq-card__img rq-card__img--fallback">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+              <div class="rq-card__img rq-card__img--placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
             <?php endif; ?>
             <div class="rq-card__overlay">

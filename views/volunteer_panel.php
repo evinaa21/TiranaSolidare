@@ -358,8 +358,9 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
             <input type="text" id="vp-req-location" name="vendndodhja" placeholder="Vendndodhja (opsionale)" class="vp-input">
           </div>
           <div class="vp-field">
-            <label for="vp-req-image">Imazhi (URL)</label>
-            <input type="text" id="vp-req-image" name="imazhi" placeholder="https://example.com/image.jpg (opsionale)" class="vp-input">
+            <label for="vp-req-image">Imazhi (Ngarkoni skedarin)</label>
+            <input type="file" id="vp-req-image" name="image" accept="image/*" class="vp-input">
+            <small style="color: #999;">Maksimumi 5MB. Formatet: JPG, PNG, GIF, WEBP</small>
           </div>
         </div>
         <button type="submit" class="btn_primary">Dërgo kërkesën</button>
@@ -462,7 +463,36 @@ if (reqForm) {
   reqForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(reqForm);
+    const imageFile = fd.get('image');
+    let imazhiValue = null;
+
+    // Upload image if provided
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const uploadFd = new FormData();
+        uploadFd.append('image', imageFile);
+        const uploadRes = await fetch(API + '/upload.php', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-CSRF-Token': csrfToken },
+          body: uploadFd,
+        });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok || !uploadJson.success) throw new Error(uploadJson.message || 'Gabim në ngarkimin e imazhit.');
+        imazhiValue = uploadJson.data.filename;
+      } catch (err) {
+        vpStatus('vp-req-status', 'error', 'Gabim në ngarkimin e imazhit: ' + err.message);
+        return;
+      }
+    }
+
+    // Build request body with filename only
     const body = Object.fromEntries(fd);
+    delete body.image;
+    if (imazhiValue) {
+      body.imazhi = imazhiValue;
+    }
+
     try {
       const res = await fetch(API + '/help_requests.php?action=create', {
         method: 'POST',
