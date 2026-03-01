@@ -1,0 +1,18 @@
+# Tirana Solidare — Apache Configuration
+
+# Custom error pages
+ErrorDocument 404 /TiranaSolidare/views/404.php
+
+# Prevent directory listing
+Options -Indexes
+
+# Deny access to sensitive files
+<FilesMatch "\.(sql|md|env|log)$">
+    Require all denied
+</FilesMatch>
+
+# Protect config directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^config/ - [F,L]
+</IfModule>

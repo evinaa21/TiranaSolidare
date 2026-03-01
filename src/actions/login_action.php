@@ -2,8 +2,21 @@
 // actions/login_action.php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // CSRF validation
+    if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
+        header("Location: /TiranaSolidare/views/login.php?error=csrf_expired");
+        exit();
+    }
+
+    // Rate limiting: max 5 login attempts per 15 minutes
+    if (!check_rate_limit('login_form', 5, 900)) {
+        header("Location: /TiranaSolidare/views/login.php?error=rate_limited");
+        exit();
+    }
+
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $password = $_POST['password'];
     $redirect = trim($_POST['redirect'] ?? '');
@@ -31,14 +44,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         }
 
+        // Regenerate session to prevent session fixation (H-10)
+        session_regenerate_id(true);
+
         // SUCCESS: Set session variables
         $_SESSION['user_id'] = $user['id_perdoruesi'];
         $_SESSION['emri'] = $user['emri'];
         $_SESSION['roli'] = $user['roli'];
         $_SESSION['email'] = $user['email'];
 
-        // Redirect to original page or appropriate dashboard
-        if ($redirect && strpos($redirect, '/TiranaSolidare/') === 0) {
+        // Safe redirect validation (H-02)
+        if ($redirect && is_safe_redirect($redirect)) {
             header("Location: $redirect");
         } elseif ($user['roli'] === 'Admin') {
             header("Location: /TiranaSolidare/views/dashboard.php");

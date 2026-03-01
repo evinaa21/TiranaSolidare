@@ -67,7 +67,7 @@ switch ($action) {
         ]);
         break;
 
-    // ── APPLICATIONS BY EVENT ──────────────────────
+    // ── APPLICATIONS BY EVENT (A-05/A-06) ──────────
     case 'by_event':
         require_method('GET');
         require_admin();
@@ -77,14 +77,29 @@ switch ($action) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
+        // Verify event exists (A-05)
+        $evCheck = $pdo->prepare('SELECT id_eventi, titulli FROM Eventi WHERE id_eventi = ?');
+        $evCheck->execute([$eventId]);
+        if (!$evCheck->fetch()) {
+            json_error('Eventi nuk u gjet.', 404);
+        }
+
+        // Paginated fetch (A-06)
+        $pagination = get_pagination();
+
+        $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ?');
+        $countStmt->execute([$eventId]);
+        $total = (int) $countStmt->fetchColumn();
+
         $stmt = $pdo->prepare(
             "SELECT a.*, p.emri AS vullnetari_emri, p.email AS vullnetari_email
              FROM Aplikimi a
              JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
              WHERE a.id_eventi = ?
-             ORDER BY a.aplikuar_me DESC"
+             ORDER BY a.aplikuar_me DESC
+             LIMIT ? OFFSET ?"
         );
-        $stmt->execute([$eventId]);
+        $stmt->execute([$eventId, $pagination['limit'], $pagination['offset']]);
         $apps = $stmt->fetchAll();
 
         // Summary counts
@@ -102,6 +117,10 @@ switch ($action) {
         json_success([
             'applications' => $apps,
             'summary'      => $stats,
+            'total'        => $total,
+            'page'         => $pagination['page'],
+            'limit'        => $pagination['limit'],
+            'total_pages'  => (int) ceil($total / $pagination['limit']),
         ]);
         break;
 
@@ -123,12 +142,17 @@ switch ($action) {
         }
 
         // Check event exists
-        $check = $pdo->prepare('SELECT id_eventi, titulli FROM Eventi WHERE id_eventi = ?');
+        $check = $pdo->prepare('SELECT id_eventi, titulli, data FROM Eventi WHERE id_eventi = ?');
         $check->execute([$eventId]);
         $event = $check->fetch();
 
         if (!$event) {
             json_error('Eventi nuk u gjet.', 404);
+        }
+
+        // Check event is not in the past (L-01)
+        if (strtotime($event['data']) <= time()) {
+            json_error('Nuk mund të aplikoni për një event që ka kaluar.', 422);
         }
 
         // Check for duplicate application

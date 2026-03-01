@@ -126,6 +126,24 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
+        // Validate event date is in the future (L-02)
+        if ($data_eventi && strtotime($data_eventi) <= time()) {
+            json_error('Data e eventit duhet të jetë në të ardhmen.', 422);
+        }
+
+        // Validate banner URL (H-11)
+        if ($banner && !validate_image_url($banner)) {
+            json_error('URL-ja e banner-it nuk është e vlefshme.', 422);
+        }
+
+        // Validate input lengths
+        if ($lenErr = validate_length($titulli, 3, 200, 'titulli')) {
+            json_error($lenErr, 422);
+        }
+        if ($pershkrimi && ($lenErr = validate_length($pershkrimi, 0, 5000, 'pershkrimi'))) {
+            json_error($lenErr, 422);
+        }
+
         $stmt = $pdo->prepare(
             "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, data, vendndodhja, banner)
              VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -174,6 +192,16 @@ switch ($action) {
             json_error('Asnjë fushë për të përditësuar.', 400);
         }
 
+        // Validate date is in the future if being updated
+        if (isset($body['data']) && strtotime($body['data']) <= time()) {
+            json_error('Data e eventit duhet të jetë në të ardhmen.', 422);
+        }
+
+        // Validate banner URL if provided
+        if (isset($body['banner']) && $body['banner'] && !validate_image_url($body['banner'])) {
+            json_error('URL-ja e banner-it nuk është e vlefshme.', 422);
+        }
+
         $params[] = $id;
         $stmt = $pdo->prepare("UPDATE Eventi SET " . implode(', ', $sets) . " WHERE id_eventi = ?");
         $stmt->execute($params);
@@ -190,6 +218,13 @@ switch ($action) {
         if ($id <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
+
+        // Delete related notifications for this event's applications (L-03)
+        $pdo->prepare(
+            'DELETE n FROM Njoftimi n
+             INNER JOIN Aplikimi a ON n.id_perdoruesi = a.id_perdoruesi
+             WHERE a.id_eventi = ? AND n.mesazhi LIKE ?'
+        )->execute([$id, '%' . $id . '%']);
 
         // Delete related applications first (cascade)
         $pdo->prepare('DELETE FROM Aplikimi WHERE id_eventi = ?')->execute([$id]);

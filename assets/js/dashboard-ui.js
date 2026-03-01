@@ -70,8 +70,20 @@ async function loadCategoryDropdown() {
                 opt.textContent = c.emri;
                 sel.appendChild(opt);
             });
+        } else {
+            console.warn('[Dashboard] Category load failed:', json.message || 'Unknown error');
+            const opt = document.createElement('option');
+            opt.disabled = true;
+            opt.textContent = 'Gabim gjatë ngarkimit të kategorive';
+            sel.appendChild(opt);
         }
-    } catch (e) { /* silent */ }
+    } catch (e) {
+        console.warn('[Dashboard] Category dropdown error:', e);
+        const opt = document.createElement('option');
+        opt.disabled = true;
+        opt.textContent = 'Gabim rrjeti';
+        sel.appendChild(opt);
+    }
 }
 
 
@@ -190,7 +202,7 @@ window.loadAdminEvents = async function (page = 1) {
             <td>${formatDate(ev.data)}</td>
             <td>
                 <div class="db-table__actions">
-                    <button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, '${escapeHtml(ev.titulli).replace(/'/g, "\\'")}')">Ndrysho</button>
+                    <button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>
                     <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
                     <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
                 </div>
@@ -215,6 +227,7 @@ window.viewEventApps = async function (eventId) {
     const container = document.getElementById('event-applications');
     const card = document.getElementById('event-applications-card');
     if (!container) return;
+    container.dataset.eventId = eventId;
     if (card) card.style.display = 'block';
 
     const json = await apiCall(`applications.php?action=by_event&id=${eventId}`);
@@ -760,9 +773,32 @@ function dbToast(message, type = 'info') {
 
 function dbPagination(current, totalPages, callbackName) {
     let html = '<div class="db-pagination">';
-    for (let i = 1; i <= totalPages; i++) {
+
+    // Limit visible page buttons to a window of 7
+    const maxVisible = 7;
+    let start = Math.max(1, current - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+        start = Math.max(1, end - maxVisible + 1);
+    }
+
+    if (current > 1) {
+        html += `<button class="db-pagination__btn" onclick="${callbackName}(${current - 1})">&laquo;</button>`;
+    }
+    if (start > 1) {
+        html += `<button class="db-pagination__btn" onclick="${callbackName}(1)">1</button>`;
+        if (start > 2) html += '<span class="db-pagination__ellipsis">&hellip;</span>';
+    }
+    for (let i = start; i <= end; i++) {
         html += `<button class="db-pagination__btn ${i === current ? 'active' : ''}"
                     onclick="${callbackName}(${i})">${i}</button>`;
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) html += '<span class="db-pagination__ellipsis">&hellip;</span>';
+        html += `<button class="db-pagination__btn" onclick="${callbackName}(${totalPages})">${totalPages}</button>`;
+    }
+    if (current < totalPages) {
+        html += `<button class="db-pagination__btn" onclick="${callbackName}(${current + 1})">&raquo;</button>`;
     }
     html += '</div>';
     return html;

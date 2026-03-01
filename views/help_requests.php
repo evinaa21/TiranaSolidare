@@ -1,8 +1,11 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
+$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'Admin');
+$currentUserId = $_SESSION['user_id'] ?? null;
 
 // ── Single help request detail ──
 if (isset($_GET['id'])) {
@@ -65,20 +68,6 @@ $statClosed       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 $statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
 $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();
 
-// Helper: time-ago in Albanian
-if (!function_exists('koheParapake')) {
-    function koheParapake(string $datetime): string {
-        $now  = new DateTime();
-        $then = new DateTime($datetime);
-        $diff = $now->diff($then);
-        if ($diff->y > 0)  return $diff->y . ' vit më parë';
-        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-        if ($diff->h > 0)  return $diff->h . ' orë më parë';
-        if ($diff->i > 0)  return $diff->i . ' min më parë';
-        return 'tani';
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -167,11 +156,13 @@ if (!function_exists('koheParapake')) {
           <?php if (!$isLoggedIn): ?>
             <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/help_requests.php?id=' . $request['id_kerkese_ndihme']) ?>" class="btn_primary rq-btn-full">Kyçu për të kontaktuar</a>
             <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të kontaktuar postuesin</p>
-          <?php elseif (!empty($request['krijuesi_email'])): ?>
+          <?php elseif (($isAdmin || (int)$request['id_perdoruesi'] === (int)$currentUserId) && !empty($request['krijuesi_email'])): ?>
             <a href="mailto:<?= htmlspecialchars($request['krijuesi_email']) ?>" class="btn_primary rq-btn-full">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               Kontakto përmes email
             </a>
+          <?php elseif ($isLoggedIn): ?>
+            <p class="rq-sidebar-hint">Kontakti i postuesit është i disponueshëm vetëm për pronarin e kërkesës.</p>
           <?php endif; ?>
         </div>
       </div>
@@ -181,8 +172,8 @@ if (!function_exists('koheParapake')) {
         <div class="rq-sidebar-trust__icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
         </div>
-        <p><strong>Platformë e verifikuar</strong></p>
-        <p class="rq-sidebar-trust__sub">Të gjitha kërkesat kontrollohen nga ekipi ynë para publikimit.</p>
+        <p><strong>Platformë komunitare</strong></p>
+        <p class="rq-sidebar-trust__sub">Kjo platformë mundëson lidhje direkte midis vullnetarëve dhe atyre që kanë nevojë.</p>
       </div>
     </aside>
   </div>

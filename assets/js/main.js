@@ -8,13 +8,24 @@
 
 const API = '/TiranaSolidare/api';
 
+// ── CSRF token from meta tag ────────────────────────
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
 // ── Generic API caller ──────────────────────────────
 
 async function apiCall(endpoint, method = 'GET', body = null) {
     const opts = {
         method,
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
     };
+    // Include CSRF token for state-changing requests
+    if (method !== 'GET') {
+        opts.headers['X-CSRF-Token'] = getCsrfToken();
+    }
     if (body) opts.body = JSON.stringify(body);
 
     const res = await fetch(`${API}/${endpoint}`, opts);
@@ -46,7 +57,7 @@ async function loadAdminEvents(page = 1) {
             <td>${escapeHtml(ev.kategoria_emri || '—')}</td>
             <td>${formatDate(ev.data)}</td>
             <td>
-                <button class="btn btn-sm btn-warning" onclick="editEventPrompt(${ev.id_eventi}, '${escapeHtml(ev.titulli)}')">Ndrysho</button>
+                <button class="btn btn-sm btn-warning" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
                 <button class="btn btn-sm btn-info" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
             </td>
@@ -68,7 +79,10 @@ async function deleteEvent(id) {
     loadAdminEvents();
 }
 
-async function editEventPrompt(id, currentTitle) {
+async function editEventPrompt(id, btnEl) {
+    // Get current title safely from the table row
+    const row = btnEl.closest('tr');
+    const currentTitle = row ? row.querySelector('td:nth-child(2)').textContent.trim() : '';
     const newTitle = prompt('Titulli i ri:', currentTitle);
     if (!newTitle || newTitle === currentTitle) return;
 
@@ -150,6 +164,11 @@ async function viewEventApps(eventId) {
 async function updateAppStatus(appId, status) {
     const json = await apiCall(`applications.php?action=update_status&id=${appId}`, 'PUT', { statusi: status });
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    // Refresh the application list for the current event
+    const container = document.getElementById('event-applications');
+    if (container && container.dataset.eventId) {
+        viewEventApps(parseInt(container.dataset.eventId));
+    }
 }
 
 // ══════════════════════════════════════════════════════

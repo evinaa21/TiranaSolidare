@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/functions.php';
 
 if (!isset($_SESSION['user_id'])) {
 	header('Location: /TiranaSolidare/views/login.php');
@@ -14,6 +15,7 @@ if (!isset($_SESSION['user_id'])) {
 	<title>Profili im — Tirana Solidare</title>
 	<link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
 	<link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
+	<?= csrf_meta() ?>
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -106,6 +108,7 @@ if (!isset($_SESSION['user_id'])) {
 	const statsApi = '/TiranaSolidare/api/stats.php?action=my_stats';
 	const updateNameApi = '/TiranaSolidare/api/users.php?action=update_profile';
 	const changePasswordApi = '/TiranaSolidare/api/auth.php?action=change_password';
+	const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
 	const statusBox = document.getElementById('profile-status');
 	const emriEl = document.getElementById('profile-emri');
@@ -165,7 +168,7 @@ if (!isset($_SESSION['user_id'])) {
 		try {
 			const res = await fetch(updateNameApi, {
 				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
+				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
 				credentials: 'same-origin',
 				body: JSON.stringify({ emri }),
 			});
@@ -194,7 +197,7 @@ if (!isset($_SESSION['user_id'])) {
 		try {
 			const res = await fetch(changePasswordApi, {
 				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
+				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
 				credentials: 'same-origin',
 				body: JSON.stringify({ current_password, new_password, confirm_password }),
 			});

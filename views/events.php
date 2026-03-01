@@ -1,8 +1,10 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
+$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'Admin');
 
 // ── Single event detail view ──
 if (isset($_GET['id'])) {
@@ -68,21 +70,6 @@ $params[] = $offset;
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Helper: time-ago in Albanian
-if (!function_exists('koheParapake')) {
-    function koheParapake(string $datetime): string {
-        $now  = new DateTime();
-        $then = new DateTime($datetime);
-        $diff = $now->diff($then);
-        if ($diff->y > 0)  return $diff->y . ' vit më parë';
-        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-        if ($diff->h > 0)  return $diff->h . ' orë më parë';
-        if ($diff->i > 0)  return $diff->i . ' min më parë';
-        return 'tani';
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -148,9 +135,13 @@ if (!function_exists('koheParapake')) {
     <div class="page-content__actions">
       <?php if (!$isLoggedIn): ?>
         <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="btn_primary">Kyçu për të aplikuar</a>
+      <?php elseif ($isAdmin): ?>
+        <p class="text-muted">Administratorët nuk mund të aplikojnë si vullnetarë.</p>
       <?php elseif ($alreadyApplied): ?>
         <span class="page-badge page-badge--status"><?= htmlspecialchars($existingApp['statusi']) ?></span>
         <p class="text-muted">Ju keni aplikuar tashmë për këtë event.</p>
+      <?php elseif (strtotime($event['data']) <= time()): ?>
+        <p class="text-muted">Ky event ka kaluar. Nuk mund të aplikoni më.</p>
       <?php else: ?>
         <button class="btn_primary" id="apply-btn" data-event="<?= $event['id_eventi'] ?>">Apliko si Vullnetar</button>
       <?php endif; ?>
@@ -258,7 +249,10 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch('/TiranaSolidare/api/applications.php?action=apply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '<?= csrf_token() ?>'
+        },
         body: JSON.stringify({ id_eventi: parseInt(eventId) })
       });
       const json = await res.json();

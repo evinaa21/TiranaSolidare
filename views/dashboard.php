@@ -1,6 +1,7 @@
 <?php
 // views/dashboard.php — Admin Panel (Admin only)
 session_start();
+require_once __DIR__ . '/../includes/functions.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /TiranaSolidare/views/login.php");
@@ -24,6 +25,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?= csrf_meta() ?>
   <title>Paneli — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
@@ -62,19 +64,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     <button class="db-nav-item" data-panel="requests" onclick="switchPanel('requests', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
       <span>Kërkesat</span>
-    </button>
-    <?php else: ?>
-    <button class="db-nav-item" data-panel="browse-events" onclick="switchPanel('browse-events', this)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-      <span>Eventet</span>
-    </button>
-    <button class="db-nav-item" data-panel="my-apps" onclick="switchPanel('my-apps', this)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
-      <span>Aplikimet e Mia</span>
-    </button>
-    <button class="db-nav-item" data-panel="submit-request" onclick="switchPanel('submit-request', this)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-      <span>Dërgo Kërkesë</span>
     </button>
     <?php endif; ?>
 
@@ -244,64 +233,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   </div>
 
 
-  <?php else: ?>
-  <!-- ═══════════════ PANEL: BROWSE EVENTS (Volunteer) ═══════════════ -->
-  <div class="db-panel" id="panel-browse-events">
-    <div class="db-panel__header">
-      <h3>Eventet e Hapura</h3>
-    </div>
-    <div id="event-list">
-      <div class="db-loading">Duke ngarkuar eventet…</div>
-    </div>
-  </div>
-
-
-  <!-- ═══════════════ PANEL: MY APPLICATIONS (Volunteer) ═══════════════ -->
-  <div class="db-panel" id="panel-my-apps">
-    <div class="db-panel__header">
-      <h3>Aplikimet e Mia</h3>
-    </div>
-    <div class="db-table-wrap" id="application-list">
-      <div class="db-loading">Duke ngarkuar aplikimet…</div>
-    </div>
-  </div>
-
-
-  <!-- ═══════════════ PANEL: SUBMIT REQUEST (Volunteer) ═══════════════ -->
-  <div class="db-panel" id="panel-submit-request">
-    <div class="db-panel__header">
-      <h3>Dërgo Kërkesë për Ndihmë</h3>
-      <p class="db-panel__subtitle">Posto kërkesën ose ofertën tënde dhe komuniteti do të përgjigjet.</p>
-    </div>
-    <div class="db-create-form db-create-form--visible">
-      <form id="help-request-form" class="db-form">
-        <div class="db-form__row">
-          <div class="db-form__group db-form__group--wide">
-            <label>Titulli</label>
-            <input type="text" name="titulli" required placeholder="Titulli i kërkesës">
-          </div>
-          <div class="db-form__group">
-            <label>Tipi</label>
-            <select name="tipi" required>
-              <option value="Kërkesë">Kërkesë</option>
-              <option value="Ofertë">Ofertë</option>
-            </select>
-          </div>
-          <div class="db-form__group">
-            <label>Vendndodhja</label>
-            <input type="text" name="vendndodhja" placeholder="Vendndodhja (opsionale)">
-          </div>
-        </div>
-        <div class="db-form__group">
-          <label>Përshkrimi</label>
-          <textarea name="pershkrimi" rows="3" placeholder="Përshkruani kërkesën tuaj në detaje..."></textarea>
-        </div>
-        <div class="db-form__actions">
-          <button type="submit" class="db-btn db-btn--primary">Dërgo Kërkesën</button>
-        </div>
-      </form>
-    </div>
-  </div>
   <?php endif; ?>
 
 

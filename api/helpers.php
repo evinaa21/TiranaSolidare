@@ -16,16 +16,33 @@ if (session_status() === PHP_SESSION_NONE) {
 // Include DB connection
 require_once __DIR__ . '/../config/db.php';
 
+// Include shared utility functions (CSRF, validation, etc.)
+require_once __DIR__ . '/../includes/functions.php';
+
 // ── CORS & Content-Type Headers ────────────────────
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+
+// Restrict CORS to same-origin (localhost only)
+$allowedOrigins = ['http://localhost', 'http://127.0.0.1'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+}
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
 
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit();
+}
+
+// ── CSRF Enforcement for state-changing requests ───
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'], true)) {
+    if (!validate_csrf_token()) {
+        json_error('Sesioni ka skaduar. Rifreskoni faqen.', 403);
+    }
 }
 
 // ── JSON Response Helpers ──────────────────────────

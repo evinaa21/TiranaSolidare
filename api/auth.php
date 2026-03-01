@@ -50,10 +50,19 @@ switch ($action) {
             json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
         }
 
-        // Set session
+        // Rate limit: max 5 login attempts per 15 minutes
+        if (!check_rate_limit('login', 5, 900)) {
+            json_error('Shumë tentativa hyrjeje. Provoni përsëri pas disa minutash.', 429);
+        }
+
+        // Regenerate session ID to prevent fixation attacks
+        session_regenerate_id(true);
+
+        // Set session (including email)
         $_SESSION['user_id'] = $user['id_perdoruesi'];
         $_SESSION['emri']    = $user['emri'];
         $_SESSION['roli']    = $user['roli'];
+        $_SESSION['email']   = $user['email'];
 
         json_success([
             'id'    => (int) $user['id_perdoruesi'],
@@ -82,12 +91,26 @@ switch ($action) {
             json_error('Formati i email-it nuk është i vlefshëm.', 422);
         }
 
+        // Input length validation
+        if ($lenErr = validate_length($emri, 2, 100, 'emri')) {
+            json_error($lenErr, 422);
+        }
+
         if (strlen($password) < 6) {
             json_error('Fjalëkalimi duhet të jetë të paktën 6 karaktere.', 422);
         }
 
+        if (mb_strlen($password) > 128) {
+            json_error('Fjalëkalimi nuk mund të ketë më shumë se 128 karaktere.', 422);
+        }
+
         if ($password !== $confirm_password) {
             json_error('Fjalëkalimet nuk përputhen.', 422);
+        }
+
+        // Rate limit: max 3 registrations per 30 minutes
+        if (!check_rate_limit('register', 3, 1800)) {
+            json_error('Shumë tentativa regjistrimi. Provoni përsëri më vonë.', 429);
         }
 
         // Check uniqueness
@@ -98,7 +121,7 @@ switch ($action) {
             json_error('Ky email është i regjistruar tashmë.', 409);
         }
 
-        $hashed = password_hash($password, PASSWORD_BCRYPT);
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
 
         $stmt = $pdo->prepare(
             "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise)
@@ -159,7 +182,7 @@ switch ($action) {
             json_error('Fjalëkalimi aktual është i pasaktë.', 401);
         }
 
-        $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
         $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ? WHERE id_perdoruesi = ?');
         $update->execute([$newHash, $user['id']]);

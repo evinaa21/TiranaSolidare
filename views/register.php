@@ -1,16 +1,21 @@
 <?php
 
 session_start();
+require_once __DIR__ . '/../includes/functions.php';
 
 $errorKey   = $_GET['error']   ?? '';
 $successKey = $_GET['success'] ?? '';
+$redirect   = $_GET['redirect'] ?? '';
 
 $errorMessages = [
   'empty_fields'       => 'Ju lutem plotësoni të gjitha fushat.',
   'invalid_email'      => 'Formati i email-it nuk është i saktë.',
+  'invalid_name'       => 'Emri duhet të ketë të paktën 2 karaktere.',
   'password_mismatch'  => 'Fjalëkalimet nuk përputhen.',
   'password_too_short' => 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.',
   'email_taken'        => 'Ky email është regjistruar tashmë.',
+  'rate_limited'       => 'Shumë tentativa regjistrimi. Provoni përsëri më vonë.',
+  'csrf_expired'       => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
 ];
 
 $successMessages = [
@@ -60,6 +65,8 @@ $successMessages = [
       </div>
 
       <form class="auth-form" action="/TiranaSolidare/src/actions/register_action.php" method="POST">
+        <?= csrf_field() ?>
+        <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
         <div class="auth-field">
           <label for="emri">Emri i plotë</label>
           <input class="auth-input" type="text" id="emri" name="emri" placeholder="Emri Mbiemri" required>
@@ -77,7 +84,7 @@ $successMessages = [
           <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
         </div>
         <button type="submit" class="btn_primary auth-submit">Regjistrohu</button>
-        <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php">Hyni këtu</a></p>
+        <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Hyni këtu</a></p>
       </form>
 
       <div class="auth-sidecard">

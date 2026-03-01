@@ -85,20 +85,12 @@ CREATE TABLE `eventi` (
 INSERT INTO `eventi` (`id_eventi`, `id_perdoruesi`, `id_kategoria`, `titulli`, `pershkrimi`, `data`, `vendndodhja`, `banner`, `krijuar_me`) VALUES
 (1, 2, 1, 'Pastrimi i Liqenit Artificial', 'Aktivitet pastrimi rreth Liqenit Artificial të Tiranës. Sjellni doreza dhe vullnet të mirë! Materialet e tjera do të sigurohen nga organizata.', '2026-03-15 08:00:00', 'Liqeni Artificial, Tiranë', 'https://images.unsplash.com/photo-1618477462146-050d2767eac4?q=80&w=800', '2026-02-24 22:16:35'),
 (2, 2, 2, 'Shpërndarja e Ushqimit në Laprakë', 'Organizojmë shpërndarje ushqimi për familjet në nevojë në zonën e Laprakës. Kemi nevojë për vullnetarë që të ndihmojnë me paketimin dhe shpërndarjen.', '2026-03-10 09:00:00', 'Laprakë, Tiranë', 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800', '2026-02-24 22:16:35'),
-(3, 3, 3, 'Tutoriale Falas për Nxënësit', 'Ofrojmë tutoriale falas në matematikë dhe shkenca për nxënësit e klasave 6-9 që kanë nevojë për ndihmë shtesë.', '2026-03-20 14:00:00', 'Biblioteka Kombëtare, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:16:35'),
-(4, 5, 4, 'Kontroll Mjekësor Falas', 'Në bashkëpunim me Kryqin e Kuq organizojmë kontroll mjekësor falas për të moshuarit në Kombinat.', '2026-03-25 10:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1584515933487-779824d29309?q=80&w=800', '2026-02-24 22:16:35'),
-(5, 6, 2, 'Mbledhje Veshjesh për Dimrin', 'Mbledhim veshje dimri për fëmijët në nevojë. Mund të sillni xhaketa, çizme, doreza dhe shalle.', '2026-04-01 10:00:00', 'Qendra Sociale, Tiranë', 'https://images.unsplash.com/photo-1489710437720-ebb67ec84dd2?q=80&w=800', '2026-02-24 22:16:35'),
-(6, 7, 3, 'Workshop Kodimi për të Rinjtë', 'Mësoni bazat e programimit në Python. I hapur për të gjithë të rinjtë 15-25 vjeç. Laptopët sigurohen nga ne.', '2026-04-05 15:00:00', 'Innovation Hub, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:16:35'),
-(7, 4, 5, 'Ndihma pas Përmbytjes në Kombinat', 'Organizojmë ndihmë emergjente për banorët e prekur nga përmbytja. Kemi nevojë për vullnetarë për pastrim dhe shpërndarje materialesh.', '2026-04-10 08:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1547683905-f686c993aae5?q=80&w=800', '2026-02-24 22:16:35'),
-(8, 8, 1, 'Mbjellja e Pemëve në Parkun e Ri', 'Bashkohu me ne për të mbjellur 200 pemë në parkun e ri të lagjes. Mjetet sigurohen nga bashkia.', '2026-04-15 09:00:00', 'Parku i Ri, Tiranë', 'https://images.unsplash.com/photo-1542601906990-b4d3fb773b09?q=80&w=800', '2026-02-24 22:16:35'),
-(9, 2, 1, 'Pastrimi i Liqenit Artificial', 'Aktivitet pastrimi rreth Liqenit Artificial të Tiranës. Sjellni doreza dhe vullnet të mirë! Materialet e tjera do të sigurohen nga organizata.', '2026-03-15 08:00:00', 'Liqeni Artificial, Tiranë', 'https://images.unsplash.com/photo-1618477462146-050d2767eac4?q=80&w=800', '2026-02-24 22:15:18'),
-(10, 2, 2, 'Shpërndarja e Ushqimit në Laprakë', 'Organizojmë shpërndarje ushqimi për familjet në nevojë në zonën e Laprakës. Kemi nevojë për vullnetarë që të ndihmojnë me paketimin dhe shpërndarjen.', '2026-03-10 09:00:00', 'Laprakë, Tiranë', 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800', '2026-02-24 22:15:18'),
-(11, 3, 3, 'Tutoriale Falas për Nxënësit', 'Ofrojmë tutoriale falas në matematikë dhe shkenca për nxënësit e klasave 6-9 që kanë nevojë për ndihmë shtesë.', '2026-03-20 14:00:00', 'Biblioteka Kombëtare, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:15:18'),
-(12, 5, 4, 'Kontroll Mjekësor Falas', 'Në bashkëpunim me Kryqin e Kuq organizojmë kontroll mjekësor falas për të moshuarit në Kombinat.', '2026-03-25 10:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1584515933487-779824d29309?q=80&w=800', '2026-02-24 22:15:18'),
-(13, 6, 2, 'Mbledhje Veshjesh për Dimrin', 'Mbledhim veshje dimri për fëmijët në nevojë. Mund të sillni xhaketa, çizme, doreza dhe shalle.', '2026-04-01 10:00:00', 'Qendra Sociale, Tiranë', 'https://images.unsplash.com/photo-1489710437720-ebb67ec84dd2?q=80&w=800', '2026-02-24 22:15:18'),
-(14, 7, 3, 'Workshop Kodimi për të Rinjtë', 'Mësoni bazat e programimit në Python. I hapur për të gjithë të rinjtë 15-25 vjeç. Laptopët sigurohen nga ne.', '2026-04-05 15:00:00', 'Innovation Hub, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:15:18'),
-(15, 4, 5, 'Ndihma pas Përmbytjes në Kombinat', 'Organizojmë ndihmë emergjente për banorët e prekur nga përmbytja. Kemi nevojë për vullnetarë për pastrim dhe shpërndarje materialesh.', '2026-04-10 08:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1547683905-f686c993aae5?q=80&w=800', '2026-02-24 22:15:18'),
-(16, 8, 1, 'Mbjellja e Pemëve në Parkun e Ri', 'Bashkohu me ne për të mbjellur 200 pemë në parkun e ri të lagjes. Mjetet sigurohen nga bashkia.', '2026-04-15 09:00:00', 'Parku i Ri, Tiranë', 'https://images.unsplash.com/photo-1542601906990-b4d3fb773b09?q=80&w=800', '2026-02-24 22:15:18');
+(3, 2, 3, 'Tutoriale Falas për Nxënësit', 'Ofrojmë tutoriale falas në matematikë dhe shkenca për nxënësit e klasave 6-9 që kanë nevojë për ndihmë shtesë.', '2026-03-20 14:00:00', 'Biblioteka Kombëtare, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:16:35'),
+(4, 2, 4, 'Kontroll Mjekësor Falas', 'Në bashkëpunim me Kryqin e Kuq organizojmë kontroll mjekësor falas për të moshuarit në Kombinat.', '2026-03-25 10:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1584515933487-779824d29309?q=80&w=800', '2026-02-24 22:16:35'),
+(5, 2, 2, 'Mbledhje Veshjesh për Dimrin', 'Mbledhim veshje dimri për fëmijët në nevojë. Mund të sillni xhaketa, çizme, doreza dhe shalle.', '2026-04-01 10:00:00', 'Qendra Sociale, Tiranë', 'https://images.unsplash.com/photo-1489710437720-ebb67ec84dd2?q=80&w=800', '2026-02-24 22:16:35'),
+(6, 2, 3, 'Workshop Kodimi për të Rinjtë', 'Mësoni bazat e programimit në Python. I hapur për të gjithë të rinjtë 15-25 vjeç. Laptopët sigurohen nga ne.', '2026-04-05 15:00:00', 'Innovation Hub, Tiranë', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800', '2026-02-24 22:16:35'),
+(7, 2, 5, 'Ndihma pas Përmbytjes në Kombinat', 'Organizojmë ndihmë emergjente për banorët e prekur nga përmbytja. Kemi nevojë për vullnetarë për pastrim dhe shpërndarje materialesh.', '2026-04-10 08:00:00', 'Kombinat, Tiranë', 'https://images.unsplash.com/photo-1547683905-f686c993aae5?q=80&w=800', '2026-02-24 22:16:35'),
+(8, 2, 1, 'Mbjellja e Pemëve në Parkun e Ri', 'Bashkohu me ne për të mbjellur 200 pemë në parkun e ri të lagjes. Mjetet sigurohen nga bashkia.', '2026-04-15 09:00:00', 'Parku i Ri, Tiranë', 'https://images.unsplash.com/photo-1542601906990-b4d3fb773b09?q=80&w=800', '2026-02-24 22:16:35');
 
 -- --------------------------------------------------------
 
@@ -134,7 +126,7 @@ CREATE TABLE `kerkesa_per_ndihme` (
   `tipi` enum('Kërkesë','Ofertë') DEFAULT NULL,
   `titulli` varchar(150) DEFAULT NULL,
   `pershkrimi` text DEFAULT NULL,
-  `statusi` varchar(50) DEFAULT NULL COMMENT 'Open/Closed',
+  `statusi` enum('Open','Closed') DEFAULT 'Open' COMMENT 'Open/Closed',
   `imazhi` varchar(500) DEFAULT NULL,
   `vendndodhja` varchar(255) DEFAULT NULL,
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
@@ -144,17 +136,17 @@ CREATE TABLE `kerkesa_per_ndihme` (
 -- Dumping data for table `kerkesa_per_ndihme`
 --
 
-INSERT INTO `kerkesa_per_ndihme` (`id_kerkese_ndihme`, `id_perdoruesi`, `tipi`, `titulli`, `pershkrimi`, `statusi`, `imazhi`, `krijuar_me`) VALUES
-(1, 4, 'Kërkesë', 'Ndihmë me ushqim për familje me 4 anëtarë', 'Jemi familje me 4 anëtarë dhe po kalojmë një periudhë të vështirë financiare. Do na ndihmonte shumë çdo lloj ndihme me ushqime bazë.', 'Open', 'https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=800', '2026-02-24 22:16:35'),
-(2, 5, 'Kërkesë', 'Kërkoj veshje dimri për 2 fëmijë', 'Kam 2 fëmijë, 6 dhe 9 vjeç, që kanë nevojë për xhaketa, çizme dhe veshje të ngrohta për dimrin.', 'Open', 'https://images.unsplash.com/photo-1532622785990-d2c36a76f5a6?q=80&w=800', '2026-02-24 22:16:35'),
-(3, 3, 'Ofertë', 'Ofroj tutoriale falas në anglisht', 'Jam studente e gjuhës angleze dhe dua të ofroj tutoriale falas për fëmijët e klasave fillore.', 'Open', 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800', '2026-02-24 22:16:35'),
-(4, 6, 'Kërkesë', 'Ndihmë me riparim shtëpie pas përmbytjes', 'Banesat tona u dëmtuan nga përmbytja e fundit. Kemi nevojë për ndihmë me pastrim dhe riparime të vogla.', 'Open', 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=800', '2026-02-24 22:16:35'),
-(5, 7, 'Ofertë', 'Ofroj transport falas për vizita mjekësore', 'Kam makinë dhe jam i disponueshëm të ofroj transport falas për të moshuarit që kanë vizita mjekësore.', 'Open', 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=800', '2026-02-24 22:16:35'),
-(6, 8, 'Kërkesë', 'Kërkoj laptop për studime universitare', 'Jam student i vitit të parë dhe nuk kam laptop për të ndjekur leksionet online dhe detyrat.', 'Open', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800', '2026-02-24 22:16:35'),
-(7, 4, 'Ofertë', 'Ofroj kurse bazë kompjuteri', 'Dua të ofroj kurse bazë kompjuteri për të moshuarit që duan të mësojnë si të përdorin teknologjinë.', 'Open', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800', '2026-02-24 22:16:35'),
-(8, 9, 'Kërkesë', 'Ndihmë me furnizime shkollore', 'Kam 3 fëmijë në shkollë fillore dhe kam nevojë për furnizime shkollore: fleta, lapsa, çanta.', 'Open', 'https://images.unsplash.com/photo-1532622785990-d2c36a76f5a6?q=80&w=800', '2026-02-24 22:16:35'),
-(9, 5, 'Kërkesë', 'Kërkoj ndihmë me qira', 'Po rrezikojmë të humbasim shtëpinë. Çdo ndihmë financiare do ishte e çmuar.', 'Closed', 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800', '2026-02-24 22:16:35'),
-(10, 6, 'Ofertë', 'Ofroj mobilje për familje në nevojë', 'Kam disa mobilje në gjendje të mirë që nuk i përdor më. Tavolinë, karrige dhe një divan.', 'Open', 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=800', '2026-02-24 22:16:35');
+INSERT INTO `kerkesa_per_ndihme` (`id_kerkese_ndihme`, `id_perdoruesi`, `tipi`, `titulli`, `pershkrimi`, `statusi`, `imazhi`, `vendndodhja`, `krijuar_me`) VALUES
+(1, 4, 'Kërkesë', 'Ndihmë me ushqim për familje me 4 anëtarë', 'Jemi familje me 4 anëtarë dhe po kalojmë një periudhë të vështirë financiare. Do na ndihmonte shumë çdo lloj ndihme me ushqime bazë.', 'Open', 'https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(2, 5, 'Kërkesë', 'Kërkoj veshje dimri për 2 fëmijë', 'Kam 2 fëmijë, 6 dhe 9 vjeç, që kanë nevojë për xhaketa, çizme dhe veshje të ngrohta për dimrin.', 'Open', 'https://images.unsplash.com/photo-1532622785990-d2c36a76f5a6?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(3, 3, 'Ofertë', 'Ofroj tutoriale falas në anglisht', 'Jam studente e gjuhës angleze dhe dua të ofroj tutoriale falas për fëmijët e klasave fillore.', 'Open', 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(4, 6, 'Kërkesë', 'Ndihmë me riparim shtëpie pas përmbytjes', 'Banesat tona u dëmtuan nga përmbytja e fundit. Kemi nevojë për ndihmë me pastrim dhe riparime të vogla.', 'Open', 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=800', 'Kombinat, Tiranë', '2026-02-24 22:16:35'),
+(5, 7, 'Ofertë', 'Ofroj transport falas për vizita mjekësore', 'Kam makinë dhe jam i disponueshëm të ofroj transport falas për të moshuarit që kanë vizita mjekësore.', 'Open', 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(6, 8, 'Kërkesë', 'Kërkoj laptop për studime universitare', 'Jam student i vitit të parë dhe nuk kam laptop për të ndjekur leksionet online dhe detyrat.', 'Open', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(7, 4, 'Ofertë', 'Ofroj kurse bazë kompjuteri', 'Dua të ofroj kurse bazë kompjuteri për të moshuarit që duan të mësojnë si të përdorin teknologjinë.', 'Open', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(8, 9, 'Kërkesë', 'Ndihmë me furnizime shkollore', 'Kam 3 fëmijë në shkollë fillore dhe kam nevojë për furnizime shkollore: fleta, lapsa, çanta.', 'Open', 'https://images.unsplash.com/photo-1532622785990-d2c36a76f5a6?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35'),
+(9, 5, 'Kërkesë', 'Kërkoj ndihmë me qira', 'Po rrezikojmë të humbasim shtëpinë. Çdo ndihmë financiare do ishte e çmuar.', 'Closed', 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800', 'Laprakë, Tiranë', '2026-02-24 22:16:35'),
+(10, 6, 'Ofertë', 'Ofroj mobilje për familje në nevojë', 'Kam disa mobilje në gjendje të mirë që nuk i përdor më. Tavolinë, karrige dhe një divan.', 'Open', 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=800', 'Tiranë', '2026-02-24 22:16:35');
 
 -- --------------------------------------------------------
 
@@ -250,8 +242,10 @@ INSERT INTO `raporti` (`id_raporti`, `id_perdoruesi`, `tipi_raportit`, `permbajt
 --
 ALTER TABLE `aplikimi`
   ADD PRIMARY KEY (`id_aplikimi`),
+  ADD UNIQUE KEY `uq_user_event` (`id_perdoruesi`, `id_eventi`),
   ADD KEY `id_perdoruesi` (`id_perdoruesi`),
-  ADD KEY `id_eventi` (`id_eventi`);
+  ADD KEY `id_eventi` (`id_eventi`),
+  ADD KEY `idx_statusi` (`statusi`);
 
 --
 -- Indexes for table `eventi`
@@ -259,7 +253,8 @@ ALTER TABLE `aplikimi`
 ALTER TABLE `eventi`
   ADD PRIMARY KEY (`id_eventi`),
   ADD KEY `id_perdoruesi` (`id_perdoruesi`),
-  ADD KEY `id_kategoria` (`id_kategoria`);
+  ADD KEY `id_kategoria` (`id_kategoria`),
+  ADD KEY `idx_data` (`data`);
 
 --
 -- Indexes for table `kategoria`
@@ -273,14 +268,16 @@ ALTER TABLE `kategoria`
 --
 ALTER TABLE `kerkesa_per_ndihme`
   ADD PRIMARY KEY (`id_kerkese_ndihme`),
-  ADD KEY `id_perdoruesi` (`id_perdoruesi`);
+  ADD KEY `id_perdoruesi` (`id_perdoruesi`),
+  ADD KEY `idx_statusi` (`statusi`);
 
 --
 -- Indexes for table `njoftimi`
 --
 ALTER TABLE `njoftimi`
   ADD PRIMARY KEY (`id_njoftimi`),
-  ADD KEY `id_perdoruesi` (`id_perdoruesi`);
+  ADD KEY `id_perdoruesi` (`id_perdoruesi`),
+  ADD KEY `idx_is_read` (`is_read`);
 
 --
 -- Indexes for table `perdoruesi`
@@ -310,7 +307,7 @@ ALTER TABLE `aplikimi`
 -- AUTO_INCREMENT for table `eventi`
 --
 ALTER TABLE `eventi`
-  MODIFY `id_eventi` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id_eventi` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `kategoria`
@@ -350,33 +347,33 @@ ALTER TABLE `raporti`
 -- Constraints for table `aplikimi`
 --
 ALTER TABLE `aplikimi`
-  ADD CONSTRAINT `aplikimi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`),
-  ADD CONSTRAINT `aplikimi_ibfk_2` FOREIGN KEY (`id_eventi`) REFERENCES `eventi` (`id_eventi`);
+  ADD CONSTRAINT `aplikimi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE,
+  ADD CONSTRAINT `aplikimi_ibfk_2` FOREIGN KEY (`id_eventi`) REFERENCES `eventi` (`id_eventi`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `eventi`
 --
 ALTER TABLE `eventi`
-  ADD CONSTRAINT `eventi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`),
-  ADD CONSTRAINT `eventi_ibfk_2` FOREIGN KEY (`id_kategoria`) REFERENCES `kategoria` (`id_kategoria`);
+  ADD CONSTRAINT `eventi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE SET NULL,
+  ADD CONSTRAINT `eventi_ibfk_2` FOREIGN KEY (`id_kategoria`) REFERENCES `kategoria` (`id_kategoria`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `kerkesa_per_ndihme`
 --
 ALTER TABLE `kerkesa_per_ndihme`
-  ADD CONSTRAINT `kerkesa_per_ndihme_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`);
+  ADD CONSTRAINT `kerkesa_per_ndihme_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `njoftimi`
 --
 ALTER TABLE `njoftimi`
-  ADD CONSTRAINT `njoftimi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`);
+  ADD CONSTRAINT `njoftimi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `raporti`
 --
 ALTER TABLE `raporti`
-  ADD CONSTRAINT `raporti_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`);
+  ADD CONSTRAINT `raporti_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

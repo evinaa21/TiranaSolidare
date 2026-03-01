@@ -42,6 +42,7 @@ switch ($action) {
             'total'         => $total,
             'page'          => $pagination['page'],
             'limit'         => $pagination['limit'],
+            'total_pages'   => (int) ceil($total / $pagination['limit']),
         ]);
         break;
 

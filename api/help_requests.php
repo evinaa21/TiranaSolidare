@@ -27,6 +27,7 @@ switch ($action) {
         $tipi    = $_GET['tipi'] ?? null;     // Kërkesë | Ofertë
         $statusi = $_GET['statusi'] ?? null;   // Open | Closed
         $userId  = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
+        $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
 
         $where  = [];
         $params = [];
@@ -42,6 +43,11 @@ switch ($action) {
         if ($userId) {
             $where[]  = 'kn.id_perdoruesi = ?';
             $params[] = $userId;
+        }
+        if ($search !== '') {
+            $where[]  = '(kn.titulli LIKE ? OR kn.pershkrimi LIKE ?)';
+            $params[] = "%$search%";
+            $params[] = "%$search%";
         }
 
         $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -117,6 +123,16 @@ switch ($action) {
 
         if (!empty($errors)) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        // Validate image URL if provided (H-11)
+        if ($imazhi && !validate_image_url($imazhi)) {
+            json_error('URL-ja e imazhit nuk është e vlefshme.', 422);
+        }
+
+        // Validate input lengths
+        if ($lenErr = validate_length($titulli, 3, 200, 'titulli')) {
+            json_error($lenErr, 422);
         }
 
         $stmt = $pdo->prepare(
@@ -202,7 +218,48 @@ switch ($action) {
         $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'Closed' WHERE id_kerkese_ndihme = ?")
             ->execute([$id]);
 
+        // Notify the owner if closed by admin (A-02)
+        if ($existing['id_perdoruesi'] != $user['id']) {
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([
+                $existing['id_perdoruesi'],
+                "Kërkesa juaj \"{$existing['titulli']}\" u mbyll nga një administrator."
+            ]);
+        }
+
         json_success(['message' => 'Kërkesa u mbyll.']);
+        break;
+
+    // ── REOPEN REQUEST (A-03) ─────────────────────
+    case 'reopen':
+        require_method('PUT');
+        $user = require_auth();
+        $id   = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+        }
+
+        $check = $pdo->prepare('SELECT * FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+        $check->execute([$id]);
+        $existing = $check->fetch();
+
+        if (!$existing) {
+            json_error('Kërkesa nuk u gjet.', 404);
+        }
+
+        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+            json_error('Nuk keni leje.', 403);
+        }
+
+        if ($existing['statusi'] !== 'Closed') {
+            json_error('Kërkesa është tashmë e hapur.', 400);
+        }
+
+        $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'Open' WHERE id_kerkese_ndihme = ?")
+            ->execute([$id]);
+
+        json_success(['message' => 'Kërkesa u rihap.']);
         break;
 
     // ── DELETE REQUEST ─────────────────────────────
@@ -226,5 +283,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, delete.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete.', 400);
 }

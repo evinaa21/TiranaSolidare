@@ -31,33 +31,33 @@ switch ($action) {
              FROM Perdoruesi"
         )->fetch();
 
-        // Event counts
+        // Event counts (A-04: COALESCE to prevent NULL)
         $eventStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_evente,
-                SUM(CASE WHEN data >= NOW() THEN 1 ELSE 0 END) AS evente_te_ardhshme,
-                SUM(CASE WHEN data < NOW() THEN 1 ELSE 0 END) AS evente_te_kaluara
+                COALESCE(SUM(CASE WHEN data >= NOW() THEN 1 ELSE 0 END), 0) AS evente_te_ardhshme,
+                COALESCE(SUM(CASE WHEN data < NOW() THEN 1 ELSE 0 END), 0) AS evente_te_kaluara
              FROM Eventi"
         )->fetch();
 
-        // Application counts
+        // Application counts (A-04: COALESCE)
         $appStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_aplikime,
-                SUM(CASE WHEN statusi = 'Në pritje' THEN 1 ELSE 0 END) AS ne_pritje,
-                SUM(CASE WHEN statusi = 'Pranuar' THEN 1 ELSE 0 END) AS pranuar,
-                SUM(CASE WHEN statusi = 'Refuzuar' THEN 1 ELSE 0 END) AS refuzuar
+                COALESCE(SUM(CASE WHEN statusi = 'Në pritje' THEN 1 ELSE 0 END), 0) AS ne_pritje,
+                COALESCE(SUM(CASE WHEN statusi = 'Pranuar' THEN 1 ELSE 0 END), 0) AS pranuar,
+                COALESCE(SUM(CASE WHEN statusi = 'Refuzuar' THEN 1 ELSE 0 END), 0) AS refuzuar
              FROM Aplikimi"
         )->fetch();
 
-        // Help request counts
+        // Help request counts (A-04: COALESCE)
         $helpStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                SUM(CASE WHEN statusi = 'Open' THEN 1 ELSE 0 END) AS te_hapura,
-                SUM(CASE WHEN statusi = 'Closed' THEN 1 ELSE 0 END) AS te_mbyllura,
-                SUM(CASE WHEN tipi = 'Kërkesë' THEN 1 ELSE 0 END) AS kerkesa,
-                SUM(CASE WHEN tipi = 'Ofertë' THEN 1 ELSE 0 END) AS oferta
+                COALESCE(SUM(CASE WHEN statusi = 'Open' THEN 1 ELSE 0 END), 0) AS te_hapura,
+                COALESCE(SUM(CASE WHEN statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS te_mbyllura,
+                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' THEN 1 ELSE 0 END), 0) AS kerkesa,
+                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' THEN 1 ELSE 0 END), 0) AS oferta
              FROM Kerkesa_per_Ndihme"
         )->fetch();
 

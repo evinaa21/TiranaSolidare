@@ -111,6 +111,8 @@ async function withdrawApplication(id) {
     try {
         const res = await fetch(`${API_BASE}/applications.php?action=withdraw&id=${id}`, {
             method: 'DELETE',
+            headers: { 'X-CSRF-Token': getCsrfToken() },
+            credentials: 'same-origin',
         });
         const json = await res.json();
 
@@ -195,7 +197,8 @@ async function applyForEvent(eventId) {
     try {
         const res = await fetch(`${API_BASE}/applications.php?action=apply`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+            credentials: 'same-origin',
             body: JSON.stringify({ id_eventi: eventId }),
         });
         const json = await res.json();
@@ -211,43 +214,9 @@ async function applyForEvent(eventId) {
 }
 
 // ── Shared Utility Functions ────────────────────────
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('sq-AL', {
-        year: 'numeric', month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-    });
-}
-
-function renderPagination(current, totalPages, callbackName) {
-    let html = '<nav><ul class="pagination justify-content-center mt-3">';
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${i === current ? 'active' : ''}">
-            <a class="page-link" href="#" onclick="${callbackName}(${i}); return false;">${i}</a>
-        </li>`;
-    }
-    html += '</ul></nav>';
-    return html;
-}
-
-function showToast(message, type = 'info') {
-    // Simple toast using a floating div
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow`;
-    toast.style.zIndex = '9999';
-    toast.style.minWidth = '280px';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-}
+// Note: escapeHtml, formatDate, renderPagination, and showToast
+// are provided by main.js which loads before this file.
+// No duplicates needed here.
 
 // ── Auto-Init on DOM Ready ──────────────────────────
 

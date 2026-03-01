@@ -1,6 +1,7 @@
 <?php
 
 session_start();
+require_once __DIR__ . '/../includes/functions.php';
 
 $errorKey   = $_GET['error']   ?? '';
 $successKey = $_GET['success'] ?? '';
@@ -11,6 +12,8 @@ $errorMessages = [
   'wrong_credentials'   => 'Email ose fjalëkalim i pasaktë.',
   'account_blocked'     => 'Llogaria juaj është bllokuar. Kontaktoni administratorin.',
   'account_deactivated' => 'Llogaria juaj është çaktivizuar. Kontaktoni administratorin.',
+  'rate_limited'        => 'Shumë tentativa. Provoni përsëri pas disa minutash.',
+  'csrf_expired'        => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
 ];
 
 $successMessages = [
@@ -60,6 +63,7 @@ $successMessages = [
       </div>
 
       <form class="auth-form" action="/TiranaSolidare/src/actions/login_action.php" method="POST">
+        <?= csrf_field() ?>
         <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
         <div class="auth-field">
           <label for="email">Email</label>

@@ -37,6 +37,6 @@
     </div>
   </div>
   <div class="footer-copy">
-    <span>Copyright © 2026 Tirana Solidare. Të drejtat e rezervuara</span>
+    <span>Copyright © <?= date('Y') ?> Tirana Solidare. Të drejtat e rezervuara</span>
   </div>
 </footer>

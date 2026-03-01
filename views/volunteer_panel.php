@@ -2,6 +2,7 @@
 // views/volunteer_panel.php — Volunteer Personal Panel (public-style layout)
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /TiranaSolidare/views/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
@@ -35,16 +36,6 @@ $stmtApps = $pdo->prepare(
      FROM Aplikimi a
      JOIN Eventi e ON e.id_eventi = a.id_eventi
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     ORDER BY a.aplikuar_me DESC"
-);
-$stmtApps->execute();
-// filter to this user
-$stmtApps = $pdo->prepare(
-    "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data, e.vendndodhja AS eventi_vendndodhja,
-            k.emri AS kategoria_emri
-     FROM Aplikimi a
-     JOIN Eventi e ON e.id_eventi = a.id_eventi
-     LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
      WHERE a.id_perdoruesi = ?
      ORDER BY a.aplikuar_me DESC"
 );
@@ -64,21 +55,6 @@ $acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Pranua
 $pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Në pritje'));
 $totalRequests = count($myRequests);
 $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Open'));
-
-// Time-ago helper
-if (!function_exists('koheParapake')) {
-    function koheParapake(string $datetime): string {
-        $now  = new DateTime();
-        $then = new DateTime($datetime);
-        $diff = $now->diff($then);
-        if ($diff->y > 0) return $diff->y . ' vit më parë';
-        if ($diff->m > 0) return $diff->m . ' muaj më parë';
-        if ($diff->d > 0) return $diff->d . ' ditë më parë';
-        if ($diff->h > 0) return $diff->h . ' orë më parë';
-        if ($diff->i > 0) return $diff->i . ' min më parë';
-        return 'tani';
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -420,6 +396,7 @@ if (!function_exists('koheParapake')) {
 <!-- Volunteer Panel JavaScript -->
 <script>
 const API = '/TiranaSolidare/api';
+const csrfToken = '<?= csrf_token() ?>';
 
 function vpStatus(elId, type, message) {
   const el = document.getElementById(elId);
@@ -440,7 +417,7 @@ if (nameForm) {
     try {
       const res = await fetch(API + '/users.php?action=update_profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         credentials: 'same-origin',
         body: JSON.stringify({ emri }),
       });
@@ -467,7 +444,7 @@ if (pwForm) {
     try {
       const res = await fetch(API + '/auth.php?action=change_password', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         credentials: 'same-origin',
         body: JSON.stringify({ current_password, new_password, confirm_password }),
       });
@@ -489,7 +466,7 @@ if (reqForm) {
     try {
       const res = await fetch(API + '/help_requests.php?action=create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         credentials: 'same-origin',
         body: JSON.stringify(body),
       });
@@ -505,7 +482,7 @@ if (reqForm) {
 async function withdrawApp(id) {
   if (!confirm('Jeni i sigurt që doni të tërhiqni këtë aplikim?')) return;
   try {
-    const res = await fetch(API + '/applications.php?action=withdraw&id=' + id, { method: 'DELETE' });
+    const res = await fetch(API + '/applications.php?action=withdraw&id=' + id, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken }, credentials: 'same-origin' });
     const json = await res.json();
     if (json.success) { location.reload(); }
     else { alert(json.message || 'Gabim.'); }
@@ -546,20 +523,20 @@ async function loadVPNotifications() {
 }
 
 async function markNotifRead(id) {
-  await fetch(API + '/notifications.php?action=mark_read&id=' + id, { method: 'PUT' });
+  await fetch(API + '/notifications.php?action=mark_read&id=' + id, { method: 'PUT', headers: { 'X-CSRF-Token': csrfToken }, credentials: 'same-origin' });
   loadVPNotifications();
   updateNotifBadge();
 }
 
 async function deleteNotif(id) {
-  await fetch(API + '/notifications.php?action=delete&id=' + id, { method: 'DELETE' });
+  await fetch(API + '/notifications.php?action=delete&id=' + id, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken }, credentials: 'same-origin' });
   loadVPNotifications();
 }
 
 const markAllBtn = document.getElementById('vp-mark-all-read');
 if (markAllBtn) {
   markAllBtn.addEventListener('click', async () => {
-    await fetch(API + '/notifications.php?action=mark_all_read', { method: 'PUT' });
+    await fetch(API + '/notifications.php?action=mark_all_read', { method: 'PUT', headers: { 'X-CSRF-Token': csrfToken }, credentials: 'same-origin' });
     loadVPNotifications();
     updateNotifBadge();
   });

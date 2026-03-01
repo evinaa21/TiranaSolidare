@@ -151,12 +151,21 @@ switch ($action) {
             json_error('Nuk mund të bllokoni veten.', 400);
         }
 
-        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Bllokuar' WHERE id_perdoruesi = ?");
-        $stmt->execute([$id]);
+        // Prevent blocking other admins (H-09)
+        $targetCheck = $pdo->prepare('SELECT roli FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $targetCheck->execute([$id]);
+        $targetUser = $targetCheck->fetch();
 
-        if ($stmt->rowCount() === 0) {
+        if (!$targetUser) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
+
+        if ($targetUser['roli'] === 'Admin') {
+            json_error('Nuk mund të bllokoni një administrator tjetër.', 403);
+        }
+
+        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Bllokuar' WHERE id_perdoruesi = ?");
+        $stmt->execute([$id]);
 
         json_success(['message' => 'Përdoruesi u bllokua.']);
         break;
@@ -171,12 +180,15 @@ switch ($action) {
             json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
         }
 
-        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Aktiv' WHERE id_perdoruesi = ?");
-        $stmt->execute([$id]);
-
-        if ($stmt->rowCount() === 0) {
+        // Fix D-05: Use fetch() instead of rowCount() for unblock
+        $checkUser = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $checkUser->execute([$id]);
+        if (!$checkUser->fetch()) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
+
+        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Aktiv' WHERE id_perdoruesi = ?");
+        $stmt->execute([$id]);
 
         json_success(['message' => 'Përdoruesi u zhbllokua.']);
         break;
@@ -201,12 +213,15 @@ switch ($action) {
             json_error("Roli duhet të jetë 'Admin' ose 'Vullnetar'.", 422);
         }
 
-        $stmt = $pdo->prepare('UPDATE Perdoruesi SET roli = ? WHERE id_perdoruesi = ?');
-        $stmt->execute([$newRole, $id]);
-
-        if ($stmt->rowCount() === 0) {
+        // Fix D-05: Use fetch() for role change
+        $checkUser = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $checkUser->execute([$id]);
+        if (!$checkUser->fetch()) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
+
+        $stmt = $pdo->prepare('UPDATE Perdoruesi SET roli = ? WHERE id_perdoruesi = ?');
+        $stmt->execute([$newRole, $id]);
 
         json_success(['message' => "Roli u ndryshua në '$newRole'."]);
         break;
@@ -226,14 +241,17 @@ switch ($action) {
         }
 
         // Check user exists and is not already deactivated
-        $check = $pdo->prepare('SELECT statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $check = $pdo->prepare('SELECT statusi_llogarise, roli FROM Perdoruesi WHERE id_perdoruesi = ?');
         $check->execute([$id]);
-        $current = $check->fetchColumn();
+        $target = $check->fetch();
 
-        if ($current === false) {
+        if (!$target) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
-        if ($current === 'Çaktivizuar') {
+        if ($target['roli'] === 'Admin') {
+            json_error('Nuk mund të çaktivizoni një administrator tjetër.', 403);
+        }
+        if ($target['statusi_llogarise'] === 'Çaktivizuar') {
             json_error('Llogaria është tashmë e çaktivizuar.', 400);
         }
 

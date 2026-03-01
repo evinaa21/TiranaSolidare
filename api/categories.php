@@ -79,12 +79,22 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
+        // Fix L-08: Check existence first, don't rely on rowCount()
+        $checkExists = $pdo->prepare('SELECT id_kategoria FROM Kategoria WHERE id_kategoria = ?');
+        $checkExists->execute([$id]);
+        if (!$checkExists->fetch()) {
+            json_error('Kategoria nuk u gjet.', 404);
+        }
+
+        // Check for duplicate name
+        $checkDup = $pdo->prepare('SELECT id_kategoria FROM Kategoria WHERE emri = ? AND id_kategoria != ?');
+        $checkDup->execute([$emri, $id]);
+        if ($checkDup->fetch()) {
+            json_error('Kjo kategori ekziston tashmë.', 409);
+        }
+
         $stmt = $pdo->prepare('UPDATE Kategoria SET emri = ? WHERE id_kategoria = ?');
         $stmt->execute([$emri, $id]);
-
-        if ($stmt->rowCount() === 0) {
-            json_error('Kategoria nuk u gjet ose emri është i njëjtë.', 404);
-        }
 
         json_success(['message' => 'Kategoria u përditësua.']);
         break;

@@ -1,6 +1,7 @@
 <?php
 // ── Connect to DB and fetch data for landing page ──
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 // Fetch latest 8 help requests (Open only)
 $stmtReq = $pdo->prepare(
@@ -14,12 +15,12 @@ $stmtReq = $pdo->prepare(
 $stmtReq->execute();
 $kerkesat = $stmtReq->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch latest 8 events (upcoming first)
+// Fetch latest 8 events (upcoming first, then recent past)
 $stmtEv = $pdo->prepare(
     "SELECT e.*, k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     ORDER BY e.data DESC
+     ORDER BY CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END, e.data ASC
      LIMIT 8"
 );
 $stmtEv->execute();
@@ -29,24 +30,9 @@ $eventet = $stmtEv->fetchAll(PDO::FETCH_ASSOC);
 $totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
 $totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi")->fetchColumn();
 $totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
-
-// Helper: time-ago in Albanian
-if (!function_exists('koheParapake')) {
-    function koheParapake(string $datetime): string {
-        $now  = new DateTime();
-        $then = new DateTime($datetime);
-        $diff = $now->diff($then);
-        if ($diff->y > 0)  return $diff->y . ' vit më parë';
-        if ($diff->m > 0)  return $diff->m . ' muaj më parë';
-        if ($diff->d > 0)  return $diff->d . ' ditë më parë';
-        if ($diff->h > 0)  return $diff->h . ' orë më parë';
-        if ($diff->i > 0)  return $diff->i . ' min më parë';
-        return 'tani';
-    }
-}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sq">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
