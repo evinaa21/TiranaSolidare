@@ -6,6 +6,8 @@ if (session_status() === PHP_SESSION_NONE) {
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
 ?>
+<link rel="manifest" href="/TiranaSolidare/public/manifest.json">
+<meta name="theme-color" content="#00715D">
 <header id="header" class="header">
   <a href="/TiranaSolidare/public/" class="header-logo">
     <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare">
@@ -45,5 +47,11 @@ $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
     </button>
   </div>
 </header>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/TiranaSolidare/public/sw.js');
+}
+</script>
 
 ```

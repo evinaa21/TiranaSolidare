@@ -36,6 +36,8 @@ $totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00715D">
+  <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
   <link rel="stylesheet" href="assets/styles/main.css">
   <link rel="stylesheet" href="assets/styles/index.css">

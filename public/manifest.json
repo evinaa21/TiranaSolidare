@@ -1,0 +1,21 @@
+{
+  "id": "/TiranaSolidare/public/",
+  "name": "Tirana Solidare",
+  "short_name": "TiranaSol",
+  "start_url": "/TiranaSolidare/public/",
+  "display": "standalone",
+  "theme_color": "#00715D",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/TiranaSolidare/public/assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/TiranaSolidare/public/assets/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
