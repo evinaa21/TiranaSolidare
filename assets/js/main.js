@@ -385,7 +385,36 @@ function initHelpRequestForm() {
         }
     });
 }
+window.escapeHtml = function(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+};
 
+window.formatDate = function(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('sq-AL', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+window.renderPagination = function(current, totalPages, callbackName) {
+    if (typeof dbPagination === 'function') {
+        return dbPagination(current, totalPages, callbackName);
+    }
+    return '';
+};
+
+window.showToast = function(message, type = 'info') {
+    if (typeof dbToast === 'function') {
+        dbToast(message, type);
+    }
+};
 // ── DOM Ready ───────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {

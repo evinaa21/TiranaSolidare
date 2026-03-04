@@ -745,10 +745,6 @@ window.renderApplicationList = function (data) {
 //  OVERRIDE: Toast (styled)
 // ═══════════════════════════════════════════════════════
 
-window.showToast = function (message, type = 'info') {
-    dbToast(message, type);
-};
-
 function dbToast(message, type = 'info') {
     const container = document.getElementById('db-toast-container');
     if (!container) return;
@@ -802,8 +798,7 @@ function dbPagination(current, totalPages, callbackName) {
     }
     html += '</div>';
     return html;
-}
-
+};
 
 // ═══════════════════════════════════════════════════════
 //  INIT
