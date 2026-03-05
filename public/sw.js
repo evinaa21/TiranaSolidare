@@ -13,6 +13,12 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // HTML faqet - gjithmonë nga rrjeti
+  if (event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  // Assets (CSS, JS) - nga cache
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

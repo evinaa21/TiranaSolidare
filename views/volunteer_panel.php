@@ -55,6 +55,9 @@ $acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Pranua
 $pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Në pritje'));
 $totalRequests = count($myRequests);
 $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Open'));
+$score        = ($acceptedApps * 5) + ($totalApps * 1) + ($totalRequests * 2);
+$scoreMax     = 150;
+$scorePercent = min(100, round(($score / $scoreMax) * 100));
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -68,6 +71,7 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -127,7 +131,10 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
     <a href="?tab=new-request" class="vp-tab <?= $tab === 'new-request' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
       Dërgo kërkesë
-    </a>
+    </a><a href="?tab=score" class="vp-tab <?= $tab === 'score' ? 'active' : '' ?>">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+  Pikët e mia
+</a>
     <a href="?tab=notifications" class="vp-tab <?= $tab === 'notifications' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       Njoftimet
@@ -380,6 +387,35 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
         <button type="submit" class="btn_primary">Dërgo kërkesën</button>
         <div id="vp-req-status" class="vp-status" style="display:none"></div>
       </form>
+    </div>
+  </div>
+</div>
+<?php elseif ($tab === 'score'): ?>
+<div class="vp-panel">
+  <div class="vp-card vp-score-card">
+    <div class="vp-card__header"><h3>Rezultati im si Vullnetar</h3></div>
+    <div class="vp-card__body vp-score-body">
+      <div class="vp-score-chart-wrap">
+        <canvas id="vp-score-chart" width="180" height="180"></canvas>
+        <div class="vp-score-overlay">
+          <strong><?= $score ?></strong>
+          <span>pikë</span>
+        </div>
+      </div>
+      <div class="vp-score-details">
+      <div class="vp-score-item">
+            <span>Aplikime të pranuara (<?= $acceptedApps ?>)</span>
+            <strong><?= $acceptedApps * 5 ?> pikë</strong>
+        </div>
+        <div class="vp-score-item">
+            <span>Total aplikime (<?= $totalApps ?>)</span>
+            <strong><?= $totalApps * 1 ?> pikë</strong>
+        </div>
+        <div class="vp-score-item">
+             <span>Kërkesa dërguar (<?= $totalRequests ?>)</span>
+             <strong><?= $totalRequests * 2 ?> pikë</strong>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -650,6 +686,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+</script>
+<script>
+const scoreCtx = document.getElementById('vp-score-chart');
+if (scoreCtx) {
+  new Chart(scoreCtx.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [<?= $scorePercent ?>, <?= 100 - $scorePercent ?>],
+        backgroundColor: ['#00715D', '#e5e7eb'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '75%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    }
+  });
+}
 </script>
 </body>
 </html>

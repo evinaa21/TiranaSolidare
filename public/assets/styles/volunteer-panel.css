@@ -660,3 +660,54 @@ select.vp-input {
     justify-content: center;
   }
 }
+  .vp-score-body { 
+    display:flex; 
+    gap:32px; align-items:center; 
+    flex-wrap:wrap; 
+}
+  .vp-score-chart-wrap { 
+     position:relative; 
+     width:180px; 
+     height:180px; 
+     flex-shrink:0; 
+}
+  .vp-score-overlay { 
+      position:absolute; 
+      top:50%; left:50%; 
+      transform:translate(-50%,-50%); 
+      text-align:center; 
+}
+  .vp-score-overlay strong { 
+      display:block; 
+      font-size:2rem; 
+      font-weight:700; 
+      color:#00715D; 
+}
+  .vp-score-overlay span { 
+      font-size:0.85rem; 
+      color:#6b7280; 
+}
+  .vp-score-details { 
+      display:flex; 
+      flex-direction:column; 
+      gap:12px; 
+      flex:1; 
+}
+  .vp-score-item { 
+      display:flex; 
+      justify-content:space-between; 
+      padding:10px 14px; 
+      background:#f9fafb; 
+      border-radius:8px; 
+}
+  .vp-score-item span { 
+      color:#6b7280; 
+       font-size:0.9rem; 
+}
+  .vp-score-item strong { 
+      color:#00715D; 
+      font-weight:600; 
+}
+
+
+
