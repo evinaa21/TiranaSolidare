@@ -142,37 +142,10 @@ window.loadDashboardStats = async function () {
             </div>
         </div>`;
 
-    // Sub-stats grid
-    if (subContainer) {
-        subContainer.innerHTML = `
-            <div class="db-overview-card">
-                <h4>Aplikime sipas Statusit</h4>
-                <ul class="db-progress-list">
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">Në pritje</span>
-                        <span class="db-badge db-badge--pending">${d.applications.ne_pritje || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">Pranuar</span>
-                        <span class="db-badge db-badge--active">${d.applications.pranuar || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">Refuzuar</span>
-                        <span class="db-badge db-badge--blocked">${d.applications.refuzuar || 0}</span>
-                    </li>
-                </ul>
-            </div>
-            <div class="db-overview-card">
-                <h4>Top Kategoritë</h4>
-                <ul class="db-category-list">
-                    ${(d.top_categories || []).map(c => `
-                        <li class="db-category-item">
-                            <span class="db-category-item__name">${escapeHtml(c.emri)}</span>
-                            <span class="db-category-item__count">${c.event_count}</span>
-                        </li>`).join('')}
-                </ul>
-            </div>`;
-    }
+ 
+
+    // Render charts after sub-stats
+    setTimeout(() => renderDashboardCharts(d), 50);
 };
 
 
@@ -799,6 +772,128 @@ function dbPagination(current, totalPages, callbackName) {
     html += '</div>';
     return html;
 };
+
+// Render dashboard charts (applications, help requests, categories)
+function renderDashboardCharts(d) {
+    if (typeof Chart === 'undefined') return;
+
+    const substats = document.getElementById('dashboard-substats');
+    if (!substats) return;
+
+    const existing = document.getElementById('dashboard-charts');
+    if (existing) existing.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'dashboard-charts';
+    wrapper.style.display = 'grid';
+    wrapper.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+    wrapper.style.gap = '20px';
+    wrapper.style.marginTop = '20px';
+
+    const makeCard = (title) => {
+        const card = document.createElement('div');
+        card.className = 'db-overview-card';
+        card.style.padding = '20px';
+        const h4 = document.createElement('h4');
+        h4.textContent = title;
+        card.appendChild(h4);
+        const canvas = document.createElement('canvas');
+        card.appendChild(canvas);
+        return { card, canvas };
+    };
+
+    const apps = d.applications || {};
+    const appsCard = makeCard('Aplikime sipas Statusit');
+    wrapper.appendChild(appsCard.card);
+    new Chart(appsCard.canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Në pritje', 'Pranuar', 'Refuzuar'],
+            datasets: [{
+                data: [apps.ne_pritje || 0, apps.pranuar || 0, apps.refuzuar || 0],
+                backgroundColor: ['#f59e0b', '#00715D', '#ef4444'],
+            }],
+        },
+        options: {
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom' },
+            },
+        },
+    });
+
+    const hr = d.help_requests || {};
+const helpWrapper = document.createElement('div');
+helpWrapper.style.cssText = 'display:grid; grid-template-columns:1fr ; gap:12px;';
+
+const kerkesaCard = makeCard('Kërkesa');
+helpWrapper.appendChild(kerkesaCard.card);
+new Chart(kerkesaCard.canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Të hapura', 'Të mbyllura'],
+        datasets: [{
+            data: [hr.kerkese_open || 0, hr.kerkese_closed || 0],
+            backgroundColor: ['#00715D', '#94a3b8'],
+            borderRadius: 6,
+        }],
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } },
+        },
+    },
+});
+
+const ofertaCard = makeCard('Oferta');
+helpWrapper.appendChild(ofertaCard.card);
+new Chart(ofertaCard.canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Të hapura', 'Të mbyllura'],
+        datasets: [{
+            data: [hr.oferte_open || 0, hr.oferte_closed || 0],
+            backgroundColor: ['#00715D', '#94a3b8'],
+            borderRadius: 6,
+        }],
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } },
+        },
+    },
+});
+wrapper.appendChild(helpWrapper);
+
+    const categories = Array.isArray(d.top_categories) && d.top_categories.length > 0
+        ? d.top_categories
+        : [{ emri: 'Nuk ka kategori', event_count: 0 }];
+    const palette = ['#00715D', '#34d399', '#f59e0b', '#3b82f6', '#a78bfa'];
+    const catCard = makeCard('Top Kategoritë');
+    wrapper.appendChild(catCard.card);
+    new Chart(catCard.canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: categories.map(c => c.emri),
+            datasets: [{
+                data: categories.map(c => c.event_count || 0),
+                backgroundColor: categories.map((_, i) => palette[i % palette.length]),
+            }],
+        },
+        options: {
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom' },
+            },
+        },
+    });
+
+    substats.insertAdjacentElement('afterend', wrapper);
+}
 
 // ═══════════════════════════════════════════════════════
 //  INIT

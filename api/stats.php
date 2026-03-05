@@ -50,14 +50,13 @@ switch ($action) {
              FROM Aplikimi"
         )->fetch();
 
-        // Help request counts (A-04: COALESCE)
         $helpStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                COALESCE(SUM(CASE WHEN statusi = 'Open' THEN 1 ELSE 0 END), 0) AS te_hapura,
-                COALESCE(SUM(CASE WHEN statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS te_mbyllura,
-                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' THEN 1 ELSE 0 END), 0) AS kerkesa,
-                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' THEN 1 ELSE 0 END), 0) AS oferta
+                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' AND statusi = 'Open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
+                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' AND statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS kerkese_closed,
+                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' AND statusi = 'Open' THEN 1 ELSE 0 END), 0) AS oferte_open,
+                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' AND statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS oferte_closed
              FROM Kerkesa_per_Ndihme"
         )->fetch();
 
