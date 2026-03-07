@@ -95,9 +95,15 @@ async function loadCategoryDropdown() {
 const _origLoadDashboardStats = typeof loadDashboardStats === 'function' ? loadDashboardStats : null;
 
 window.loadDashboardStats = async function () {
+    if (window._dashboardStatsLoading) return;
+    window._dashboardStatsLoading = true;
+
     const container = document.getElementById('dashboard-stats');
     const subContainer = document.getElementById('dashboard-substats');
-    if (!container) return;
+    if (!container) {
+        window._dashboardStatsLoading = false;
+        return;
+    }
 
     const json = await apiCall('stats.php?action=overview');
     if (!json.success) return;
@@ -144,8 +150,15 @@ window.loadDashboardStats = async function () {
 
  
 
-    // Render charts after sub-stats
-    setTimeout(() => renderDashboardCharts(d), 50);
+
+// Render charts after sub-stats
+    if (!document.getElementById('dashboard-charts')) {
+        setTimeout(() => renderDashboardCharts(d), 50);
+    } else {
+        document.getElementById('dashboard-charts').remove();
+        setTimeout(() => renderDashboardCharts(d), 50);
+    }
+    setTimeout(() => { window._dashboardStatsLoading = false; }, 500);
 };
 
 
@@ -773,126 +786,365 @@ function dbPagination(current, totalPages, callbackName) {
     return html;
 };
 
-// Render dashboard charts (applications, help requests, categories)
-function renderDashboardCharts(d) {
+//CHARTS
+async function renderDashboardCharts(overviewData) {
     if (typeof Chart === 'undefined') return;
 
-    const substats = document.getElementById('dashboard-substats');
-    if (!substats) return;
+    const anchor = document.getElementById('dashboard-substats');
+    if (!anchor) return;
 
     const existing = document.getElementById('dashboard-charts');
     if (existing) existing.remove();
 
-    const wrapper = document.createElement('div');
-    wrapper.id = 'dashboard-charts';
-    wrapper.style.display = 'grid';
-    wrapper.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
-    wrapper.style.gap = '20px';
-    wrapper.style.marginTop = '20px';
+    const PRIMARY = '#00715D';
+    const ACCENT = '#E17254';
+    const PRIMARY_SOFT = 'rgba(0,113,93,0.15)';
+    const ACCENT_SOFT = 'rgba(225,114,84,0.16)';
+    const PRIMARY_TINT = '#e8f5f1';
+    const ACCENT_TINT = '#fdf0eb';
+    const TEXT = '#0F172A';
+    const MUTED = '#64748B';
+    const GRID = 'rgba(15,23,42,0.08)';
 
-    const makeCard = (title) => {
-        const card = document.createElement('div');
+    const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const lastNMonths = (n = 6) => {
+        const out = [];
+        const now = new Date();
+        for (let i = n - 1; i >= 0; i--) out.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+        return out;
+    };
+    const toMap = (rows = []) => {
+        const m = new Map();
+        rows.forEach(r => m.set(r.muaji, Number.parseInt(r.total, 10) || 0));
+        return m;
+    };
+    const sum = (arr = []) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
+
+    const g = (ctx, area, c1, c2) => {
+        const grad = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+        grad.addColorStop(0, c1);
+        grad.addColorStop(1, c2);
+        return grad;
+    };
+
+    let monthly = {};
+    try {
+        const monthlyJson = await apiCall('stats.php?action=monthly');
+        monthly = monthlyJson?.success ? (monthlyJson.data || {}) : {};
+    } catch (_) {
+        monthly = {};
+    }
+
+    const appsMap = toMap(monthly.monthly_apps);
+    const reqMap = toMap(monthly.monthly_requests);
+    const eventsMap = toMap(monthly.monthly_events);
+
+    const allMonthKeys = Array.from(new Set([
+        ...appsMap.keys(),
+        ...reqMap.keys(),
+        ...eventsMap.keys()
+    ])).sort();
+
+    const months = allMonthKeys.length ? allMonthKeys : lastNMonths(6);
+    const labels = months.map(k => {
+        const [y, m] = k.split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString('sq-AL', { month: 'short', year: '2-digit' });
+    });
+
+    const appsData = months.map(k => appsMap.get(k) || 0);
+    const reqData = months.map(k => reqMap.get(k) || 0);
+    const eventsData = months.map(k => eventsMap.get(k) || 0);
+    const categoryRows = monthly.apps_by_category || [];
+
+    const appStats = overviewData?.applications || {};
+    const statusData = [
+        Number.parseInt(appStats.ne_pritje, 10) || 0,
+        Number.parseInt(appStats.pranuar, 10) || 0,
+        Number.parseInt(appStats.refuzuar, 10) || 0
+    ];
+
+    const totals = {
+        aplikime: sum(appsData),
+        kerkesa: sum(reqData),
+        evente: sum(eventsData),
+        statuse: sum(statusData),
+        kategori: sum(categoryRows.map(c => Number.parseInt(c.total, 10) || 0))
+    };
+
+    const wrapper = document.createElement('section');
+    wrapper.id = 'dashboard-charts';
+    wrapper.style.cssText = `
+        display:grid;
+        grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);
+        gap:20px;
+        margin-top:20px;
+        padding:0 24px 28px;
+    `;
+
+    const createCard = (title, totalText, chipBg) => {
+        const card = document.createElement('article');
         card.className = 'db-overview-card';
-        card.style.padding = '20px';
-        const h4 = document.createElement('h4');
-        h4.textContent = title;
-        card.appendChild(h4);
+        card.style.cssText = `
+            display:flex;
+            flex-direction:column;
+            min-height:320px;
+            padding:16px;
+            border-radius:16px;
+        `;
+
+        const head = document.createElement('div');
+        head.style.cssText = `
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:10px;
+            gap:10px;
+        `;
+
+        const h = document.createElement('h4');
+        h.textContent = title;
+        h.style.cssText = `margin:0;color:${TEXT};font-size:14px;font-weight:700;letter-spacing:.2px;`;
+        h.style.borderBottom = 'none';
+
+        const total = document.createElement('span');
+        total.textContent = totalText;
+        total.style.cssText = `
+            font-size:12px;
+            font-weight:600;
+            color:${MUTED};
+            background:${chipBg};
+            border:1px solid rgba(15,23,42,.08);
+            border-radius:999px;
+            padding:4px 10px;
+            white-space:nowrap;
+        `;
+
+        const body = document.createElement('div');
+        body.style.cssText = 'position:relative;flex:1;min-height:240px;';
         const canvas = document.createElement('canvas');
-        card.appendChild(canvas);
+        body.appendChild(canvas);
+
+        head.appendChild(h);
+        head.appendChild(total);
+        card.appendChild(head);
+        card.appendChild(body);
+
         return { card, canvas };
     };
 
-    const apps = d.applications || {};
-    const appsCard = makeCard('Aplikime sipas Statusit');
-    wrapper.appendChild(appsCard.card);
-    new Chart(appsCard.canvas.getContext('2d'), {
+    const tooltip = {
+        backgroundColor: '#0B1220',
+        titleColor: '#F8FAFC',
+        bodyColor: '#E2E8F0',
+        borderColor: 'rgba(255,255,255,0.14)',
+        borderWidth: 1,
+        cornerRadius: 12,
+        padding: 12,
+        displayColors: true,
+        titleFont: { weight: '700', size: 12 },
+        bodyFont: { size: 12 }
+    };
+
+    const axis = {
+        x: {
+            grid: { display: false, drawBorder: false },
+            ticks: { color: MUTED, font: { size: 11, weight: '600' } },
+            border: { display: false }
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: GRID, drawBorder: false },
+            ticks: { color: MUTED, precision: 0, font: { size: 11, weight: '600' } },
+            border: { display: false }
+        }
+    };
+
+    Chart.defaults.font.family = "Inter, Segoe UI, Roboto, Arial, sans-serif";
+    Chart.defaults.color = MUTED;
+
+    // 1) Aplikime Mujore 
+    const c1 = createCard('Aplikime Mujore', `Totali: ${totals.aplikime}`, PRIMARY_TINT);
+    c1.card.style.gridColumn = '1';
+    c1.card.style.gridRow = '1';
+    wrapper.appendChild(c1.card);
+
+    new Chart(c1.canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Aplikime',
+                data: appsData,
+                borderColor: PRIMARY,
+                backgroundColor: (ctx) => {
+                    const ca = ctx.chart.chartArea;
+                    if (!ca) return PRIMARY_SOFT;
+                    return g(ctx.chart.ctx, ca, 'rgba(0,113,93,0.30)', 'rgba(0,113,93,0.03)');
+                },
+                fill: true,
+                tension: 0.42,
+                borderWidth: 2.8,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: PRIMARY,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip },
+            scales: axis
+        }
+    });
+
+    // 2) Statuset e Aplikimeve 
+    const c2 = createCard('Statuset e Aplikimeve', `Totali: ${totals.statuse}`, ACCENT_TINT);
+    c2.card.style.gridColumn = '2';
+    c2.card.style.gridRow = '1';
+    wrapper.appendChild(c2.card);
+
+    new Chart(c2.canvas.getContext('2d'), {
         type: 'doughnut',
         data: {
             labels: ['Në pritje', 'Pranuar', 'Refuzuar'],
             datasets: [{
-                data: [apps.ne_pritje || 0, apps.pranuar || 0, apps.refuzuar || 0],
-                backgroundColor: ['#f59e0b', '#00715D', '#ef4444'],
-            }],
+                data: statusData,
+                backgroundColor: [
+                    'rgba(225,114,84,0.75)',
+                    'rgba(0,113,93,0.90)',
+                    'rgba(225,114,84,0.50)'
+                ],
+                borderColor: '#fff',
+                borderWidth: 3,
+                spacing: 3,
+                hoverOffset: 8
+            }]
         },
         options: {
-            cutout: '65%',
+            maintainAspectRatio: false,
+            cutout: '68%',
             plugins: {
-                legend: { position: 'bottom' },
-            },
-        },
+                tooltip,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        padding: 14,
+                        color: TEXT,
+                        font: { size: 11, weight: '600' }
+                    }
+                }
+            }
+        }
     });
 
-    const hr = d.help_requests || {};
-const helpWrapper = document.createElement('div');
-helpWrapper.style.cssText = 'display:grid; grid-template-columns:1fr ; gap:12px;';
+    // 3) Kërkesa për Ndihmë vs Evente (poshtë majtas)
+    const c3 = createCard('Kërkesa vs Evente', `Kërkesa: ${totals.kerkesa} • Evente: ${totals.evente}`, ACCENT_TINT);
+    c3.card.style.gridColumn = '1';
+    c3.card.style.gridRow = '2';
+    wrapper.appendChild(c3.card);
 
-const kerkesaCard = makeCard('Kërkesa');
-helpWrapper.appendChild(kerkesaCard.card);
-new Chart(kerkesaCard.canvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: ['Të hapura', 'Të mbyllura'],
-        datasets: [{
-            data: [hr.kerkese_open || 0, hr.kerkese_closed || 0],
-            backgroundColor: ['#00715D', '#94a3b8'],
-            borderRadius: 6,
-        }],
-    },
-    options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-            x: { grid: { display: false } },
-        },
-    },
-});
-
-const ofertaCard = makeCard('Oferta');
-helpWrapper.appendChild(ofertaCard.card);
-new Chart(ofertaCard.canvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: ['Të hapura', 'Të mbyllura'],
-        datasets: [{
-            data: [hr.oferte_open || 0, hr.oferte_closed || 0],
-            backgroundColor: ['#00715D', '#94a3b8'],
-            borderRadius: 6,
-        }],
-    },
-    options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-            x: { grid: { display: false } },
-        },
-    },
-});
-wrapper.appendChild(helpWrapper);
-
-    const categories = Array.isArray(d.top_categories) && d.top_categories.length > 0
-        ? d.top_categories
-        : [{ emri: 'Nuk ka kategori', event_count: 0 }];
-    const palette = ['#00715D', '#34d399', '#f59e0b', '#3b82f6', '#a78bfa'];
-    const catCard = makeCard('Top Kategoritë');
-    wrapper.appendChild(catCard.card);
-    new Chart(catCard.canvas.getContext('2d'), {
-        type: 'doughnut',
+    new Chart(c3.canvas.getContext('2d'), {
+        type: 'line',
         data: {
-            labels: categories.map(c => c.emri),
-            datasets: [{
-                data: categories.map(c => c.event_count || 0),
-                backgroundColor: categories.map((_, i) => palette[i % palette.length]),
-            }],
+            labels,
+            datasets: [
+                {
+                    label: 'Kërkesa',
+                    data: reqData,
+                    borderColor: ACCENT,
+                    backgroundColor: (ctx) => {
+                        const ca = ctx.chart.chartArea;
+                        if (!ca) return ACCENT_SOFT;
+                        return g(ctx.chart.ctx, ca, 'rgba(225,114,84,0.24)', 'rgba(225,114,84,0.02)');
+                    },
+                    fill: true,
+                    tension: 0.38,
+                    borderWidth: 2.4,
+                    pointRadius: 2.5,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: ACCENT,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                },
+                {
+                    label: 'Evente',
+                    data: eventsData,
+                    borderColor: PRIMARY,
+                    backgroundColor: (ctx) => {
+                        const ca = ctx.chart.chartArea;
+                        if (!ca) return PRIMARY_SOFT;
+                        return g(ctx.chart.ctx, ca, 'rgba(0,113,93,0.20)', 'rgba(0,113,93,0.02)');
+                    },
+                    fill: true,
+                    tension: 0.38,
+                    borderWidth: 2.4,
+                    pointRadius: 2.5,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: PRIMARY,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }
+            ]
         },
         options: {
-            cutout: '65%',
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom' },
+                tooltip,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        padding: 12,
+                        color: TEXT,
+                        font: { size: 11, weight: '600' }
+                    }
+                }
             },
-        },
+            scales: axis
+        }
     });
 
-    substats.insertAdjacentElement('afterend', wrapper);
+    // 4) Aplikime sipas Kategorisë (poshtë djathtas)
+    const c4 = createCard('Aplikime sipas Kategorisë', `Totali: ${totals.kategori}`, PRIMARY_TINT);
+    c4.card.style.gridColumn = '2';
+    c4.card.style.gridRow = '2';
+    wrapper.appendChild(c4.card);
+
+    new Chart(c4.canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: categoryRows.map(c => c.emri),
+            datasets: [{
+                label: 'Aplikime',
+                data: categoryRows.map(c => Number.parseInt(c.total, 10) || 0),
+                backgroundColor: categoryRows.map((_, i) => i % 2 === 0 ? 'rgba(0,113,93,0.88)' : 'rgba(225,114,84,0.82)'),
+                borderColor: categoryRows.map((_, i) => i % 2 === 0 ? PRIMARY : ACCENT),
+                borderWidth: 1,
+                borderRadius: 12,
+                borderSkipped: false,
+                maxBarThickness: 36
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip },
+            scales: {
+                ...axis,
+                x: {
+                    ...axis.x,
+                    ticks: { ...axis.x.ticks, maxRotation: 0, minRotation: 0, autoSkip: true }
+                }
+            }
+        }
+    });
+
+    anchor.insertAdjacentElement('afterend', wrapper);
 }
 
 // ═══════════════════════════════════════════════════════

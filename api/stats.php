@@ -140,7 +140,49 @@ switch ($action) {
             'upcoming_events'   => $upcomingEvents->fetchAll(),
         ]);
         break;
+// ── MONTHLY STATS (Charts) ─────────────────────────
+case 'monthly':
+    require_method('GET');
+    require_admin();
 
+    $monthly_apps = $pdo->query(
+        "SELECT DATE_FORMAT(aplikuar_me, '%Y-%m') AS muaji, COUNT(*) AS total
+         FROM Aplikimi
+         GROUP BY muaji
+         ORDER BY muaji ASC"
+    )->fetchAll();
+
+    $monthly_requests = $pdo->query(
+        "SELECT DATE_FORMAT(krijuar_me, '%Y-%m') AS muaji, COUNT(*) AS total
+         FROM Kerkesa_per_Ndihme
+         GROUP BY muaji
+         ORDER BY muaji ASC"
+    )->fetchAll();
+
+    $monthly_events = $pdo->query(
+        "SELECT DATE_FORMAT(krijuar_me, '%Y-%m') AS muaji, COUNT(*) AS total
+         FROM Eventi
+         GROUP BY muaji
+         ORDER BY muaji ASC"
+    )->fetchAll();
+
+    $apps_by_category = $pdo->query(
+        "SELECT k.emri, COUNT(a.id_aplikimi) AS total
+         FROM Kategoria k
+         LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria
+         LEFT JOIN Aplikimi a ON a.id_eventi = e.id_eventi
+         GROUP BY k.id_kategoria
+         ORDER BY total DESC
+         LIMIT 5"
+    )->fetchAll();
+
+    json_success([
+        'monthly_apps'      => $monthly_apps,
+        'monthly_requests'  => $monthly_requests,
+        'monthly_events'    => $monthly_events,
+        'apps_by_category'  => $apps_by_category,
+    ]);
+    break;
     // ── LIST REPORTS ───────────────────────────────
     case 'reports':
         require_method('GET');
@@ -226,5 +268,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: overview, my_stats, reports, generate.', 400);
+        json_error('Veprim i panjohur. Përdorni: overview, my_stats, reports, generate, monthly.', 400);
 }
