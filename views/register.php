@@ -16,6 +16,7 @@ $errorMessages = [
   'email_taken'        => 'Ky email është regjistruar tashmë.',
   'rate_limited'       => 'Shumë tentativa regjistrimi. Provoni përsëri më vonë.',
   'csrf_expired'       => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
+  'sql_error'          => 'Ndodhi një gabim gjatë regjistrimit. Provoni përsëri.',
 ];
 
 $successMessages = [
