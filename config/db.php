@@ -16,5 +16,6 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    error_log('Database connection failed: ' . $e->getMessage());
+    die('Lidhja me databazën dështoi. Ju lutem provoni përsëri më vonë.');
 }

@@ -194,5 +194,6 @@ try {
         'mime'     => $finalMime,
     ]);
 } catch (\Exception $e) {
-    json_error('Gabim gjatë ngarkimit të skedarit: ' . $e->getMessage(), 500);
+    error_log('upload: ' . $e->getMessage());
+    json_error('Gabim gjatë ngarkimit të skedarit.', 500);
 }

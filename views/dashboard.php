@@ -29,7 +29,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <title>Paneli — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
 </head>
@@ -86,7 +85,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <strong><?= $userEmri ?></strong>
       <span><?= $userRoli ?></span>
     </div>
-    <a href="/TiranaSolidare/src/actions/logout.php" class="db-sidebar__logout" title="Dil">
+    <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="db-sidebar__logout" title="Dil">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
     </a>
   </div>

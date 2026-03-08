@@ -634,6 +634,12 @@
   border: 1px solid rgba(107,114,128,0.2);
 }
 
+.rq-badge--past {
+  background: rgba(239,68,68,0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
 /* Hero context: on dark bg */
 .rq-detail-hero .rq-badge--request {
   background: rgba(225,114,84,0.25);

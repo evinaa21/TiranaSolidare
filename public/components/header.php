@@ -29,7 +29,7 @@ $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
       <?php $isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin'); ?>
       <a href="/TiranaSolidare/views/<?= $isAdminUser ? 'dashboard.php' : 'volunteer_panel.php' ?>" class="header-user"><?= htmlspecialchars($userName) ?></a>
       <a href="/TiranaSolidare/views/<?= $isAdminUser ? 'dashboard.php' : 'volunteer_panel.php' ?>" class="btn_primary">Paneli</a>
-      <a href="/TiranaSolidare/src/actions/logout.php" class="btn_secondary">Dil</a>
+      <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="btn_secondary">Dil</a>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">
         Bëhu Vullnetar 

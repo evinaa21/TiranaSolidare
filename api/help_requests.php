@@ -79,7 +79,8 @@ switch ($action) {
                 'total_pages' => (int) ceil($total / $pagination['limit']),
             ]);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë marrjes të kërkesave: ' . $e->getMessage(), 500);
+            error_log('help_requests list: ' . $e->getMessage());
+            json_error('Gabim gjatë marrjes të kërkesave.', 500);
         }
         break;
 
@@ -108,7 +109,8 @@ switch ($action) {
 
             json_success($request);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë marrjes të kërkesës: ' . $e->getMessage(), 500);
+            error_log('help_requests get: ' . $e->getMessage());
+            json_error('Gabim gjatë marrjes të kërkesës.', 500);
         }
         break;
 
@@ -123,6 +125,7 @@ switch ($action) {
         $pershkrimi   = $body['pershkrimi'] ?? '';
         $tipi         = $body['tipi'] ?? '';
         $imazhi       = $body['imazhi'] ?? null;
+        $vendndodhja  = $body['vendndodhja'] ?? null;
         $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
         $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
 
@@ -141,17 +144,18 @@ switch ($action) {
 
         try {
             $stmt = $pdo->prepare(
-                "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, imazhi)
-                 VALUES (?, ?, ?, ?, 'Open', ?)"
+                "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, imazhi, vendndodhja, latitude, longitude)
+                 VALUES (?, ?, ?, ?, 'Open', ?, ?, ?, ?)"
             );
-            $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $imazhi]);
+            $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $imazhi, $vendndodhja, $latitude, $longitude]);
 
             json_success([
                 'id_kerkese_ndihme' => (int) $pdo->lastInsertId(),
                 'message'           => 'Kërkesa u krijua me sukses.',
             ], 201);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë ruajtjes të kërkesës: ' . $e->getMessage(), 500);
+            error_log('help_requests create: ' . $e->getMessage());
+            json_error('Gabim gjatë ruajtjes të kërkesës.', 500);
         }
         break;
 
@@ -201,7 +205,8 @@ switch ($action) {
 
             json_success(['message' => 'Kërkesa u përditësua.']);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë përditësimit të kërkesës: ' . $e->getMessage(), 500);
+            error_log('help_requests update: ' . $e->getMessage());
+            json_error('Gabim gjatë përditësimit të kërkesës.', 500);
         }
         break;
 
@@ -242,7 +247,8 @@ switch ($action) {
 
             json_success(['message' => 'Kërkesa u mbyll.']);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë mbylljes të kërkesës: ' . $e->getMessage(), 500);
+            error_log('help_requests close: ' . $e->getMessage());
+            json_error('Gabim gjatë mbylljes të kërkesës.', 500);
         }
         break;
 
@@ -278,7 +284,8 @@ switch ($action) {
 
             json_success(['message' => 'Kërkesa u rihap.']);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë rihapjes të kërkesës: ' . $e->getMessage(), 500);
+            error_log('help_requests reopen: ' . $e->getMessage());
+            json_error('Gabim gjatë rihapjes të kërkesës.', 500);
         }
         break;
 
@@ -296,14 +303,14 @@ switch ($action) {
             $stmt = $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
             $stmt->execute([$id]);
 
+            if ($stmt->rowCount() === 0) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+
             json_success(['message' => 'Kërkesa u fshi.']);
         } catch (\Exception $e) {
-            json_error('Gabim gjatë fshirjes të kërkesës: ' . $e->getMessage(), 500);
-        }
-        break;
-
-        if ($stmt->rowCount() === 0) {
-            json_error('Kërkesa nuk u gjet.', 404);
+            error_log('help_requests delete: ' . $e->getMessage());
+            json_error('Gabim gjatë fshirjes të kërkesës.', 500);
         }
         break;
 

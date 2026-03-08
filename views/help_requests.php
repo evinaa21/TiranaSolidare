@@ -20,7 +20,13 @@ if (isset($_GET['id'])) {
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// ── List view: paginated & filterable ──
+// ── List view: paginated & filterable (only when not viewing detail) ──
+$page = $limit = $offset = $total = $totalPages = 0;
+$requests = [];
+$search = $tipi = $statusi = '';
+$statTotalKerkesa = $statClosed = $statVullnetare = $statOferta = 0;
+
+if (!isset($_GET['id'])) {
 $page   = max(1, (int) ($_GET['page'] ?? 1));
 $limit  = 12;
 $offset = ($page - 1) * $limit;
@@ -66,8 +72,7 @@ $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme")->fetchColumn();
 $statClosed       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
 $statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
-$statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();
-
+$statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();} // end if (!isset($_GET['id']))
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -170,8 +175,12 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             <div><span>Krijuar</span><strong><?= date('d/m/Y — H:i', strtotime($request['krijuar_me'])) ?></strong></div>
+          </li>          <?php if (!empty($request['vendndodhja'])): ?>
+          <li>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            <div><span>Vendndodhja</span><strong><?= htmlspecialchars($request['vendndodhja']) ?></strong></div>
           </li>
-        </ul>
+          <?php endif; ?>        </ul>
 
         <div class="rq-sidebar-cta">
           <?php if (!$isLoggedIn): ?>

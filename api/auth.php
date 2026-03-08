@@ -34,6 +34,11 @@ switch ($action) {
             json_error('Formati i email-it nuk është i vlefshëm.', 422);
         }
 
+        // Rate limit: max 5 login attempts per 15 minutes (checked BEFORE DB lookup)
+        if (!check_rate_limit('login', 5, 900)) {
+            json_error('Shumë tentativa hyrjeje. Provoni përsëri pas disa minutash.', 429);
+        }
+
         $stmt = $pdo->prepare('SELECT * FROM Perdoruesi WHERE email = ?');
         $stmt->execute([$email]);
         $user = $stmt->fetch();
@@ -48,11 +53,6 @@ switch ($action) {
 
         if ($user['statusi_llogarise'] === 'Çaktivizuar') {
             json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
-        }
-
-        // Rate limit: max 5 login attempts per 15 minutes
-        if (!check_rate_limit('login', 5, 900)) {
-            json_error('Shumë tentativa hyrjeje. Provoni përsëri pas disa minutash.', 429);
         }
 
         // Regenerate session ID to prevent fixation attacks

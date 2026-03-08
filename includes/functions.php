@@ -6,12 +6,27 @@
  * ---------------------------------------------------
  */
 
+// ── Secure session cookie settings (applied globally) ──
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+ini_set('session.use_strict_mode', '1');
+// ini_set('session.cookie_secure', '1'); // Uncomment in production with HTTPS
+
 /**
  * Check if user is logged in; redirect to login if not.
  */
 function check_login(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
+        // Secure session cookie settings
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/TiranaSolidare/',
+            'domain'   => '',
+            'secure'   => false, // Set to true in production with HTTPS
+            'httponly'  => true,
+            'samesite' => 'Lax',
+        ]);
         session_start();
     }
     if (!isset($_SESSION['user_id'])) {

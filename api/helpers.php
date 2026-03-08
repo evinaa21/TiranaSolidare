@@ -10,6 +10,14 @@
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/TiranaSolidare/',
+        'domain'   => '',
+        'secure'   => false, // Set to true in production with HTTPS
+        'httponly'  => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
@@ -22,8 +30,17 @@ require_once __DIR__ . '/../includes/functions.php';
 // ── CORS & Content-Type Headers ────────────────────
 header('Content-Type: application/json; charset=utf-8');
 
-// Restrict CORS to same-origin (localhost only)
-$allowedOrigins = ['http://localhost', 'http://127.0.0.1'];
+// Restrict CORS to same-origin (localhost variants)
+$allowedOrigins = [
+    'http://localhost',
+    'http://localhost:80',
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1',
+    'http://127.0.0.1:80',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8080',
+];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins, true)) {
     header("Access-Control-Allow-Origin: $origin");

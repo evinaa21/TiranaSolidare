@@ -71,6 +71,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <?= csrf_meta() ?>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -447,7 +448,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
 <!-- Volunteer Panel JavaScript -->
 <script>
 const API = '/TiranaSolidare/api';
-const csrfToken = '<?= csrf_token() ?>';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 function vpStatus(elId, type, message) {
   const el = document.getElementById(elId);

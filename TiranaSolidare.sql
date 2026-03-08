@@ -74,6 +74,8 @@ CREATE TABLE `eventi` (
   `pershkrimi` text DEFAULT NULL,
   `data` datetime DEFAULT NULL,
   `vendndodhja` varchar(255) DEFAULT NULL,
+  `latitude` decimal(10,7) DEFAULT NULL,
+  `longitude` decimal(10,7) DEFAULT NULL,
   `banner` varchar(500) DEFAULT NULL COMMENT 'URL to image storage',
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -128,8 +130,8 @@ CREATE TABLE `kerkesa_per_ndihme` (
   `pershkrimi` text DEFAULT NULL,
   `statusi` enum('Open','Closed') DEFAULT 'Open' COMMENT 'Open/Closed',
   `imazhi` varchar(500) DEFAULT NULL,
-  `vendndodhja` varchar(255) DEFAULT NULL,
-  `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
+  `vendndodhja` varchar(255) DEFAULT NULL,  `latitude` decimal(10,7) DEFAULT NULL,
+  `longitude` decimal(10,7) DEFAULT NULL,  `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
