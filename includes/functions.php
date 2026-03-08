@@ -7,10 +7,12 @@
  */
 
 // ── Secure session cookie settings (applied globally) ──
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.use_strict_mode', '1');
-// ini_set('session.cookie_secure', '1'); // Uncomment in production with HTTPS
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.use_strict_mode', '1');
+    // ini_set('session.cookie_secure', '1'); // Uncomment in production with HTTPS
+}
 
 /**
  * Check if user is logged in; redirect to login if not.

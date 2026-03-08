@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -88,7 +88,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260308W">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -175,19 +175,27 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
 
         <div class="rq-sidebar-cta">
           <?php if (!$isLoggedIn): ?>
-            <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="btn_primary rq-btn-full">Kyçu për të aplikuar</a>
-            <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të aplikuar si vullnetar</p>
+            <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="rq-btn-full rq-btn-login">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+              Kyçu për të aplikuar
+            </a>
+            <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të aplikuar si vullnetar.</p>
           <?php elseif ($isAdmin): ?>
-            <p class="text-muted">Administratorët nuk mund të aplikojnë si vullnetarë.</p>
+            <p class="rq-sidebar-hint">Administratorët nuk mund të aplikojnë si vullnetarë.</p>
           <?php elseif ($alreadyApplied): ?>
-            <span class="rq-badge rq-badge--status"><?= htmlspecialchars($existingApp['statusi']) ?></span>
-            <p class="text-muted">Ju keni aplikuar tashmë për këtë event.</p>
+            <span class="rq-badge rq-badge--open"><?= htmlspecialchars($existingApp['statusi']) ?></span>
+            <p class="rq-sidebar-hint">Ju keni aplikuar tashmë për këtë event.</p>
           <?php elseif (strtotime($event['data']) <= time()): ?>
-            <p class="text-muted">Ky event ka kaluar. Nuk mund të aplikoni më.</p>
+            <p class="rq-sidebar-hint">Ky event ka kaluar. Nuk mund të aplikoni më.</p>
           <?php else: ?>
-            <button class="btn_primary rq-btn-full" id="apply-btn" data-event="<?= $event['id_eventi'] ?>">Apliko si Vullnetar</button>
+            <button class="rq-btn-full rq-btn-login" id="apply-btn" data-event="<?= $event['id_eventi'] ?>">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+              Apliko si Vullnetar
+            </button>
           <?php endif; ?>
         </div>
+
+        
       </div>
 
       <!-- Trust box -->
