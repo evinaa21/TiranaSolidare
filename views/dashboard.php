@@ -273,6 +273,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <script src="/TiranaSolidare/assets/js/map-component.js"></script>
 <script src="/TiranaSolidare/assets/js/main.js"></script>
 <script src="/TiranaSolidare/assets/js/ajax-polling.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/TiranaSolidare/assets/js/dashboard-ui.js"></script>
 <script>
 // Initialize map picker for event creation

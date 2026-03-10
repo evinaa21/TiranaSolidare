@@ -794,12 +794,14 @@
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 1;
+   line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .kbtn-card-0 .kbtn-dock-text p {
   font-size: 1.05rem;
   -webkit-line-clamp: 2;
+   line-clamp: 2;
 }
 
 .kbtn-dock-arrow {
@@ -966,42 +968,190 @@
 
 
 #regjistrohu{
-  background: linear-gradient(0deg, #fff 0%, #fff0 10%, #fff0 90%, #fff 100%), url('../images/bg_pattern.svg');
-  background-size: cover;
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 50px;
+  gap: 60px;
+  align-items: center;
+  padding-block: 120px;
+  background:
+    radial-gradient(ellipse 70% 60% at 25% 75%, rgba(225,114,84,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 75% 25%, rgba(225,114,84,0.04) 0%, transparent 70%),
+    #fdf9f7;
+  overflow: hidden;
 }
 
+/* Subtle dot-grid overlay */
+#regjistrohu::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(0,50,41,0.04) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Decorative SVG blobs ── */
+.reg-blob{
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.reg-blob--1{
+  width: 480px;
+  height: 480px;
+  top: -140px;
+  right: -100px;
+  animation: regBlobFloat 12s ease-in-out infinite;
+}
+
+.reg-blob--2{
+  width: 400px;
+  height: 400px;
+  bottom: -120px;
+  left: -80px;
+  animation: regBlobFloat 16s ease-in-out infinite reverse;
+}
+
+@keyframes regBlobFloat{
+  0%, 100%{ transform: translateY(0) rotate(0deg); }
+  50%{ transform: translateY(-20px) rotate(4deg); }
+}
+
+/* ── Label badge ── */
+.regjistrohu-label{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 100px;
+  background: rgba(0,113,93,0.08);
+  border: 1px solid rgba(0,113,93,0.15);
+  color: #00715D;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.regjistrohu-label svg{
+  color: #E17254;
+  flex-shrink: 0;
+}
+
+/* ── Text column ── */
 #regjistrohu-content{
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  gap: 24px;
+  gap: 15px;
+}
+
+#regjistrohu-content h2{
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #003229 0%, #00715D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 #regjistrohu-content p{
-  max-width: 600px;
-  font-size: 1.2rem;
+  max-width: 580px;
+  font-size: 1.15rem;
+  line-height: 1.75;
+  color: #555;
 }
 
+/* ── Image column ── */
 #regjistrohu-image{
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-#regjistrohu-image img{
-  width: 100%;
+.regjistrohu-img-stack{
+  position: relative;
+  width: 90%;
+  max-width: 500px;
 }
 
-@media screen and (max-width: 700px) {
+/* Back shadow card (rotated) */
+.regjistrohu-img-back{
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0,113,93,0.12), rgba(225,114,84,0.10));
+  transform: rotate(4deg) translate(10px, 10px);
+  box-shadow: 0 15px 40px rgba(0,50,41,0.12);
+  z-index: 0;
+}
+
+.regjistrohu-img-front{
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  box-shadow:
+    0 20px 50px rgba(0,50,41,0.15),
+    0 6px 16px rgba(0,0,0,0.08);
+  z-index: 1;
+  transform: rotate(-2deg);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.regjistrohu-img-stack:hover .regjistrohu-img-front{
+  transform: rotate(-2deg) translateY(-6px);
+  box-shadow:
+    0 28px 60px rgba(0,50,41,0.20),
+    0 8px 20px rgba(0,0,0,0.10);
+}
+
+.regjistrohu-img-stack:hover .regjistrohu-img-back{
+  transform: rotate(6deg) translate(12px, 14px);
+  transition: transform 0.4s ease;
+}
+
+/* ── Responsive ── */
+@media screen and (max-width: 900px) {
   #regjistrohu{
     grid-template-columns: 1fr;
+    padding-block: 80px;
+    gap: 48px;
   }
   #regjistrohu-content{
     align-items: center;
     text-align: center;
+  }
+  #regjistrohu-content h2{
+    text-align: center;
+  }
+  #regjistrohu-content p{
+    margin-inline: auto;
+  }
+  .regjistrohu-img-stack{
+    width: 65%;
+    margin-inline: auto;
+  }
+  .reg-blob--1{ width: 320px; height: 320px; }
+  .reg-blob--2{ width: 280px; height: 280px; }
+}
+
+@media screen and (max-width: 500px) {
+  #regjistrohu{
+    padding-block: 60px;
+  }
+  .regjistrohu-img-stack{
+    width: 85%;
   }
 }
