@@ -60,7 +60,9 @@ $sql = "SELECT k.*, p.emri AS krijuesi_emri
         FROM Kerkesa_per_Ndihme k
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
         $whereSQL
-        ORDER BY k.krijuar_me DESC
+        ORDER BY 
+        CASE WHEN k.statusi = 'Open' THEN 0 ELSE 1 END ASC,
+        k.krijuar_me DESC
         LIMIT ? OFFSET ?";
 $params[] = $limit;
 $params[] = $offset;

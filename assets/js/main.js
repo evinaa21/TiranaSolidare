@@ -50,19 +50,20 @@ async function loadAdminEvents(page = 1) {
         + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    events.forEach(ev => {
-        html += `<tr>
-            <td>${ev.id_eventi}</td>
-            <td>${escapeHtml(ev.titulli)}</td>
-            <td>${escapeHtml(ev.kategoria_emri || '—')}</td>
-            <td>${formatDate(ev.data)}</td>
-            <td>
-                <button class="btn btn-sm btn-warning" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-                <button class="btn btn-sm btn-info" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
-            </td>
-        </tr>`;
-    });
+  events.forEach(ev => {
+    const isPast = new Date(ev.data) < new Date();
+    html += `<tr>
+        <td>${ev.id_eventi}</td>
+        <td>${escapeHtml(ev.titulli)}</td>
+        <td>${escapeHtml(ev.kategoria_emri || '—')}</td>
+        <td>${formatDate(ev.data)}</td>
+        <td>
+            ${!isPast ? `<button class="btn btn-sm btn-warning" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` : ''}
+            <button class="btn btn-sm btn-danger" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+            <button class="btn btn-sm btn-info" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+        </td>
+    </tr>`;
+});
     html += '</tbody></table>';
 
     if (total_pages > 1) {
@@ -80,15 +81,84 @@ async function deleteEvent(id) {
 }
 
 async function editEventPrompt(id, btnEl) {
-    // Get current title safely from the table row
-    const row = btnEl.closest('tr');
-    const currentTitle = row ? row.querySelector('td:nth-child(2)').textContent.trim() : '';
-    const newTitle = prompt('Titulli i ri:', currentTitle);
-    if (!newTitle || newTitle === currentTitle) return;
+    const json = await apiCall(`events.php?action=get&id=${id}`);
+    if (!json.success) return;
+    const ev = json.data;
 
-    const json = await apiCall(`events.php?action=update&id=${id}`, 'PUT', { titulli: newTitle });
+    const existing = document.getElementById('edit-event-modal');
+    if (existing) existing.remove();
+
+    const catsJson = await apiCall('categories.php?action=list');
+    const cats = catsJson.success ? catsJson.data.categories : [];
+    const catOptions = cats.map(c =>
+        `<option value="${c.id_kategoria}" ${c.id_kategoria == ev.id_kategoria ? 'selected' : ''}>${escapeHtml(c.emri)}</option>`
+    ).join('');
+
+    const dataVal = ev.data ? ev.data.replace(' ', 'T').substring(0, 16) : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'edit-event-modal';
+    modal.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+                <h3 style="margin:0;font-size:1.2rem;font-weight:700;">Ndrysho Eventin</h3>
+                <button onclick="document.getElementById('edit-event-modal').remove()" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#6b7280;">×</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Titulli</label>
+                    <input id="edit-ev-titulli" type="text" value="${escapeHtml(ev.titulli || '')}" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Përshkrimi</label>
+                    <textarea id="edit-ev-pershkrimi" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;resize:vertical;box-sizing:border-box;">${escapeHtml(ev.pershkrimi || '')}</textarea>
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Data</label>
+                    <input id="edit-ev-data" type="datetime-local" value="${dataVal}" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Vendndodhja</label>
+                    <input id="edit-ev-vendndodhja" type="text" value="${escapeHtml(ev.vendndodhja || '')}" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Kategoria</label>
+                    <select id="edit-ev-kategoria" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                        ${catOptions}
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
+                <button onclick="document.getElementById('edit-event-modal').remove()" style="padding:10px 20px;border:1.5px solid #e4e8ee;border-radius:10px;background:transparent;cursor:pointer;font-size:0.88rem;font-weight:600;">Anulo</button>
+                <button onclick="saveEventEdit(${id})" style="padding:10px 20px;background:#00715D;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:0.88rem;font-weight:600;">Ruaj Ndryshimet</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveEventEdit(id) {
+    const titulli = document.getElementById('edit-ev-titulli')?.value.trim();
+    const pershkrimi = document.getElementById('edit-ev-pershkrimi')?.value.trim();
+    const data = document.getElementById('edit-ev-data')?.value;
+    const vendndodhja = document.getElementById('edit-ev-vendndodhja')?.value.trim();
+    const id_kategoria = document.getElementById('edit-ev-kategoria')?.value;
+
+    if (!titulli) { showToast('Titulli është i detyrueshëm.', 'danger'); return; }
+    if (!data) { showToast('Data është e detyrueshme.', 'danger'); return; }
+    if (!vendndodhja) { showToast('Vendndodhja është e detyrueshme.', 'danger'); return; }
+
+    const json = await apiCall(`events.php?action=update&id=${id}`, 'PUT', {
+        titulli, pershkrimi, data, vendndodhja, id_kategoria
+    });
+
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
-    loadAdminEvents();
+    if (json.success) {
+        document.getElementById('edit-event-modal')?.remove();
+        loadAdminEvents();
+    }
 }
 
 // ── Create Event Form Handler ───────────────────────

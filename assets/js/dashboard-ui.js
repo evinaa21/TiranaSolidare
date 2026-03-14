@@ -26,6 +26,9 @@ function switchPanel(panelId, btn) {
         panel.style.animation = '';
     }
     if (btn) btn.classList.add('active');
+
+      // Ruaj tab-in aktiv në URL
+      location.hash = panelId;
 }
 
 
@@ -180,21 +183,22 @@ window.loadAdminEvents = async function (page = 1) {
         + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    events.forEach(ev => {
-        html += `<tr>
-            <td><strong>#${ev.id_eventi}</strong></td>
-            <td>${escapeHtml(ev.titulli)}</td>
-            <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
-            <td>${formatDate(ev.data)}</td>
-            <td>
-                <div class="db-table__actions">
-                    <button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-                    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
-                </div>
-            </td>
-        </tr>`;
-    });
+events.forEach(ev => {
+    const isPast = new Date(ev.data) < new Date();
+    html += `<tr>
+        <td><strong>#${ev.id_eventi}</strong></td>
+        <td>${escapeHtml(ev.titulli)}</td>
+        <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
+        <td>${formatDate(ev.data)}</td>
+        <td>
+            <div class="db-table__actions">
+                ${!isPast ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` : ''}
+                <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+                <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+            </div>
+        </td>
+    </tr>`;
+});
     html += '</tbody></table></div>';
 
     if (total_pages > 1) {
@@ -1165,4 +1169,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNotifications();
         loadHelpRequests();
     }, 100);
+
+    // Rikthe tab-in nga URL pas refresh
+    if (location.hash) {
+        const panelId = location.hash.replace('#', '');
+        const navBtn = document.querySelector(`[data-panel="${panelId}"]`);
+        if (document.getElementById(`panel-${panelId}`)) {
+            switchPanel(panelId, navBtn);
+        }
+     }
 });

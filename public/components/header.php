@@ -53,5 +53,3 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/TiranaSolidare/public/sw.js');
 }
 </script>
-
-```
