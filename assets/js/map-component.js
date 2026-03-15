@@ -122,7 +122,7 @@ const TSMap = (() => {
       clearTimeout(searchTimeout);
       const q = this.value.trim();
       if (q.length < 3) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; return; }
-      searchTimeout = setTimeout(() => geocodeSearch(q, searchResults, map, marker, options, (m) => { marker = m; }), 400);
+      searchTimeout = setTimeout(() => geocodeSearch(q, searchResults, map, marker, options, (m) => { marker = m; }, () => { searchSelected = true; }), 400);
     });
 
     searchInput.addEventListener('keydown', function(e) {
@@ -130,10 +130,16 @@ const TSMap = (() => {
     });
 
     // Click on map to place marker
+    let searchSelected = false;
     map.on('click', function(e) {
+  if (searchSelected) {
+    searchSelected = false;
+    return;
+  }
       const { lat: clickLat, lng: clickLng } = e.latlng;
 
       if (marker) {
+        marker._skipReverseGeocode = true; 
         marker.setLatLng(e.latlng);
       } else {
         marker = L.marker(e.latlng, { icon: eventIcon, draggable: true }).addTo(map);
@@ -165,12 +171,16 @@ const TSMap = (() => {
   }
 
   function bindMarkerDrag(marker, options) {
-    marker.on('dragend', function(e) {
-      const { lat, lng } = e.target.getLatLng();
-      updateInputs(lat, lng, options);
-      reverseGeocode(lat, lng, options);
-    });
-  }
+  marker.on('dragend', function(e) {
+    if (e.target._skipReverseGeocode) {
+      e.target._skipReverseGeocode = false;
+      return;
+    }
+    const { lat, lng } = e.target.getLatLng();
+    updateInputs(lat, lng, options);
+    reverseGeocode(lat, lng, options);
+  });
+}
 
   function updateInputs(lat, lng, options) {
     const latInput = options.latInput ? document.getElementById(options.latInput) : null;
@@ -201,7 +211,7 @@ const TSMap = (() => {
   }
 
   // Forward geocode search
-  async function geocodeSearch(query, resultsDiv, map, marker, options, setMarker) {
+  async function geocodeSearch(query, resultsDiv, map, marker, options, setMarker, onResultSelect) {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Tiranë, Albania')}&limit=5&addressdetails=1`, {
         headers: { 'Accept-Language': 'sq,en' },
@@ -226,6 +236,8 @@ const TSMap = (() => {
       // Click handler for results
       resultsDiv.querySelectorAll('.ts-map-search__item[data-lat]').forEach(item => {
         item.addEventListener('click', function() {
+          if (onResultSelect) onResultSelect(); 
+          searchSelected = true;
           const lat = parseFloat(this.dataset.lat);
           const lng = parseFloat(this.dataset.lng);
           const name = this.dataset.name;
@@ -250,7 +262,7 @@ const TSMap = (() => {
 
           // Update search input
           const searchInput = resultsDiv.parentElement.querySelector('.ts-map-search__input');
-          if (searchInput) searchInput.value = '';
+          if (searchInput) searchInput.value = name;
         });
       });
     } catch (e) {

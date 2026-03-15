@@ -106,7 +106,8 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <span class="db-topbar__role db-topbar__role--<?= $isAdmin ? 'admin' : 'vol' ?>"><?= $userRoli ?></span>
     </div>
   </header>
-
+
+
 
 
   <!-- ═══════════════ PANEL: OVERVIEW ═══════════════ -->
@@ -153,7 +154,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           </div>
           <div class="db-form__group">
             <label>Vendndodhja</label>
-            <input type="text" name="vendndodhja" required placeholder="Vendi">
+           <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Vendi">
           </div>
           <div class="db-form__group">
             <label>Data</label>
@@ -276,31 +277,26 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/TiranaSolidare/assets/js/dashboard-ui.js"></script>
 <script>
-// Initialize map picker for event creation
 document.addEventListener('DOMContentLoaded', function() {
   let eventMapPicker = null;
 
-  // Observe when the create event form becomes visible
   const createWrapper = document.getElementById('create-event-wrapper');
   if (createWrapper) {
+
+    // Inicializo hartën kur hapet forma
     const observer = new MutationObserver(function() {
       if (createWrapper.style.display !== 'none' && !eventMapPicker) {
         setTimeout(() => {
           eventMapPicker = TSMap.picker('event-map-picker', {
             latInput: 'event-lat-input',
             lngInput: 'event-lng-input',
-            addressInput: 'create-event-form' && document.querySelector('#create-event-form [name="vendndodhja"]') ? document.querySelector('#create-event-form [name="vendndodhja"]').id || null : null,
+            addressInput: 'event-vendndodhja',
             onSelect: function(lat, lng) {
               const coordDisplay = document.getElementById('event-coord-display');
               const coordText = document.getElementById('event-coord-text');
               if (coordDisplay && coordText) {
                 coordDisplay.style.display = 'flex';
                 coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-              }
-              // Auto-fill vendndodhja input if empty
-              const vendInput = document.querySelector('#create-event-form [name="vendndodhja"]');
-              if (vendInput && !vendInput.value.trim()) {
-                vendInput.value = 'Tiranë';
               }
             }
           });
@@ -311,8 +307,48 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     observer.observe(createWrapper, { attributes: true, attributeFilter: ['style'] });
-  }
-});
+
+    // Forward geocoding — kur useri shkruan vendndodhjen
+const vendInput = document.getElementById('event-vendndodhja');
+if (vendInput) {
+    let geocodeTimeout = null;
+    let skipNextGeocode = false;
+
+    vendInput.addEventListener('input', function() {
+        if (skipNextGeocode) {
+            skipNextGeocode = false;
+            return;
+        }
+        clearTimeout(geocodeTimeout);
+        const q = this.value.trim();
+        if (q.length < 3) return;
+        geocodeTimeout = setTimeout(async () => {
+            if (!eventMapPicker) return;
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
+                    { headers: { 'Accept-Language': 'sq,en' } }
+                );
+                const data = await res.json();
+                if (data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+                    eventMapPicker.setPosition(lat, lng);
+                    const coordDisplay = document.getElementById('event-coord-display');
+                    const coordText = document.getElementById('event-coord-text');
+                    if (coordDisplay && coordText) {
+                        coordDisplay.style.display = 'flex';
+                        coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+                    }
+                }
+            } catch (e) {}
+        }, 600);
+    });
+
+    vendInput._skipNextGeocode = () => { skipNextGeocode = true; };
+    }
+  } 
+}); 
 </script>
 </body>
 </html>

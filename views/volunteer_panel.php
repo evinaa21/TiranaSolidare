@@ -685,6 +685,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
+
+    // Forward geocoding — kur useri shkruan vendndodhjen
+    const vendInput = document.getElementById('vp-req-location');
+    if (vendInput) {
+      let geocodeTimeout = null;
+      vendInput.addEventListener('input', function() {
+        clearTimeout(geocodeTimeout);
+        const q = this.value.trim();
+        if (q.length < 3) return;
+        geocodeTimeout = setTimeout(async () => {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
+              { headers: { 'Accept-Language': 'sq,en' } }
+            );
+            const data = await res.json();
+            if (data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lng = parseFloat(data[0].lon);
+              reqMap.setPosition(lat, lng);
+              const coordDisplay = document.getElementById('req-coord-display');
+              const coordText = document.getElementById('req-coord-text');
+              if (coordDisplay && coordText) {
+                coordDisplay.style.display = 'flex';
+                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+              }
+            }
+          } catch (e) {}
+        }, 600);
+      });
+    }
   }
 });
 </script>
