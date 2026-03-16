@@ -55,7 +55,15 @@ function toggleSidebar() {
 
 function toggleCreateEvent() {
     const w = document.getElementById('create-event-wrapper');
-    if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
+    const table = document.getElementById('admin-event-list');
+    const appCard = document.getElementById('event-applications-card');
+    
+    if (w) {
+        const isOpening = w.style.display === 'none';
+        w.style.display = isOpening ? 'block' : 'none';
+        if (table) table.style.display = isOpening ? 'none' : 'block';
+        if (appCard) appCard.style.display = 'none';
+    }
 }
 
 
@@ -169,43 +177,190 @@ window.loadDashboardStats = async function () {
 //  OVERRIDE: Admin Event List
 // ═══════════════════════════════════════════════════════
 
+window._eventFilters = window._eventFilters || {
+    status: 'all',
+    kategoria: 'all',
+    dateRange: 'all',
+    search: '',
+    location: ''
+};
+
 window.loadAdminEvents = async function (page = 1) {
     const container = document.getElementById('admin-event-list');
     if (!container) return;
 
-    const json = await apiCall(`events.php?action=list&page=${page}&limit=10`);
+    const filters = window._eventFilters;
+
+    // Merr të gjitha eventet për filtrim client-side
+    const json = await apiCall(`events.php?action=list&page=1&limit=1000`);
     if (!json.success) return;
 
-    const { events, total, total_pages } = json.data;
+    let events = json.data.events;
+    const allEvents = [...events];
 
-    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> evente</div>`;
-    html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
-        + '</tr></thead><tbody>';
-
-events.forEach(ev => {
-    const isPast = new Date(ev.data) < new Date();
-    html += `<tr>
-        <td><strong>#${ev.id_eventi}</strong></td>
-        <td>${escapeHtml(ev.titulli)}</td>
-        <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
-        <td>${formatDate(ev.data)}</td>
-        <td>
-            <div class="db-table__actions">
-                ${!isPast ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` : ''}
-                <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-                <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
-            </div>
-        </td>
-    </tr>`;
-});
-    html += '</tbody></table></div>';
-
-    if (total_pages > 1) {
-        html += dbPagination(page, total_pages, 'loadAdminEvents');
+    // ── Filter: status ──
+    if (filters.status === 'active') {
+        events = events.filter(ev => new Date(ev.data) >= new Date());
+    } else if (filters.status === 'past') {
+        events = events.filter(ev => new Date(ev.data) < new Date());
     }
 
-    container.innerHTML = html;
+    // ── Filter: kategoria ──
+    if (filters.kategoria !== 'all') {
+        events = events.filter(ev => String(ev.id_kategoria) === String(filters.kategoria));
+    }
+
+    // ── Filter: date range ──
+const now = new Date();
+if (filters.dateRange === 'week') {
+    // Java aktuale — nga e hëna deri të dielën
+    const dayOfWeek = now.getDay(); // 0=diel, 1=hënë...
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    events = events.filter(ev => new Date(ev.data) >= monday && new Date(ev.data) <= sunday);
+} else if (filters.dateRange === 'month') {
+    // Muaji aktual — nga 1 i muajit deri në fund të muajit
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    events = events.filter(ev => new Date(ev.data) >= monthStart && new Date(ev.data) <= monthEnd);
+} else if (filters.dateRange === 'past3') {
+    // 3 muajt e fundit — nga 1 i muajit 3 muaj më parë deri sot
+    const past3Start = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
+    const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+    events = events.filter(ev => new Date(ev.data) >= past3Start && new Date(ev.data) <= todayEnd);
+}
+
+    // ── Filter: search ──
+    if (filters.search.trim() !== '') {
+        const q = filters.search.toLowerCase();
+        events = events.filter(ev => ev.titulli.toLowerCase().includes(q));
+    }
+
+    // ── Filter: location ──
+    if (filters.location.trim() !== '') {
+        const q = filters.location.toLowerCase();
+        events = events.filter(ev => (ev.vendndodhja || '').toLowerCase().includes(q));
+    }
+
+    // ── Pagination client-side ──
+    const limit = 10;
+    const totalFiltered = events.length;
+    const totalPages = Math.ceil(totalFiltered / limit) || 1;
+    const offset = (page - 1) * limit;
+    const pageEvents = events.slice(offset, offset + limit);
+
+    // ── Kategoritë për dropdown ──
+    const categories = [...new Map(
+        allEvents.filter(e => e.kategoria_emri).map(e => [e.id_kategoria, e.kategoria_emri])
+    ).entries()];
+
+    // ── Vendndodhjet për dropdown ──
+    const locations = [...new Set(
+        allEvents.filter(e => e.vendndodhja).map(e => e.vendndodhja.trim())
+    )].sort();
+
+    let html = `
+    <div class="db-filter-bar">
+        <div class="db-filter-group">
+            <label>Statusi</label>
+            <select class="db-filter-select" onchange="window._eventFilters.status = this.value; loadAdminEvents(1)">
+                <option value="all"    ${filters.status === 'all'    ? 'selected' : ''}>Të gjitha</option>
+                <option value="active" ${filters.status === 'active' ? 'selected' : ''}>Aktive</option>
+                <option value="past"   ${filters.status === 'past'   ? 'selected' : ''}>Të kaluara</option>
+            </select>
+        </div>
+        <div class="db-filter-group">
+            <label>Kategoria</label>
+            <select class="db-filter-select" onchange="window._eventFilters.kategoria = this.value; loadAdminEvents(1)">
+                <option value="all">Të gjitha</option>
+                ${categories.map(([id, name]) => `<option value="${id}" ${filters.kategoria === String(id) ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="db-filter-group">
+            <label>Periudha</label>
+            <select class="db-filter-select" onchange="window._eventFilters.dateRange = this.value; loadAdminEvents(1)">
+                <option value="all"   ${filters.dateRange === 'all'   ? 'selected' : ''}>Të gjitha</option>
+                <option value="week"  ${filters.dateRange === 'week'  ? 'selected' : ''}>Kjo javë</option>
+                <option value="month" ${filters.dateRange === 'month' ? 'selected' : ''}>Ky muaj</option>
+                <option value="past3" ${filters.dateRange === 'past3' ? 'selected' : ''}>3 muajt e fundit</option>
+            </select>
+        </div>
+        <div class="db-filter-group">
+    <input
+        type="text"
+        class="db-filter-select"
+        placeholder="Kërko vendndodhje..."
+        value="${escapeHtml(filters.location)}"
+        oninput="window._eventFilters.location = this.value; clearTimeout(window._locSearchTimeout); window._locSearchTimeout = setTimeout(() => { loadAdminEvents(1); }, 350)"
+        style="min-width:160px;"
+    >
+</div>
+        <div class="db-filter-group">
+            <input
+                type="text"
+                class="db-filter-select"
+                placeholder="Kërko titull..."
+                value="${escapeHtml(filters.search)}"
+                oninput="window._eventFilters.search = this.value; clearTimeout(window._searchTimeout); window._searchTimeout = setTimeout(() => { loadAdminEvents(1); }, 350)"
+                style="min-width:160px;"
+            >
+        </div>
+        <span class="db-filter-count"><strong>${totalFiltered}</strong> evente</span>
+    </div>`;
+
+    if (pageEvents.length === 0) {
+        html += '<div class="db-loading">Nuk ka evente për këto filtra.</div>';
+        container.innerHTML = html;
+        return;
+    }
+
+    html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
+        + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Vendndodhja</th><th>Veprime</th>'
+        + '</tr></thead><tbody>';
+
+    pageEvents.forEach(ev => {
+        const isPast = new Date(ev.data) < new Date();
+        html += `<tr ${isPast ? 'style="opacity:0.65"' : ''}>
+            <td><strong>#${ev.id_eventi}</strong></td>
+            <td>${escapeHtml(ev.titulli)}</td>
+            <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
+            <td>${formatDate(ev.data)}</td>
+            <td>${escapeHtml(ev.vendndodhja || '—')}</td>
+            <td>
+                <div class="db-table__actions">
+    ${!isPast 
+        ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
+        : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
+    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+</div>
+            </td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+
+    if (totalPages > 1) {
+        html += dbPagination(page, totalPages, 'loadAdminEvents');
+    }
+const existingFilterBar = container.querySelector('.db-filter-bar');
+const wasSearchFocused = document.activeElement?.classList.contains('db-filter-select') && 
+                         document.activeElement?.type === 'text';
+
+container.innerHTML = html;
+
+// Rifokuso search input pas render
+if (wasSearchFocused) {
+    const inp = container.querySelector('input[type="text"]');
+    if (inp) {
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+    }
+}
 };
 
 
@@ -262,21 +417,67 @@ window.viewEventApps = async function (eventId) {
 //  OVERRIDE: User Management (Detail Panel approach)
 // ═══════════════════════════════════════════════════════
 
+window._userFilters = window._userFilters || {
+    roli: 'all',
+    statusi: 'all'
+};
+
 window.loadUsers = async function (page = 1) {
     const container = document.getElementById('admin-user-list');
     if (!container) return;
 
-    const json = await apiCall(`users.php?action=list&page=${page}&limit=15`);
+    const filters = window._userFilters;
+
+    // Merr të gjithë përdoruesit për filtrim client-side
+    const json = await apiCall(`users.php?action=list&page=1&limit=1000`);
     if (!json.success) return;
 
-    const { users, total, total_pages } = json.data;
+    let users = json.data.users;
 
-    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> përdorues</div>`;
+    // ── Filter: roli ──
+    if (filters.roli !== 'all') {
+        users = users.filter(u => u.roli === filters.roli);
+    }
+
+    // ── Filter: statusi ──
+    if (filters.statusi !== 'all') {
+        users = users.filter(u => u.statusi_llogarise === filters.statusi);
+    }
+
+    // ── Pagination client-side ──
+    const limit = 15;
+    const totalFiltered = users.length;
+    const totalPages = Math.ceil(totalFiltered / limit) || 1;
+    const offset = (page - 1) * limit;
+    const pageUsers = users.slice(offset, offset + limit);
+
+    let html = `
+    <div class="db-filter-bar">
+        <div class="db-filter-group">
+            <label>Roli</label>
+            <select class="db-filter-select" onchange="window._userFilters.roli = this.value; loadUsers(1)">
+                <option value="all"       ${filters.roli === 'all'       ? 'selected' : ''}>Të gjitha</option>
+                <option value="Admin"     ${filters.roli === 'Admin'     ? 'selected' : ''}>Admin</option>
+                <option value="Vullnetar" ${filters.roli === 'Vullnetar' ? 'selected' : ''}>Vullnetar</option>
+            </select>
+        </div>
+        <div class="db-filter-group">
+            <label>Statusi</label>
+            <select class="db-filter-select" onchange="window._userFilters.statusi = this.value; loadUsers(1)">
+                <option value="all"         ${filters.statusi === 'all'         ? 'selected' : ''}>Të gjitha</option>
+                <option value="Aktiv"       ${filters.statusi === 'Aktiv'       ? 'selected' : ''}>Aktiv</option>
+                <option value="Bllokuar"    ${filters.statusi === 'Bllokuar'    ? 'selected' : ''}>Bllokuar</option>
+                <option value="Çaktivizuar" ${filters.statusi === 'Çaktivizuar' ? 'selected' : ''}>Çaktivizuar</option>
+            </select>
+        </div>
+        <span class="db-filter-count"><strong>${totalFiltered}</strong> përdorues</span>
+    </div>`;
+
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
         + '<th>ID</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    users.forEach(u => {
+    pageUsers.forEach(u => {
         const isBlocked = u.statusi_llogarise === 'Bllokuar';
         const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
         const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
@@ -295,27 +496,23 @@ window.loadUsers = async function (page = 1) {
                         Shiko
                     </button>
                     ${isBlocked
-                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">
-                             Zhblloko</button>`
+                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">Zhblloko</button>`
                         : isDeactivated
-                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="reactivateUser(${u.id_perdoruesi})">
-                             Riaktivizo</button>`
-                        : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">
-                             Blloko</button>`}
+                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="reactivateUser(${u.id_perdoruesi})">Riaktivizo</button>`
+                        : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">Blloko</button>`}
                 </div>
             </td>
         </tr>`;
     });
+
     html += '</tbody></table></div>';
 
-    if (total_pages > 1) {
-        html += dbPagination(page, total_pages, 'loadUsers');
+    if (totalPages > 1) {
+        html += dbPagination(page, totalPages, 'loadUsers');
     }
 
     container.innerHTML = html;
 };
-
-
 // ═══════════════════════════════════════════════════════
 //  User Detail Panel
 // ═══════════════════════════════════════════════════════
@@ -368,24 +565,29 @@ window.openUserDetail = async function (userId) {
         </div>
 
         <!-- Stats Row -->
-        <div class="ud-stats">
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_aplikime}</div>
-                <div class="ud-stat-card__label">Aplikime</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_kerkesa}</div>
-                <div class="ud-stat-card__label">Kërkesa</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_evente || 0}</div>
-                <div class="ud-stat-card__label">Evente</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
-                <div class="ud-stat-card__label">Regjistruar më</div>
-            </div>
-        </div>
+<div class="ud-stats">
+    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+        <div class="ud-stat-card__value">${u.total_aplikime}</div>
+        <div class="ud-stat-card__label">Aplikime</div>
+        <div class="ud-stat-card__hint">Shiko →</div>
+    </div>
+    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+        <div class="ud-stat-card__value">${u.total_kerkesa}</div>
+        <div class="ud-stat-card__label">Kërkesa</div>
+        <div class="ud-stat-card__hint">Shiko →</div>
+    </div>
+    <div class="ud-stat-card">
+        <div class="ud-stat-card__value">${u.total_evente || 0}</div>
+        <div class="ud-stat-card__label">Evente</div>
+    </div>
+    <div class="ud-stat-card">
+        <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
+        <div class="ud-stat-card__label">Regjistruar më</div>
+    </div>
+</div>
+
+<!-- User Activity Section (injected by click) -->
+
 
         ${isDeactivated && u.deaktivizuar_me ? `
             <div class="ud-deactivation-notice">
@@ -410,26 +612,6 @@ window.openUserDetail = async function (userId) {
                     </select>
                     <button class="db-btn db-btn--primary" onclick="changeUserRoleFromDetail(${u.id_perdoruesi})">
                         Ruaj Rolin
-                    </button>
-                </div>
-            </div>
-
-            <!-- Reset Password Card -->
-            <div class="ud-card">
-                <div class="ud-card__header">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <h4>Rivendos Fjalëkalimin</h4>
-                </div>
-                <p class="ud-card__desc">Vendosni fjalëkalim të ri nëse përdoruesi ka harruar fjalëkalimin.</p>
-                <div class="ud-card__body">
-                    <div class="ud-password-wrap">
-                        <input type="password" id="ud-new-password" class="ud-input" placeholder="Fjalëkalimi i ri (min. 6 karaktere)" minlength="6">
-                        <button class="ud-password-toggle" onclick="togglePasswordVisibility()" type="button" title="Shfaq/Fshih">
-                            <svg id="ud-eye-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </div>
-                    <button class="db-btn db-btn--primary" onclick="adminResetPassword(${u.id_perdoruesi})">
-                        Rivendos Fjalëkalimin
                     </button>
                 </div>
             </div>
@@ -470,14 +652,95 @@ window.openUserDetail = async function (userId) {
         </div>
     `;
 };
+// ── User Activity: shfaq aplikimet ose kërkesat e një përdoruesi kur shtypen stat cards ──
 
+window.loadUserApplications = async function(userId, userName) {
+    showUserActivityModal('Duke ngarkuar aplikimet…');
 
-// Toggle password field visibility
-window.togglePasswordVisibility = function () {
-    const inp = document.getElementById('ud-new-password');
-    if (!inp) return;
-    inp.type = inp.type === 'password' ? 'text' : 'password';
+    const json = await apiCall(`applications.php?action=list&page=1&limit=100`);
+    if (!json.success) return;
+
+    const apps = json.data.applications.filter(a => a.id_perdoruesi == userId);
+
+    let body = '';
+    if (apps.length === 0) {
+        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka aplikime.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
+        apps.forEach(a => {
+            const statusClass = a.statusi === 'Pranuar' ? 'active' : a.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            body += `<tr>
+                <td><strong>${escapeHtml(a.eventi_titulli)}</strong></td>
+                <td>${formatDate(a.eventi_data)}</td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.statusi)}</span></td>
+                <td>${formatDate(a.aplikuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    updateUserActivityModal(`Aplikimet e ${escapeHtml(userName)}`, body);
 };
+
+window.loadUserRequests = async function(userId, userName) {
+    showUserActivityModal('Duke ngarkuar kërkesat…');
+
+    const json = await apiCall(`help_requests.php?action=list&user_id=${userId}&limit=100`);
+    if (!json.success) return;
+
+    const requests = json.data.requests;
+
+    let body = '';
+    if (requests.length === 0) {
+        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka kërkesa.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
+        requests.forEach(r => {
+            const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
+            const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+            body += `<tr>
+                <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
+                <td>${formatDate(r.krijuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    updateUserActivityModal(`Kërkesat e ${escapeHtml(userName)}`, body);
+};
+
+function showUserActivityModal(loadingText) {
+    const existing = document.getElementById('ud-activity-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'ud-activity-modal';
+    modal.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);`;
+    modal.innerHTML = `
+        <div id="ud-activity-modal-inner" style="background:#fff;border-radius:16px;width:100%;max-width:800px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e4e8ee;position:sticky;top:0;background:#fff;z-index:1;">
+                <h3 id="ud-activity-modal-title" style="margin:0;font-family:'Bitter',serif;font-size:1.1rem;font-weight:700;color:#003229;">Duke ngarkuar…</h3>
+                <button onclick="document.getElementById('ud-activity-modal').remove()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:#6b7280;line-height:1;">×</button>
+            </div>
+            <div id="ud-activity-modal-body" style="padding:20px 24px;">
+                <div class="db-loading">${loadingText}</div>
+            </div>
+        </div>`;
+
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+}
+
+function updateUserActivityModal(title, bodyHtml) {
+    const titleEl = document.getElementById('ud-activity-modal-title');
+    const bodyEl = document.getElementById('ud-activity-modal-body');
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.innerHTML = bodyHtml;
+}
+
+
 
 // Change role from detail panel
 window.changeUserRoleFromDetail = async function (userId) {
@@ -491,27 +754,6 @@ window.changeUserRoleFromDetail = async function (userId) {
     if (json.success) {
         // Refresh detail
         setTimeout(() => openUserDetail(userId), 300);
-    }
-};
-
-// Admin password reset
-window.adminResetPassword = async function (userId) {
-    const inp = document.getElementById('ud-new-password');
-    if (!inp) return;
-    const pw = inp.value.trim();
-
-    if (pw.length < 6) {
-        dbToast('Fjalëkalimi duhet të ketë të paktën 6 karaktere.', 'danger');
-        return;
-    }
-
-    if (!confirm('Jeni të sigurt që doni të rivendosni fjalëkalimin e këtij përdoruesi?')) return;
-
-    const json = await apiCall(`users.php?action=reset_password&id=${userId}`, 'PUT', { password: pw });
-    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
-
-    if (json.success) {
-        inp.value = '';
     }
 };
 
@@ -547,20 +789,90 @@ window.reactivateUser = async function (userId) {
 //  OVERRIDE: Help Requests
 // ═══════════════════════════════════════════════════════
 
-window.loadHelpRequests = async function (page = 1, filters = {}) {
+window._requestFilters = window._requestFilters || {
+    status: 'all',
+    tipi: 'all',
+    search: ''
+};
+
+window.loadHelpRequests = async function (page = 1) {
     const container = document.getElementById('help-request-list');
     if (!container) return;
 
-    const params = new URLSearchParams({ action: 'list', page, limit: 10, ...filters });
-    const json = await apiCall(`help_requests.php?${params}`);
+    const filters = window._requestFilters;
+    const wasSearchFocused = document.activeElement?.classList.contains('db-filter-select') &&
+                             document.activeElement?.type === 'text';
+
+    const json = await apiCall(`help_requests.php?action=list&page=1&limit=1000`);
     if (!json.success) return;
 
-    const { requests, total, total_pages } = json.data;
+    let requests = json.data.requests;
 
-    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> kërkesa</div>`;
+    // ── Rendit: Open para, Closed pas ──
+    requests.sort((a, b) => {
+        if (a.statusi === 'Open' && b.statusi !== 'Open') return -1;
+        if (a.statusi !== 'Open' && b.statusi === 'Open') return 1;
+        return new Date(b.krijuar_me) - new Date(a.krijuar_me);
+    });
 
-    if (requests.length === 0) {
-        html += '<div class="db-loading">Nuk ka kërkesa për momentin.</div>';
+    // ── Filter: statusi ──
+    if (filters.status === 'open') {
+        requests = requests.filter(r => r.statusi === 'Open');
+    } else if (filters.status === 'closed') {
+        requests = requests.filter(r => r.statusi === 'Closed');
+    }
+
+    // ── Filter: tipi ──
+    if (filters.tipi !== 'all') {
+        requests = requests.filter(r => r.tipi === filters.tipi);
+    }
+
+    // ── Filter: search ──
+    if (filters.search.trim() !== '') {
+        const q = filters.search.toLowerCase();
+        requests = requests.filter(r => r.titulli.toLowerCase().includes(q));
+    }
+
+    // ── Pagination client-side ──
+    const limit = 10;
+    const totalFiltered = requests.length;
+    const totalPages = Math.ceil(totalFiltered / limit) || 1;
+    const offset = (page - 1) * limit;
+    const pageRequests = requests.slice(offset, offset + limit);
+
+    let html = `
+    <div class="db-filter-bar">
+        <div class="db-filter-group">
+            <label>Statusi</label>
+            <select class="db-filter-select" onchange="window._requestFilters.status = this.value; loadHelpRequests(1)">
+                <option value="all"    ${filters.status === 'all'    ? 'selected' : ''}>Të gjitha</option>
+                <option value="open"   ${filters.status === 'open'   ? 'selected' : ''}>Të hapura</option>
+                <option value="closed" ${filters.status === 'closed' ? 'selected' : ''}>Të mbyllura</option>
+            </select>
+        </div>
+        <div class="db-filter-group">
+            <label>Tipi</label>
+            <select class="db-filter-select" onchange="window._requestFilters.tipi = this.value; loadHelpRequests(1)">
+                <option value="all"     ${filters.tipi === 'all'     ? 'selected' : ''}>Të gjitha</option>
+                <option value="Kërkesë" ${filters.tipi === 'Kërkesë' ? 'selected' : ''}>Kërkesë</option>
+                <option value="Ofertë"  ${filters.tipi === 'Ofertë'  ? 'selected' : ''}>Ofertë</option>
+            </select>
+        </div>
+        <div class="db-filter-group">
+            <input
+                type="text"
+                class="db-filter-select"
+                placeholder="Kërko titull..."
+                value="${escapeHtml(filters.search)}"
+                oninput="window._requestFilters.search = this.value; clearTimeout(window._reqSearchTimeout); window._reqSearchTimeout = setTimeout(() => { loadHelpRequests(1); }, 350)"
+                style="min-width:180px;"
+            >
+        </div>
+        <span class="db-filter-count"><strong>${totalFiltered}</strong> kërkesa</span>
+    </div>`;
+
+    if (pageRequests.length === 0) {
+        html += '<div class="db-loading">Nuk ka kërkesa për këto filtra.</div>';
         container.innerHTML = html;
         return;
     }
@@ -569,7 +881,7 @@ window.loadHelpRequests = async function (page = 1, filters = {}) {
         + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Nga</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    requests.forEach(r => {
+    pageRequests.forEach(r => {
         const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
         const statClass = r.statusi === 'Open' ? 'open' : 'closed';
 
@@ -588,13 +900,22 @@ window.loadHelpRequests = async function (page = 1, filters = {}) {
             </td>
         </tr>`;
     });
+
     html += '</tbody></table></div>';
 
-    if (total_pages > 1) {
-        html += dbPagination(page, total_pages, 'loadHelpRequests');
+    if (totalPages > 1) {
+        html += dbPagination(page, totalPages, 'loadHelpRequests');
     }
 
     container.innerHTML = html;
+
+    if (wasSearchFocused) {
+        const inp = container.querySelector('input[type="text"]');
+        if (inp) {
+            inp.focus();
+            inp.setSelectionRange(inp.value.length, inp.value.length);
+        }
+    }
 };
 
 // Close request action
