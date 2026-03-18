@@ -8,3 +8,4 @@ vendor/
 seed_data.sql
 uploads/
 public/assets/uploads
+config/

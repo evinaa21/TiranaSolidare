@@ -45,6 +45,18 @@ Open your browser and go to:
 
 You should see the login screen.
 
+## 5.1 Configure Email Verification (PHPMailer)
+Registration now sends a verification email and users must verify before login.
+
+1. Install PHPMailer with Composer (from project root):
+    ```bash
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    php composer-setup.php
+    php composer.phar require phpmailer/phpmailer
+    ```
+2. Open `config/mail.php` and set your real SMTP credentials.
+3. Test by creating a new account and clicking the verification link from email.
+
 ## 6. How to Push Code (GitHub)
 **Before you start working:**
 Always pull the latest changes so you don't overwrite someone else's work.
@@ -66,4 +78,16 @@ git pull
 If your database was created before the latest changes, run this SQL in phpMyAdmin:
 ```sql
 ALTER TABLE `kerkesa_per_ndihme` ADD COLUMN `vendndodhja` varchar(255) DEFAULT NULL AFTER `imazhi`;
+```
+
+Also run the new email-verification migration:
+```sql
+ALTER TABLE Perdoruesi
+    ADD COLUMN verified TINYINT(1) NOT NULL DEFAULT 0 AFTER statusi_llogarise,
+    ADD COLUMN verification_token_hash VARCHAR(64) NULL AFTER verified,
+    ADD COLUMN verification_token_expires DATETIME NULL AFTER verification_token_hash;
+
+UPDATE Perdoruesi
+SET verified = 1
+WHERE roli = 'Admin' OR verified IS NULL OR verified = 0;
 ```

@@ -47,8 +47,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
-    if (strlen($password) < 6) {
-        header("Location: /TiranaSolidare/views/register.php?error=password_too_short" . $redirectParam);
+    if ($passwordError = validate_password_strength($password)) {
+        header("Location: /TiranaSolidare/views/register.php?error=password_weak" . $redirectParam);
         exit();
     }
 
@@ -61,30 +61,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: /TiranaSolidare/views/register.php?error=email_taken" . $redirectParam);
         exit();
     } else {
-        // 4. Hash Password (Q-06: Use PASSWORD_DEFAULT for best practice)
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        // 5. Insert New User (Default role: Vullnetar)
-        $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise) VALUES (?, ?, ?, 'Vullnetar', 'Aktiv')";
-        $stmt = $pdo->prepare($sql_insert);
-        
-        if ($stmt->execute([$emri, $email, $hashed_password])) {
-            // U-02: Auto-login after registration
-            $newId = (int) $pdo->lastInsertId();
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $newId;
-            $_SESSION['emri'] = $emri;
-            $_SESSION['roli'] = 'Vullnetar';
-            $_SESSION['email'] = $email;
+        $plainToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $plainToken);
+        $expiresAt = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
 
-            // U-03: Redirect to original page or volunteer panel
-            if ($redirect && is_safe_redirect($redirect)) {
-                header("Location: $redirect");
-            } else {
-                header("Location: /TiranaSolidare/views/volunteer_panel.php?welcome=1");
+        $verifyUrl = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+
+        try {
+            $pdo->beginTransaction();
+
+            $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, verification_token_hash, verification_token_expires) VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, ?, ?)";
+            $stmt = $pdo->prepare($sql_insert);
+            $stmt->execute([$emri, $email, $hashed_password, $tokenHash, $expiresAt]);
+
+            $mailSent = send_verification_email($email, $emri, $verifyUrl);
+            if (!$mailSent) {
+                $pdo->rollBack();
+                header("Location: /TiranaSolidare/views/register.php?error=verification_email_failed" . $redirectParam);
+                exit();
             }
+
+            $pdo->commit();
+            header("Location: /TiranaSolidare/views/login.php?success=verify_email_sent");
             exit();
-        } else {
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Registration failed: ' . $e->getMessage());
             header("Location: /TiranaSolidare/views/register.php?error=sql_error" . $redirectParam);
             exit();
         }

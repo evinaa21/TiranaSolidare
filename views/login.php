@@ -12,12 +12,19 @@ $errorMessages = [
   'wrong_credentials'   => 'Email ose fjalëkalim i pasaktë.',
   'account_blocked'     => 'Llogaria juaj është bllokuar. Kontaktoni administratorin.',
   'account_deactivated' => 'Llogaria juaj është çaktivizuar. Kontaktoni administratorin.',
+  'email_not_verified'  => 'Konfirmoni email-in tuaj përpara se të kyçeni.',
+  'invalid_verification_link' => 'Linku i verifikimit është i pavlefshëm ose është përdorur.',
+  'verification_expired' => 'Linku i verifikimit ka skaduar. Krijoni një llogari përsëri ose kontaktoni mbështetjen.',
   'rate_limited'        => 'Shumë tentativa. Provoni përsëri pas disa minutash.',
   'csrf_expired'        => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
+  'sql_error'           => 'Ndodhi një gabim i brendshëm. Provoni përsëri më vonë.',
 ];
 
 $successMessages = [
   'registered' => 'Llogaria u krijua me sukses. Tani mund të kyçeni.',
+  'verify_email_sent' => 'Llogaria u krijua. Kontrolloni email-in dhe konfirmoni adresën para hyrjes.',
+  'email_verified' => 'Email-i u verifikua me sukses. Tani mund të kyçeni.',
+  'email_already_verified' => 'Email-i ishte konfirmuar më parë. Mund të kyçeni.',
 ];
 ?>
 <!DOCTYPE html>

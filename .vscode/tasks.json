@@ -1,0 +1,38 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "install-phpmailer",
+			"type": "shell",
+			"command": "composer",
+			"args": [
+				"require",
+				"phpmailer/phpmailer"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "install-composer-and-phpmailer",
+			"type": "shell",
+			"command": "php",
+			"args": [
+				"-r",
+				"\"copy('https://getcomposer.org/installer', 'composer-setup.php');\"; php composer-setup.php; php composer.phar require phpmailer/phpmailer"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "bootstrap-composer-and-install-phpmailer",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"Set-Location 'C:\\xampp\\htdocs\\TiranaSolidare'; Invoke-WebRequest -Uri 'https://getcomposer.org/installer' -OutFile 'composer-setup.php'; php composer-setup.php; php composer.phar require phpmailer/phpmailer"
+			],
+			"isBackground": false
+		}
+	]
+}

@@ -55,6 +55,10 @@ switch ($action) {
             json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
         }
 
+        if ((int) ($user['verified'] ?? 0) !== 1) {
+            json_error('Duhet të konfirmoni email-in para hyrjes.', 403);
+        }
+
         // Regenerate session ID to prevent fixation attacks
         session_regenerate_id(true);
 
@@ -96,12 +100,8 @@ switch ($action) {
             json_error($lenErr, 422);
         }
 
-        if (strlen($password) < 6) {
-            json_error('Fjalëkalimi duhet të jetë të paktën 6 karaktere.', 422);
-        }
-
-        if (mb_strlen($password) > 128) {
-            json_error('Fjalëkalimi nuk mund të ketë më shumë se 128 karaktere.', 422);
+        if ($passwordError = validate_password_strength($password)) {
+            json_error($passwordError, 422);
         }
 
         if ($password !== $confirm_password) {
@@ -122,21 +122,42 @@ switch ($action) {
         }
 
         $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $plainToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $plainToken);
+        $expiresAt = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+        $verifyUrl = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
 
-        $stmt = $pdo->prepare(
-            "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise)
-             VALUES (?, ?, ?, 'Vullnetar', 'Aktiv')"
-        );
-        $stmt->execute([$emri, $email, $hashed]);
+        try {
+            $pdo->beginTransaction();
 
-        $newId = (int) $pdo->lastInsertId();
+            $stmt = $pdo->prepare(
+                "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, verification_token_hash, verification_token_expires)
+                 VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, ?, ?)"
+            );
+            $stmt->execute([$emri, $email, $hashed, $tokenHash, $expiresAt]);
 
-        json_success([
-            'id'    => $newId,
-            'emri'  => $emri,
-            'email' => $email,
-            'roli'  => 'Vullnetar',
-        ], 201);
+            if (!send_verification_email($email, $emri, $verifyUrl)) {
+                $pdo->rollBack();
+                json_error('Nuk u dërgua email-i i verifikimit. Kontrolloni konfigurimin SMTP.', 500);
+            }
+
+            $newId = (int) $pdo->lastInsertId();
+            $pdo->commit();
+
+            json_success([
+                'id'      => $newId,
+                'emri'    => $emri,
+                'email'   => $email,
+                'roli'    => 'Vullnetar',
+                'message' => 'Llogaria u krijua. Konfirmoni email-in para hyrjes.',
+            ], 201);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('API register failed: ' . $e->getMessage());
+            json_error('Ndodhi një gabim gjatë regjistrimit.', 500);
+        }
         break;
 
     // ── LOGOUT ─────────────────────────────────────
@@ -162,8 +183,8 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
-        if (strlen($newPassword) < 6) {
-            json_error('Fjalëkalimi duhet të jetë të paktën 6 karaktere.', 422);
+        if ($passwordError = validate_password_strength($newPassword)) {
+            json_error($passwordError, 422);
         }
 
         if ($newPassword !== $confirmPassword) {

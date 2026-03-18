@@ -216,6 +216,130 @@ function validate_length(string $value, int $min, int $max, string $fieldName): 
 }
 
 /**
+ * Validate password strength against common modern requirements.
+ * Returns null if valid, otherwise an Albanian error message.
+ */
+function validate_password_strength(string $password): ?string
+{
+    if (strlen($password) < 8) {
+        return 'Fjalëkalimi duhet të ketë të paktën 8 karaktere.';
+    }
+    if (strlen($password) > 128) {
+        return 'Fjalëkalimi nuk mund të ketë më shumë se 128 karaktere.';
+    }
+    if (preg_match('/\s/', $password)) {
+        return 'Fjalëkalimi nuk duhet të përmbajë hapësira.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Fjalëkalimi duhet të ketë të paktën një shkronjë të vogël.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Fjalëkalimi duhet të ketë të paktën një shkronjë të madhe.';
+    }
+    if (!preg_match('/\d/', $password)) {
+        return 'Fjalëkalimi duhet të ketë të paktën një numër.';
+    }
+    if (!preg_match('/[^a-zA-Z\d]/', $password)) {
+        return 'Fjalëkalimi duhet të ketë të paktën një simbol.';
+    }
+    return null;
+}
+
+/**
+ * Build base URL from current HTTP request context.
+ */
+function app_base_url(): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+    $scheme = $https ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host;
+}
+
+/**
+ * Send account verification email via PHPMailer.
+ */
+function send_verification_email(string $toEmail, string $toName, string $verificationUrl): bool
+{
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        error_log('PHPMailer autoload not found at vendor/autoload.php');
+        return false;
+    }
+
+    require_once $autoload;
+
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        error_log('PHPMailer class not found after loading autoload.');
+        return false;
+    }
+
+    $mailConfigPath = __DIR__ . '/../config/mail.php';
+    if (!file_exists($mailConfigPath)) {
+        error_log('Mail config not found at config/mail.php');
+        return false;
+    }
+
+    $cfg = require $mailConfigPath;
+    if (!is_array($cfg)) {
+        error_log('Mail config is invalid (expected array).');
+        return false;
+    }
+
+    try {
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = (string) ($cfg['host'] ?? '');
+        $mail->SMTPAuth   = true;
+        $mail->Username   = (string) ($cfg['username'] ?? '');
+        $mail->Password   = (string) ($cfg['password'] ?? '');
+        $mail->Port       = (int) ($cfg['port'] ?? 587);
+        $mail->CharSet    = 'UTF-8';
+
+        $secure = (string) ($cfg['encryption'] ?? 'tls');
+        if ($secure === 'ssl') {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        } else {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        }
+
+        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
+        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
+
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($toEmail, $toName);
+        $mail->isHTML(true);
+        $mail->Subject = 'Konfirmo email-in tënd - Tirana Solidare';
+
+        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+        $safeUrl = htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8');
+
+        $mail->Body = "
+            <div style=\"font-family:Arial,sans-serif;line-height:1.5;color:#1f2d2a\">
+              <h2 style=\"margin:0 0 12px;color:#003229\">Mirë se erdhët në Tirana Solidare</h2>
+              <p>Përshëndetje {$safeName},</p>
+              <p>Ju lutem konfirmoni email-in tuaj duke klikuar butonin më poshtë:</p>
+              <p style=\"margin:24px 0\">
+                <a href=\"{$safeUrl}\" style=\"background:#00715D;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:600\">Konfirmo email-in</a>
+              </p>
+              <p>Nëse butoni nuk funksionon, kopjo këtë link në shfletues:</p>
+              <p><a href=\"{$safeUrl}\">{$safeUrl}</a></p>
+              <p style=\"font-size:12px;color:#667\">Ky link skadon pas 24 orësh.</p>
+            </div>
+        ";
+
+        $mail->AltBody = "Përshëndetje {$toName},\n\nKonfirmo email-in tënd duke hapur këtë link:\n{$verificationUrl}\n\nKy link skadon pas 24 orësh.";
+
+        $mail->send();
+        return true;
+    } catch (Throwable $e) {
+        error_log('Verification email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Validate that a URL is a safe image URL (https:// only, no JS/data schemes).
  */
 function validate_image_url(?string $url): bool

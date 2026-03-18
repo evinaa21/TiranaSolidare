@@ -193,6 +193,9 @@ CREATE TABLE `perdoruesi` (
   `fjalekalimi` varchar(255) NOT NULL,
   `roli` enum('Admin','Vullnetar') DEFAULT 'Vullnetar',
   `statusi_llogarise` enum('Aktiv','Bllokuar','Çaktivizuar') DEFAULT 'Aktiv',
+  `verified` tinyint(1) NOT NULL DEFAULT 0,
+  `verification_token_hash` varchar(64) DEFAULT NULL,
+  `verification_token_expires` datetime DEFAULT NULL,
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp(),
   `deaktivizuar_me` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Main user table storing auth details';
@@ -201,16 +204,16 @@ CREATE TABLE `perdoruesi` (
 -- Dumping data for table `perdoruesi`
 --
 
-INSERT INTO `perdoruesi` (`id_perdoruesi`, `emri`, `email`, `fjalekalimi`, `roli`, `statusi_llogarise`, `krijuar_me`) VALUES
-(2, 'admin', 'admin@tirana.al', '$2y$10$mVd06TmyRZLOBvbsAdN1J.GsIw1QbY5.e7g7vYW4OgtiODz4f.yX.', 'Admin', 'Aktiv', '2026-02-13 23:18:58'),
-(3, 'Elisa Basha', 'elisa.basha@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(4, 'Dritan Shehu', 'dritan.shehu@yahoo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(5, 'Mira Kelmendi', 'mira.kelmendi@outlook.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(6, 'Besnik Duka', 'besnik.duka@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(7, 'Anisa Rama', 'anisa.rama@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(8, 'Genti Berisha', 'genti.berisha@hotmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(9, 'Luana Topalli', 'luana.topalli@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', '2026-02-24 22:09:13'),
-(10, 'Fatjon Muça', 'fatjon.muca@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Bllokuar', '2026-02-24 22:09:13');
+INSERT INTO `perdoruesi` (`id_perdoruesi`, `emri`, `email`, `fjalekalimi`, `roli`, `statusi_llogarise`, `verified`, `krijuar_me`) VALUES
+(2, 'admin', 'admin@tirana.al', '$2y$10$mVd06TmyRZLOBvbsAdN1J.GsIw1QbY5.e7g7vYW4OgtiODz4f.yX.', 'Admin', 'Aktiv', 1, '2026-02-13 23:18:58'),
+(3, 'Elisa Basha', 'elisa.basha@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(4, 'Dritan Shehu', 'dritan.shehu@yahoo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(5, 'Mira Kelmendi', 'mira.kelmendi@outlook.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(6, 'Besnik Duka', 'besnik.duka@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(7, 'Anisa Rama', 'anisa.rama@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(8, 'Genti Berisha', 'genti.berisha@hotmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(9, 'Luana Topalli', 'luana.topalli@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Aktiv', 1, '2026-02-24 22:09:13'),
+(10, 'Fatjon Muça', 'fatjon.muca@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vullnetar', 'Bllokuar', 1, '2026-02-24 22:09:13');
 
 -- --------------------------------------------------------
 

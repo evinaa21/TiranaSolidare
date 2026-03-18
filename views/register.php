@@ -12,8 +12,9 @@ $errorMessages = [
   'invalid_email'      => 'Formati i email-it nuk është i saktë.',
   'invalid_name'       => 'Emri duhet të ketë të paktën 2 karaktere.',
   'password_mismatch'  => 'Fjalëkalimet nuk përputhen.',
-  'password_too_short' => 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.',
+  'password_weak'      => 'Fjalëkalimi duhet të ketë të paktën 8 karaktere, shkronjë të madhe, të vogël, numër dhe simbol.',
   'email_taken'        => 'Ky email është regjistruar tashmë.',
+  'verification_email_failed' => 'Nuk u dërgua email-i i verifikimit. Kontrolloni konfigurimin e email-it dhe provoni përsëri.',
   'rate_limited'       => 'Shumë tentativa regjistrimi. Provoni përsëri më vonë.',
   'csrf_expired'       => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
   'sql_error'          => 'Ndodhi një gabim gjatë regjistrimit. Provoni përsëri.',
@@ -78,11 +79,18 @@ $successMessages = [
         </div>
         <div class="auth-field">
           <label for="password">Fjalëkalimi</label>
-          <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
+          <div class="auth-password-wrap">
+            <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
+            <button type="button" class="auth-password-toggle" data-target="password" aria-label="Shfaq ose fshih fjalëkalimin">Shfaq</button>
+          </div>
+          <small class="auth-hint">Minimumi 8 karaktere me shkronjë të madhe, të vogël, numër dhe simbol.</small>
         </div>
         <div class="auth-field">
           <label for="confirm_password">Konfirmo fjalëkalimin</label>
-          <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
+          <div class="auth-password-wrap">
+            <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
+            <button type="button" class="auth-password-toggle" data-target="confirm_password" aria-label="Shfaq ose fshih konfirmimin e fjalëkalimit">Shfaq</button>
+          </div>
         </div>
         <button type="submit" class="btn_primary auth-submit">Regjistrohu</button>
         <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Hyni këtu</a></p>
@@ -102,6 +110,22 @@ $successMessages = [
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const toggles = document.querySelectorAll('.auth-password-toggle');
+  toggles.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (!input) return;
+
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? 'Shfaq' : 'Fshih';
+    });
+  });
+});
+</script>
 </body>
 </html>
 

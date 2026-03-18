@@ -104,6 +104,39 @@
   box-shadow: 0 0 0 4px rgba(0,113,93,0.08);
   background: #fff;
 }
+
+.auth-password-wrap {
+  position: relative;
+}
+
+.auth-password-wrap .auth-input {
+  width: 100%;
+  padding-right: 84px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #00715D;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.auth-password-toggle:hover {
+  background: rgba(0,113,93,0.09);
+}
+
+.auth-hint {
+  color: #5a6f69;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
 .auth-submit {
   width: 100%;
   justify-content: center;

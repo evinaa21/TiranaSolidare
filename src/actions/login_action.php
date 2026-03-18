@@ -44,6 +44,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         }
 
+        if ((int) ($user['verified'] ?? 0) !== 1) {
+            header("Location: /TiranaSolidare/views/login.php?error=email_not_verified" . ($redirect ? '&redirect=' . urlencode($redirect) : ''));
+            exit();
+        }
+
         // Regenerate session to prevent session fixation (H-10)
         session_regenerate_id(true);
 
