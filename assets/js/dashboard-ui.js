@@ -622,7 +622,7 @@ window.openUserDetail = async function (userId) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
                     <h4>Statusi i Llogarisë</h4>
                 </div>
-                <p class="ud-card__desc">Menaxhoni statusin e llogarisë. Çaktivizimi (soft-delete) ruan të dhënat si në Facebook/Instagram.</p>
+                <p class="ud-card__desc">Menaxhoni statusin e llogarisë.</p>
                 <div class="ud-card__body ud-card__body--row">
                     ${isActive ? `
                         <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">

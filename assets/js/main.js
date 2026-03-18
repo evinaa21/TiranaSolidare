@@ -292,9 +292,82 @@ async function loadUsers(page = 1) {
 }
 
 async function toggleBlock(userId, action) {
-    const json = await apiCall(`users.php?action=${action}&id=${userId}`, 'PUT');
+    let payload = null;
+
+    if (action === 'block') {
+        const reasonInput = await openBlockReasonModal();
+        if (reasonInput === null) return;
+
+        const reason = reasonInput.trim();
+        payload = reason ? { arsye_bllokimi: reason } : {};
+    }
+
+    const json = await apiCall(`users.php?action=${action}&id=${userId}`, 'PUT', payload);
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadUsers();
+}
+
+function openBlockReasonModal() {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('block-reason-modal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'block-reason-modal';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.45);backdrop-filter:blur(3px);';
+
+        overlay.innerHTML = `
+            <div style="width:100%;max-width:560px;background:#fff;border-radius:14px;box-shadow:0 22px 55px rgba(0,0,0,0.22);overflow:hidden;">
+                <div style="padding:16px 18px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <h3 style="margin:0;font-size:1.05rem;color:#0f172a;font-family:'Bitter',serif;">Blloko përdoruesin</h3>
+                    <button type="button" id="block-reason-close" style="border:0;background:transparent;cursor:pointer;font-size:1.4rem;line-height:1;color:#64748b;">&times;</button>
+                </div>
+                <div style="padding:16px 18px;">
+                    <p style="margin:0 0 10px;color:#475569;font-size:0.9rem;">Shkruani arsyen e bllokimit (opsionale). Ky tekst do t'i dërgohet përdoruesit me email.</p>
+                    <textarea id="block-reason-input" maxlength="1000" placeholder="P.sh. Sjellje e papërshtatshme / spam i përsëritur..." style="width:100%;min-height:120px;resize:vertical;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-family:inherit;font-size:0.92rem;outline:none;"></textarea>
+                    <div style="margin-top:6px;font-size:0.78rem;color:#94a3b8;text-align:right;"><span id="block-reason-counter">0</span>/1000</div>
+                </div>
+                <div style="padding:14px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;">
+                    <button type="button" id="block-reason-cancel" style="padding:9px 14px;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;cursor:pointer;font-weight:600;">Anulo</button>
+                    <button type="button" id="block-reason-confirm" style="padding:9px 14px;border:0;background:#e17254;color:#fff;border-radius:8px;cursor:pointer;font-weight:700;">Konfirmo bllokimin</button>
+                </div>
+            </div>
+        `;
+
+        const textarea = overlay.querySelector('#block-reason-input');
+        const counter = overlay.querySelector('#block-reason-counter');
+        const closeBtn = overlay.querySelector('#block-reason-close');
+        const cancelBtn = overlay.querySelector('#block-reason-cancel');
+        const confirmBtn = overlay.querySelector('#block-reason-confirm');
+
+        let settled = false;
+        const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            document.removeEventListener('keydown', handleEsc);
+            overlay.remove();
+            resolve(value);
+        };
+
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') finish(null);
+        };
+
+        textarea.addEventListener('input', () => {
+            counter.textContent = String(textarea.value.length);
+        });
+
+        closeBtn.addEventListener('click', () => finish(null));
+        cancelBtn.addEventListener('click', () => finish(null));
+        confirmBtn.addEventListener('click', () => finish(textarea.value));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) finish(null);
+        });
+
+        document.addEventListener('keydown', handleEsc);
+        document.body.appendChild(overlay);
+        textarea.focus();
+    });
 }
 
 async function deleteUser(userId) {

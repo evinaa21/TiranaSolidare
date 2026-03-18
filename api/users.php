@@ -7,7 +7,7 @@
  * GET    ?action=list                     – List all users (Admin)
  * GET    ?action=get&id=<id>              – User detail (Admin)
  * PUT    ?action=update_profile           – Update own profile (Auth)
- * PUT    ?action=block&id=<id>            – Block a user (Admin)
+ * PUT    ?action=block&id=<id>            – Block a user (Admin), optional JSON: { arsye_bllokimi }
  * PUT    ?action=unblock&id=<id>          – Unblock a user (Admin)
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
  * PUT    ?action=deactivate&id=<id>       – Soft-delete / deactivate (Admin)
@@ -142,6 +142,12 @@ switch ($action) {
         require_method('PUT');
         $admin = require_admin();
         $id    = (int) ($_GET['id'] ?? 0);
+        $body  = get_json_body();
+
+        $blockReason = trim((string) ($body['arsye_bllokimi'] ?? ''));
+        if (mb_strlen($blockReason) > 1000) {
+            json_error('Arsyeja e bllokimit nuk mund të kalojë 1000 karaktere.', 422);
+        }
 
         if ($id <= 0) {
             json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
@@ -170,8 +176,22 @@ switch ($action) {
         $targetInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $targetInfo->execute([$id]);
         $target = $targetInfo->fetch();
+
+        $blockedPageUrl = app_base_url() . '/TiranaSolidare/views/blocked.php';
+        if ($blockReason !== '') {
+            $blockMessage = "Llogaria juaj është bllokuar nga një administrator.\n\n"
+                . "Arsyeja e bllokimit: {$blockReason}\n\n"
+                . "Për të kërkuar zhbllokim, dërgoni email te team@tiranasolidare.al me emrin dhe adresën tuaj të llogarisë, "
+                . "si dhe një shpjegim të shkurtër.";
+        } else {
+            $blockMessage = 'Llogaria juaj është bllokuar nga një administrator. '
+                . 'Për arsye dhe hapa për zhbllokim, ju lutem shihni: ' . $blockedPageUrl;
+        }
+
+        $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+        $notifStmt->execute([$id, $blockMessage]);
+
         if ($target && filter_var($target['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
-            $blockMessage = 'Llogaria juaj është bllokuar nga një administrator. Shikoni më shumë informacione në: ' . app_base_url() . '/TiranaSolidare/views/blocked.php';
             send_notification_email(
                 $target['email'],
                 $target['emri'] ?? 'Vullnetar',
