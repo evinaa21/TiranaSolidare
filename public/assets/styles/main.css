@@ -506,10 +506,10 @@ button{
 .header-user-fallback{
   display: grid;
   place-items: center;
-  font-size: 1rem;
-  font-weight: 700;
-  background: hsl(var(--avatar-hue) 72% 92%);
-  color: hsl(var(--avatar-hue) 48% 27%);
+  font-size: 1.2rem;
+  font-weight: 300;
+  background: linear-gradient(135deg, #00715D, #00a88a);
+  color: #fff;
 }
 
 .header-user-avatar.has-fallback > img{

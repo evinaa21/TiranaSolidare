@@ -1,0 +1,266 @@
+/* ============================= */
+/* BLOG CONTAINER BASE */
+/* ============================= */
+
+.blog-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 120px 20px 80px;
+  line-height: 1.75;
+  font-size: 1rem;
+  color: #202020;
+}
+
+/* ============================= */
+/* TYPOGRAPHY */
+/* ============================= */
+
+.blog-container h1,
+.blog-container h2,
+.blog-container h3,
+.blog-container h4,
+.blog-container h5,
+.blog-container h6 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.blog-container h1 {
+  font-size: 2.8rem;
+}
+
+.blog-container h2 {
+  font-size: 2.2rem;
+}
+
+.blog-container h3 {
+  font-size: 1.6rem;
+}
+
+.blog-container p {
+  margin-bottom: 1.2rem;
+  color: #333;
+}
+
+/* Lead paragraph */
+.blog-container p.lead {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #000;
+}
+
+/* ============================= */
+/* LINKS */
+/* ============================= */
+
+.blog-container a {
+  color: #00715D;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.blog-container a:hover {
+  text-decoration: underline;
+}
+
+/* ============================= */
+/* IMAGES */
+/* ============================= */
+
+.blog-container img {
+  width: 100%;
+  border-radius: 12px;
+  margin: 1.5rem 0;
+  display: block;
+}
+
+/* Image caption */
+.blog-container figure {
+  margin: 2rem 0;
+}
+
+.blog-container figcaption {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ============================= */
+/* LISTS */
+/* ============================= */
+
+.blog-container ul,
+.blog-container ol {
+  margin: 1rem 0 1.5rem 1.5rem;
+}
+
+.blog-container li {
+  margin-bottom: 0.5rem;
+}
+
+/* ============================= */
+/* BLOCKQUOTE */
+/* ============================= */
+
+.blog-container blockquote {
+  margin: 2rem 0;
+  padding: 20px 24px;
+  border-left: 4px solid #00715D;
+  background: #f5f7f6;
+  border-radius: 8px;
+  font-style: italic;
+  color: #333;
+}
+
+/* ============================= */
+/* CODE */
+/* ============================= */
+
+.blog-container pre {
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.blog-container code {
+  background: #f1f1f1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Inline code inside pre */
+.blog-container pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* ============================= */
+/* TABLES */
+/* ============================= */
+
+.blog-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.95rem;
+}
+
+.blog-container th,
+.blog-container td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.blog-container th {
+  background-color: #f3f3f3;
+  font-weight: 600;
+}
+
+/* ============================= */
+/* HR */
+/* ============================= */
+
+.blog-container hr {
+  border: none;
+  height: 1px;
+  background: #ddd;
+  margin: 3rem 0;
+}
+
+/* ============================= */
+/* EMBEDS (VIDEO / IFRAME) */
+/* ============================= */
+
+.blog-container iframe {
+  width: 100%;
+  height: 400px;
+  border-radius: 12px;
+  margin: 2rem 0;
+  border: none;
+}
+
+/* ============================= */
+/* CALLOUT / ALERT BOX */
+/* ============================= */
+
+.blog-container .callout {
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin: 2rem 0;
+  background: #e7f5f1;
+  border-left: 4px solid #00715D;
+}
+
+.blog-container .callout.warning {
+  background: #fff4e5;
+  border-left-color: #e17254;
+}
+
+/* ============================= */
+/* AUTHOR / META */
+/* ============================= */
+
+.blog-container .blog-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.blog-container .blog-meta img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin: 0;
+}
+
+/* ============================= */
+/* TAGS */
+/* ============================= */
+
+.blog-container .tags {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.blog-container .tag {
+  background: #00715D15;
+  color: #00715D;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+@media (max-width: 768px) {
+  .blog-container {
+    padding: 100px 16px 60px;
+  }
+
+  .blog-container h1 {
+    font-size: 2.2rem;
+  }
+
+  .blog-container h2 {
+    font-size: 1.8rem;
+  }
+
+  .blog-container iframe {
+    height: 220px;
+  }
+}

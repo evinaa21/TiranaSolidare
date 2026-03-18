@@ -167,6 +167,19 @@ switch ($action) {
         $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Bllokuar' WHERE id_perdoruesi = ?");
         $stmt->execute([$id]);
 
+        $targetInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $targetInfo->execute([$id]);
+        $target = $targetInfo->fetch();
+        if ($target && filter_var($target['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            $blockMessage = 'Llogaria juaj është bllokuar nga një administrator. Shikoni më shumë informacione në: ' . app_base_url() . '/TiranaSolidare/views/blocked.php';
+            send_notification_email(
+                $target['email'],
+                $target['emri'] ?? 'Vullnetar',
+                'Llogaria juaj është bllokuar',
+                $blockMessage
+            );
+        }
+
         json_success(['message' => 'Përdoruesi u bllokua.']);
         break;
 

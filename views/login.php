@@ -10,7 +10,7 @@ $redirect   = $_GET['redirect'] ?? '';
 $errorMessages = [
   'empty_fields'        => 'Ju lutem plotësoni të gjitha fushat.',
   'wrong_credentials'   => 'Email ose fjalëkalim i pasaktë.',
-  'account_blocked'     => 'Llogaria juaj është bllokuar. Kontaktoni administratorin.',
+  'account_blocked'     => 'Llogaria juaj është bllokuar. <a href="/TiranaSolidare/views/blocked.php">Pse jam bllokuar?</a>',
   'account_deactivated' => 'Llogaria juaj është çaktivizuar. Kontaktoni administratorin.',
   'email_not_verified'  => 'Konfirmoni email-in tuaj përpara se të kyçeni.',
   'invalid_verification_link' => 'Linku i verifikimit është i pavlefshëm ose është përdorur.',
@@ -58,7 +58,11 @@ $successMessages = [
         <?php if ($errorKey && isset($errorMessages[$errorKey])): ?>
           <div class="auth-alert auth-alert--error">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-            <span><?= htmlspecialchars($errorMessages[$errorKey]) ?></span>
+            <?php if ($errorKey === 'account_blocked'): ?>
+              <span><?= $errorMessages[$errorKey] ?></span>
+            <?php else: ?>
+              <span><?= htmlspecialchars($errorMessages[$errorKey]) ?></span>
+            <?php endif; ?>
           </div>
         <?php endif; ?>
 

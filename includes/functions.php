@@ -503,12 +503,31 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
         return false;
     }
     try {
+        $host = trim((string) ($cfg['host'] ?? ''));
+        $username = trim((string) ($cfg['username'] ?? ''));
+        $password = trim((string) ($cfg['password'] ?? ''));
+        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
+        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
+
+        if ($host === '' || $host === 'smtp.example.com' || $username === '' || $password === '') {
+            // Fallback to PHP mail if SMTP is not configured.
+            $headers = "From: {$fromName} <{$fromEmail}>\r\n" .
+                       "MIME-Version: 1.0\r\n" .
+                       "Content-Type: text/html; charset=UTF-8\r\n";
+            $mailBody = "<html><body><h2>" . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . "</h2><p>" . nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8')) . "</p></body></html>";
+            if (mail($toEmail, $subject, $mailBody, $headers)) {
+                return true;
+            }
+            error_log('Notification email failed: PHP mail fallback failed.');
+            return false;
+        }
+
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host       = (string) ($cfg['host'] ?? '');
+        $mail->Host       = $host;
         $mail->SMTPAuth   = true;
-        $mail->Username   = (string) ($cfg['username'] ?? '');
-        $mail->Password   = (string) ($cfg['password'] ?? '');
+        $mail->Username   = $username;
+        $mail->Password   = $password;
         $mail->Port       = (int) ($cfg['port'] ?? 587);
         $mail->CharSet    = 'UTF-8';
         $secure = (string) ($cfg['encryption'] ?? 'tls');
