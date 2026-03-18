@@ -128,6 +128,10 @@ async function editEventPrompt(id, btnEl) {
                         ${catOptions}
                     </select>
                 </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Banner URL</label>
+                    <input id="edit-ev-banner" type="url" value="${escapeHtml(ev.banner || '')}" placeholder="https://example.com/image.jpg" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                </div>
             </div>
             <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
                 <button onclick="document.getElementById('edit-event-modal').remove()" style="padding:10px 20px;border:1.5px solid #e4e8ee;border-radius:10px;background:transparent;cursor:pointer;font-size:0.88rem;font-weight:600;">Anulo</button>
@@ -145,13 +149,14 @@ async function saveEventEdit(id) {
     const data = document.getElementById('edit-ev-data')?.value;
     const vendndodhja = document.getElementById('edit-ev-vendndodhja')?.value.trim();
     const id_kategoria = document.getElementById('edit-ev-kategoria')?.value;
+    const banner = document.getElementById('edit-ev-banner')?.value.trim() || null;
 
     if (!titulli) { showToast('Titulli është i detyrueshëm.', 'danger'); return; }
     if (!data) { showToast('Data është e detyrueshme.', 'danger'); return; }
     if (!vendndodhja) { showToast('Vendndodhja është e detyrueshme.', 'danger'); return; }
 
     const json = await apiCall(`events.php?action=update&id=${id}`, 'PUT', {
-        titulli, pershkrimi, data, vendndodhja, id_kategoria
+        titulli, pershkrimi, data, vendndodhja, id_kategoria, banner
     });
 
     showToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');

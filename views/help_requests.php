@@ -129,8 +129,8 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260308f">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260308V">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260318c">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
   <?= csrf_meta() ?>
@@ -173,20 +173,15 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <div class="rq-detail-layout">
     <!-- Main content -->
     <div class="rq-detail-main">
-      <?php if (!empty($request['imazhi'])): ?>
-        <div class="rq-detail-banner">
-          <img src="<?= htmlspecialchars(strpos($request['imazhi'], '/') === 0 ? $request['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $request['imazhi']) ?>" alt="<?= htmlspecialchars($request['titulli']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <div class="rq-detail-banner--placeholder" style="display:none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <p>Nuk ka imazh të ngarkuar</p>
-          </div>
-        </div>
-      <?php else: ?>
-        <div class="rq-detail-banner rq-detail-banner--placeholder">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          <p>Nuk ka imazh të ngarkuar</p>
-        </div>
-      <?php endif; ?>
+      <div class="rq-detail-banner">
+        <?php
+          $detailImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
+          if (!empty($request['imazhi'])) {
+              $detailImgSrc = strpos($request['imazhi'], '/') === 0 ? $request['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $request['imazhi'];
+          }
+        ?>
+        <img src="<?= htmlspecialchars($detailImgSrc) ?>" alt="<?= htmlspecialchars($request['titulli']) ?>" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
+      </div>
 
       <div class="rq-detail-text">
         <h2>Përshkrimi i kërkesës</h2>
@@ -292,11 +287,28 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
                       <div class="rq-applicant-meta">
                         <strong><?= htmlspecialchars($applicant['emri'] ?? 'Vullnetar') ?></strong>
                         <span><?= date('d/m/Y H:i', strtotime($applicant['aplikuar_me'])) ?></span>
+                        <span class="rq-applicant-status rq-applicant-status--<?= strtolower($applicant['statusi'] ?? 'në-pritje') ?>" data-app-id="<?= (int) $applicant['id_aplikimi_kerkese'] ?>">
+                          <?= htmlspecialchars($applicant['statusi'] ?? 'Në pritje') ?>
+                        </span>
                       </div>
                       <svg class="rq-applicant-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </summary>
                     <div class="rq-applicant-content">
                       <div class="rq-applicant-email"><?= htmlspecialchars($applicant['email'] ?? '—') ?></div>
+                      <div class="rq-applicant-actions" data-app-id="<?= (int) $applicant['id_aplikimi_kerkese'] ?>">
+                        <?php if (($applicant['statusi'] ?? 'Në pritje') === 'Në pritje'): ?>
+                          <button type="button" class="rq-btn-accept rq-btn-sm" data-action="Pranuar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                            Prano
+                          </button>
+                          <button type="button" class="rq-btn-reject rq-btn-sm" data-action="Refuzuar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            Refuzo
+                          </button>
+                        <?php else: ?>
+                          <span class="rq-applicant-decided"><?= $applicant['statusi'] === 'Pranuar' ? 'I pranuar' : 'I refuzuar' ?></span>
+                        <?php endif; ?>
+                      </div>
                       <form class="rq-contact-form"
                             data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>"
                             data-applicant-id="<?= (int) $applicant['id_perdoruesi'] ?>">
@@ -353,11 +365,13 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 
 <!-- ─── HERO ─── -->
 <section class="rq-hero rq-hero--requests">
-  <!-- Animated SVG blobs -->
-  <svg class="rq-blob rq-blob--1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.15)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
-  <svg class="rq-blob rq-blob--2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,215,215,0.05)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
-  <svg class="rq-blob rq-blob--3" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.1)" d="M47.7,-73.2C60.9,-67.5,70,-53.1,76.3,-38C82.6,-22.8,86.2,-6.9,83.4,7.6C80.6,22.2,71.5,35.4,60.7,47.1C49.9,58.8,37.5,69,23.3,74.3C9.1,79.6,-6.9,80,-21.4,75.4C-35.9,70.8,-48.9,61.3,-58.8,49.1C-68.7,36.9,-75.5,22,-77.2,6.3C-78.9,-9.4,-75.5,-25.9,-67,-38.7C-58.5,-51.5,-44.9,-60.5,-31,-66.3C-17.1,-72.1,-3,-74.7,8.8,-71.1C20.5,-67.5,34.5,-78.9,47.7,-73.2Z" transform="translate(100 100)"/></svg>
-  <div class="rq-grid-overlay"></div>
+  <!-- Animated floating orbs -->
+  <div class="rq-orb rq-orb--1"></div>
+  <div class="rq-orb rq-orb--2"></div>
+  <div class="rq-orb rq-orb--3"></div>
+  <div class="rq-orb rq-orb--4"></div>
+  <!-- Undraw illustration watermark -->
+  <img class="rq-hero__illustration" src="/TiranaSolidare/public/assets/images/hero-message.svg" alt="" aria-hidden="true">
 
   <div class="rq-hero__inner">
     <span class="rq-hero__label">
@@ -436,16 +450,13 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
       <?php foreach ($requests as $i => $req): ?>
         <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card" style="animation-delay: <?= $i * 0.05 ?>s">
           <div class="rq-card__visual">
-            <?php if (!empty($req['imazhi'])): ?>
-              <img src="<?= htmlspecialchars(strpos($req['imazhi'], '/') === 0 ? $req['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $req['imazhi']) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-              <div class="rq-card__img rq-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>" style="display:none;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              </div>
-            <?php else: ?>
-              <div class="rq-card__img rq-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              </div>
-            <?php endif; ?>
+            <?php
+              $cardImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
+              if (!empty($req['imazhi'])) {
+                  $cardImgSrc = strpos($req['imazhi'], '/') === 0 ? $req['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $req['imazhi'];
+              }
+            ?>
+            <img src="<?= htmlspecialchars($cardImgSrc) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
             <div class="rq-card__overlay">
               <span class="rq-badge rq-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
               <span class="rq-badge rq-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
@@ -613,6 +624,42 @@ document.addEventListener('DOMContentLoaded', function() {
       showMoreApplicantsBtn.remove();
     });
   }
+
+  // Accept / Reject applicant buttons
+  document.querySelectorAll('.rq-btn-accept, .rq-btn-reject').forEach((btn) => {
+    btn.addEventListener('click', async function() {
+      const actionsWrap = this.closest('.rq-applicant-actions');
+      const appId = parseInt(actionsWrap?.dataset.appId || '0', 10);
+      const newStatus = this.dataset.action;
+      if (!appId || !newStatus) return;
+
+      this.disabled = true;
+      const siblingBtn = actionsWrap.querySelector(this.classList.contains('rq-btn-accept') ? '.rq-btn-reject' : '.rq-btn-accept');
+      if (siblingBtn) siblingBtn.disabled = true;
+
+      try {
+        const res = await fetch(API + '/help_requests.php?action=update_applicant_status', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          credentials: 'same-origin',
+          body: JSON.stringify({ id_aplikimi_kerkese: appId, statusi: newStatus })
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+        const label = newStatus === 'Pranuar' ? 'I pranuar' : 'I refuzuar';
+        actionsWrap.innerHTML = '<span class="rq-applicant-decided">' + label + '</span>';
+        const statusBadge = document.querySelector('.rq-applicant-status[data-app-id="' + appId + '"]');
+        if (statusBadge) {
+          statusBadge.textContent = newStatus;
+          statusBadge.className = 'rq-applicant-status rq-applicant-status--' + newStatus.toLowerCase();
+        }
+      } catch (err) {
+        alert(err.message);
+        this.disabled = false;
+        if (siblingBtn) siblingBtn.disabled = false;
+      }
+    });
+  });
 
   const mapEl = document.getElementById('request-detail-map');
   if (mapEl) {

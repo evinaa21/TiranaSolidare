@@ -26,9 +26,6 @@ function switchPanel(panelId, btn) {
         panel.style.animation = '';
     }
     if (btn) btn.classList.add('active');
-
-      // Ruaj tab-in aktiv në URL
-      location.hash = panelId;
 }
 
 
@@ -55,15 +52,7 @@ function toggleSidebar() {
 
 function toggleCreateEvent() {
     const w = document.getElementById('create-event-wrapper');
-    const table = document.getElementById('admin-event-list');
-    const appCard = document.getElementById('event-applications-card');
-    
-    if (w) {
-        const isOpening = w.style.display === 'none';
-        w.style.display = isOpening ? 'block' : 'none';
-        if (table) table.style.display = isOpening ? 'none' : 'block';
-        if (appCard) appCard.style.display = 'none';
-    }
+    if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
 }
 
 
@@ -106,15 +95,9 @@ async function loadCategoryDropdown() {
 const _origLoadDashboardStats = typeof loadDashboardStats === 'function' ? loadDashboardStats : null;
 
 window.loadDashboardStats = async function () {
-    if (window._dashboardStatsLoading) return;
-    window._dashboardStatsLoading = true;
-
     const container = document.getElementById('dashboard-stats');
     const subContainer = document.getElementById('dashboard-substats');
-    if (!container) {
-        window._dashboardStatsLoading = false;
-        return;
-    }
+    if (!container) return;
 
     const json = await apiCall('stats.php?action=overview');
     if (!json.success) return;
@@ -159,17 +142,37 @@ window.loadDashboardStats = async function () {
             </div>
         </div>`;
 
- 
-
-
-// Render charts after sub-stats
-    if (!document.getElementById('dashboard-charts')) {
-        setTimeout(() => renderDashboardCharts(d), 50);
-    } else {
-        document.getElementById('dashboard-charts').remove();
-        setTimeout(() => renderDashboardCharts(d), 50);
+    // Sub-stats grid
+    if (subContainer) {
+        subContainer.innerHTML = `
+            <div class="db-overview-card">
+                <h4>Aplikime sipas Statusit</h4>
+                <ul class="db-progress-list">
+                    <li class="db-progress-item">
+                        <span class="db-progress-item__label">Në pritje</span>
+                        <span class="db-badge db-badge--pending">${d.applications.ne_pritje || 0}</span>
+                    </li>
+                    <li class="db-progress-item">
+                        <span class="db-progress-item__label">Pranuar</span>
+                        <span class="db-badge db-badge--active">${d.applications.pranuar || 0}</span>
+                    </li>
+                    <li class="db-progress-item">
+                        <span class="db-progress-item__label">Refuzuar</span>
+                        <span class="db-badge db-badge--blocked">${d.applications.refuzuar || 0}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="db-overview-card">
+                <h4>Top Kategoritë</h4>
+                <ul class="db-category-list">
+                    ${(d.top_categories || []).map(c => `
+                        <li class="db-category-item">
+                            <span class="db-category-item__name">${escapeHtml(c.emri)}</span>
+                            <span class="db-category-item__count">${c.event_count}</span>
+                        </li>`).join('')}
+                </ul>
+            </div>`;
     }
-    setTimeout(() => { window._dashboardStatsLoading = false; }, 500);
 };
 
 
@@ -177,190 +180,79 @@ window.loadDashboardStats = async function () {
 //  OVERRIDE: Admin Event List
 // ═══════════════════════════════════════════════════════
 
-window._eventFilters = window._eventFilters || {
-    status: 'all',
-    kategoria: 'all',
-    dateRange: 'all',
-    search: '',
-    location: ''
-};
-
 window.loadAdminEvents = async function (page = 1) {
     const container = document.getElementById('admin-event-list');
     if (!container) return;
 
-    const filters = window._eventFilters;
+    // Gather filter values
+    const filterSearch = document.getElementById('admin-ev-filter-search')?.value.trim() || '';
+    const filterCategory = document.getElementById('admin-ev-filter-category')?.value || '';
 
-    // Merr të gjitha eventet për filtrim client-side
-    const json = await apiCall(`events.php?action=list&page=1&limit=1000`);
+    const params = new URLSearchParams({ action: 'list', page, limit: 10 });
+    if (filterSearch) params.set('search', filterSearch);
+    if (filterCategory) params.set('category', filterCategory);
+
+    const json = await apiCall(`events.php?${params}`);
     if (!json.success) return;
 
-    let events = json.data.events;
-    const allEvents = [...events];
+    const { events, total, total_pages } = json.data;
 
-    // ── Filter: status ──
-    if (filters.status === 'active') {
-        events = events.filter(ev => new Date(ev.data) >= new Date());
-    } else if (filters.status === 'past') {
-        events = events.filter(ev => new Date(ev.data) < new Date());
-    }
-
-    // ── Filter: kategoria ──
-    if (filters.kategoria !== 'all') {
-        events = events.filter(ev => String(ev.id_kategoria) === String(filters.kategoria));
-    }
-
-    // ── Filter: date range ──
-const now = new Date();
-if (filters.dateRange === 'week') {
-    // Java aktuale — nga e hëna deri të dielën
-    const dayOfWeek = now.getDay(); // 0=diel, 1=hënë...
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-    monday.setHours(0, 0, 0, 0);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-    events = events.filter(ev => new Date(ev.data) >= monday && new Date(ev.data) <= sunday);
-} else if (filters.dateRange === 'month') {
-    // Muaji aktual — nga 1 i muajit deri në fund të muajit
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    events = events.filter(ev => new Date(ev.data) >= monthStart && new Date(ev.data) <= monthEnd);
-} else if (filters.dateRange === 'past3') {
-    // 3 muajt e fundit — nga 1 i muajit 3 muaj më parë deri sot
-    const past3Start = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
-    const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
-    events = events.filter(ev => new Date(ev.data) >= past3Start && new Date(ev.data) <= todayEnd);
-}
-
-    // ── Filter: search ──
-    if (filters.search.trim() !== '') {
-        const q = filters.search.toLowerCase();
-        events = events.filter(ev => ev.titulli.toLowerCase().includes(q));
-    }
-
-    // ── Filter: location ──
-    if (filters.location.trim() !== '') {
-        const q = filters.location.toLowerCase();
-        events = events.filter(ev => (ev.vendndodhja || '').toLowerCase().includes(q));
-    }
-
-    // ── Pagination client-side ──
-    const limit = 10;
-    const totalFiltered = events.length;
-    const totalPages = Math.ceil(totalFiltered / limit) || 1;
-    const offset = (page - 1) * limit;
-    const pageEvents = events.slice(offset, offset + limit);
-
-    // ── Kategoritë për dropdown ──
-    const categories = [...new Map(
-        allEvents.filter(e => e.kategoria_emri).map(e => [e.id_kategoria, e.kategoria_emri])
-    ).entries()];
-
-    // ── Vendndodhjet për dropdown ──
-    const locations = [...new Set(
-        allEvents.filter(e => e.vendndodhja).map(e => e.vendndodhja.trim())
-    )].sort();
-
-    let html = `
-    <div class="db-filter-bar">
-        <div class="db-filter-group">
-            <label>Statusi</label>
-            <select class="db-filter-select" onchange="window._eventFilters.status = this.value; loadAdminEvents(1)">
-                <option value="all"    ${filters.status === 'all'    ? 'selected' : ''}>Të gjitha</option>
-                <option value="active" ${filters.status === 'active' ? 'selected' : ''}>Aktive</option>
-                <option value="past"   ${filters.status === 'past'   ? 'selected' : ''}>Të kaluara</option>
-            </select>
-        </div>
-        <div class="db-filter-group">
-            <label>Kategoria</label>
-            <select class="db-filter-select" onchange="window._eventFilters.kategoria = this.value; loadAdminEvents(1)">
-                <option value="all">Të gjitha</option>
-                ${categories.map(([id, name]) => `<option value="${id}" ${filters.kategoria === String(id) ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
-            </select>
-        </div>
-        <div class="db-filter-group">
-            <label>Periudha</label>
-            <select class="db-filter-select" onchange="window._eventFilters.dateRange = this.value; loadAdminEvents(1)">
-                <option value="all"   ${filters.dateRange === 'all'   ? 'selected' : ''}>Të gjitha</option>
-                <option value="week"  ${filters.dateRange === 'week'  ? 'selected' : ''}>Kjo javë</option>
-                <option value="month" ${filters.dateRange === 'month' ? 'selected' : ''}>Ky muaj</option>
-                <option value="past3" ${filters.dateRange === 'past3' ? 'selected' : ''}>3 muajt e fundit</option>
-            </select>
-        </div>
-        <div class="db-filter-group">
-    <input
-        type="text"
-        class="db-filter-select"
-        placeholder="Kërko vendndodhje..."
-        value="${escapeHtml(filters.location)}"
-        oninput="window._eventFilters.location = this.value; clearTimeout(window._locSearchTimeout); window._locSearchTimeout = setTimeout(() => { loadAdminEvents(1); }, 350)"
-        style="min-width:160px;"
-    >
-</div>
-        <div class="db-filter-group">
-            <input
-                type="text"
-                class="db-filter-select"
-                placeholder="Kërko titull..."
-                value="${escapeHtml(filters.search)}"
-                oninput="window._eventFilters.search = this.value; clearTimeout(window._searchTimeout); window._searchTimeout = setTimeout(() => { loadAdminEvents(1); }, 350)"
-                style="min-width:160px;"
-            >
-        </div>
-        <span class="db-filter-count"><strong>${totalFiltered}</strong> evente</span>
+    // Render filter bar (once per load, preserve values)
+    let filterHtml = `<div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+        <input id="admin-ev-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadAdminEvents(1)">
+        <select id="admin-ev-filter-category" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
+            <option value="">Të gjitha kategorite</option>
+        </select>
+        <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAdminEvents(1)">Filtro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
-    if (pageEvents.length === 0) {
-        html += '<div class="db-loading">Nuk ka evente për këto filtra.</div>';
-        container.innerHTML = html;
-        return;
-    }
-
+    let html = filterHtml;
+    html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> evente</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Vendndodhja</th><th>Veprime</th>'
+        + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    pageEvents.forEach(ev => {
-        const isPast = new Date(ev.data) < new Date();
-        html += `<tr ${isPast ? 'style="opacity:0.65"' : ''}>
+    events.forEach(ev => {
+        const isPast = ev.data && new Date(ev.data) < new Date();
+        html += `<tr${isPast ? ' style="opacity:0.6"' : ''}>
             <td><strong>#${ev.id_eventi}</strong></td>
             <td>${escapeHtml(ev.titulli)}</td>
             <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
             <td>${formatDate(ev.data)}</td>
-            <td>${escapeHtml(ev.vendndodhja || '—')}</td>
             <td>
                 <div class="db-table__actions">
-    ${!isPast 
-        ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
-        : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
-    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
-</div>
+                    ${isPast ? '' : `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>`}
+                    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+                    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+                </div>
             </td>
         </tr>`;
     });
-
     html += '</tbody></table></div>';
 
-    if (totalPages > 1) {
-        html += dbPagination(page, totalPages, 'loadAdminEvents');
+    if (total_pages > 1) {
+        html += dbPagination(page, total_pages, 'loadAdminEvents');
     }
-const existingFilterBar = container.querySelector('.db-filter-bar');
-const wasSearchFocused = document.activeElement?.classList.contains('db-filter-select') && 
-                         document.activeElement?.type === 'text';
 
-container.innerHTML = html;
+    container.innerHTML = html;
 
-// Rifokuso search input pas render
-if (wasSearchFocused) {
-    const inp = container.querySelector('input[type="text"]');
-    if (inp) {
-        inp.focus();
-        inp.setSelectionRange(inp.value.length, inp.value.length);
+    // Populate category filter dropdown
+    const catSel = document.getElementById('admin-ev-filter-category');
+    if (catSel && catSel.options.length <= 1) {
+        try {
+            const catsJson = await apiCall('categories.php?action=list');
+            if (catsJson.success && catsJson.data.categories) {
+                catsJson.data.categories.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id_kategoria;
+                    opt.textContent = c.emri;
+                    if (String(c.id_kategoria) === filterCategory) opt.selected = true;
+                    catSel.appendChild(opt);
+                });
+            }
+        } catch (e) { /* ignore */ }
     }
-}
 };
 
 
@@ -417,67 +309,21 @@ window.viewEventApps = async function (eventId) {
 //  OVERRIDE: User Management (Detail Panel approach)
 // ═══════════════════════════════════════════════════════
 
-window._userFilters = window._userFilters || {
-    roli: 'all',
-    statusi: 'all'
-};
-
 window.loadUsers = async function (page = 1) {
     const container = document.getElementById('admin-user-list');
     if (!container) return;
 
-    const filters = window._userFilters;
-
-    // Merr të gjithë përdoruesit për filtrim client-side
-    const json = await apiCall(`users.php?action=list&page=1&limit=1000`);
+    const json = await apiCall(`users.php?action=list&page=${page}&limit=15`);
     if (!json.success) return;
 
-    let users = json.data.users;
+    const { users, total, total_pages } = json.data;
 
-    // ── Filter: roli ──
-    if (filters.roli !== 'all') {
-        users = users.filter(u => u.roli === filters.roli);
-    }
-
-    // ── Filter: statusi ──
-    if (filters.statusi !== 'all') {
-        users = users.filter(u => u.statusi_llogarise === filters.statusi);
-    }
-
-    // ── Pagination client-side ──
-    const limit = 15;
-    const totalFiltered = users.length;
-    const totalPages = Math.ceil(totalFiltered / limit) || 1;
-    const offset = (page - 1) * limit;
-    const pageUsers = users.slice(offset, offset + limit);
-
-    let html = `
-    <div class="db-filter-bar">
-        <div class="db-filter-group">
-            <label>Roli</label>
-            <select class="db-filter-select" onchange="window._userFilters.roli = this.value; loadUsers(1)">
-                <option value="all"       ${filters.roli === 'all'       ? 'selected' : ''}>Të gjitha</option>
-                <option value="Admin"     ${filters.roli === 'Admin'     ? 'selected' : ''}>Admin</option>
-                <option value="Vullnetar" ${filters.roli === 'Vullnetar' ? 'selected' : ''}>Vullnetar</option>
-            </select>
-        </div>
-        <div class="db-filter-group">
-            <label>Statusi</label>
-            <select class="db-filter-select" onchange="window._userFilters.statusi = this.value; loadUsers(1)">
-                <option value="all"         ${filters.statusi === 'all'         ? 'selected' : ''}>Të gjitha</option>
-                <option value="Aktiv"       ${filters.statusi === 'Aktiv'       ? 'selected' : ''}>Aktiv</option>
-                <option value="Bllokuar"    ${filters.statusi === 'Bllokuar'    ? 'selected' : ''}>Bllokuar</option>
-                <option value="Çaktivizuar" ${filters.statusi === 'Çaktivizuar' ? 'selected' : ''}>Çaktivizuar</option>
-            </select>
-        </div>
-        <span class="db-filter-count"><strong>${totalFiltered}</strong> përdorues</span>
-    </div>`;
-
+    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> përdorues</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
         + '<th>ID</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    pageUsers.forEach(u => {
+    users.forEach(u => {
         const isBlocked = u.statusi_llogarise === 'Bllokuar';
         const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
         const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
@@ -496,23 +342,27 @@ window.loadUsers = async function (page = 1) {
                         Shiko
                     </button>
                     ${isBlocked
-                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">Zhblloko</button>`
+                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">
+                             Zhblloko</button>`
                         : isDeactivated
-                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="reactivateUser(${u.id_perdoruesi})">Riaktivizo</button>`
-                        : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">Blloko</button>`}
+                        ? `<button class="db-btn db-btn--success db-btn--sm" onclick="reactivateUser(${u.id_perdoruesi})">
+                             Riaktivizo</button>`
+                        : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">
+                             Blloko</button>`}
                 </div>
             </td>
         </tr>`;
     });
-
     html += '</tbody></table></div>';
 
-    if (totalPages > 1) {
-        html += dbPagination(page, totalPages, 'loadUsers');
+    if (total_pages > 1) {
+        html += dbPagination(page, total_pages, 'loadUsers');
     }
 
     container.innerHTML = html;
 };
+
+
 // ═══════════════════════════════════════════════════════
 //  User Detail Panel
 // ═══════════════════════════════════════════════════════
@@ -565,29 +415,24 @@ window.openUserDetail = async function (userId) {
         </div>
 
         <!-- Stats Row -->
-<div class="ud-stats">
-    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
-        <div class="ud-stat-card__value">${u.total_aplikime}</div>
-        <div class="ud-stat-card__label">Aplikime</div>
-        <div class="ud-stat-card__hint">Shiko →</div>
-    </div>
-    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
-        <div class="ud-stat-card__value">${u.total_kerkesa}</div>
-        <div class="ud-stat-card__label">Kërkesa</div>
-        <div class="ud-stat-card__hint">Shiko →</div>
-    </div>
-    <div class="ud-stat-card">
-        <div class="ud-stat-card__value">${u.total_evente || 0}</div>
-        <div class="ud-stat-card__label">Evente</div>
-    </div>
-    <div class="ud-stat-card">
-        <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
-        <div class="ud-stat-card__label">Regjistruar më</div>
-    </div>
-</div>
-
-<!-- User Activity Section (injected by click) -->
-
+        <div class="ud-stats">
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_aplikime}</div>
+                <div class="ud-stat-card__label">Aplikime</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_kerkesa}</div>
+                <div class="ud-stat-card__label">Kërkesa</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${u.total_evente || 0}</div>
+                <div class="ud-stat-card__label">Evente</div>
+            </div>
+            <div class="ud-stat-card">
+                <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
+                <div class="ud-stat-card__label">Regjistruar më</div>
+            </div>
+        </div>
 
         ${isDeactivated && u.deaktivizuar_me ? `
             <div class="ud-deactivation-notice">
@@ -616,13 +461,15 @@ window.openUserDetail = async function (userId) {
                 </div>
             </div>
 
+
+
             <!-- Account Status Card -->
             <div class="ud-card ud-card--full">
                 <div class="ud-card__header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
                     <h4>Statusi i Llogarisë</h4>
                 </div>
-                <p class="ud-card__desc">Menaxhoni statusin e llogarisë.</p>
+                <p class="ud-card__desc">Menaxhoni statusin e llogarisë. Çaktivizimi (soft-delete) ruan të dhënat si në Facebook/Instagram.</p>
                 <div class="ud-card__body ud-card__body--row">
                     ${isActive ? `
                         <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
@@ -652,94 +499,6 @@ window.openUserDetail = async function (userId) {
         </div>
     `;
 };
-// ── User Activity: shfaq aplikimet ose kërkesat e një përdoruesi kur shtypen stat cards ──
-
-window.loadUserApplications = async function(userId, userName) {
-    showUserActivityModal('Duke ngarkuar aplikimet…');
-
-    const json = await apiCall(`applications.php?action=list&page=1&limit=100`);
-    if (!json.success) return;
-
-    const apps = json.data.applications.filter(a => a.id_perdoruesi == userId);
-
-    let body = '';
-    if (apps.length === 0) {
-        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka aplikime.</p>';
-    } else {
-        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
-        apps.forEach(a => {
-            const statusClass = a.statusi === 'Pranuar' ? 'active' : a.statusi === 'Refuzuar' ? 'blocked' : 'pending';
-            body += `<tr>
-                <td><strong>${escapeHtml(a.eventi_titulli)}</strong></td>
-                <td>${formatDate(a.eventi_data)}</td>
-                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.statusi)}</span></td>
-                <td>${formatDate(a.aplikuar_me)}</td>
-            </tr>`;
-        });
-        body += '</tbody></table></div>';
-    }
-
-    updateUserActivityModal(`Aplikimet e ${escapeHtml(userName)}`, body);
-};
-
-window.loadUserRequests = async function(userId, userName) {
-    showUserActivityModal('Duke ngarkuar kërkesat…');
-
-    const json = await apiCall(`help_requests.php?action=list&user_id=${userId}&limit=100`);
-    if (!json.success) return;
-
-    const requests = json.data.requests;
-
-    let body = '';
-    if (requests.length === 0) {
-        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka kërkesa.</p>';
-    } else {
-        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
-        requests.forEach(r => {
-            const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
-            const statClass = r.statusi === 'Open' ? 'open' : 'closed';
-            body += `<tr>
-                <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
-                <td><span class="db-badge db-badge--${tipClass}">${r.tipi === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span></td>
-                <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
-                <td>${formatDate(r.krijuar_me)}</td>
-            </tr>`;
-        });
-        body += '</tbody></table></div>';
-    }
-
-    updateUserActivityModal(`Kërkesat e ${escapeHtml(userName)}`, body);
-};
-
-function showUserActivityModal(loadingText) {
-    const existing = document.getElementById('ud-activity-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'ud-activity-modal';
-    modal.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);`;
-    modal.innerHTML = `
-        <div id="ud-activity-modal-inner" style="background:#fff;border-radius:16px;width:100%;max-width:800px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e4e8ee;position:sticky;top:0;background:#fff;z-index:1;">
-                <h3 id="ud-activity-modal-title" style="margin:0;font-family:'Bitter',serif;font-size:1.1rem;font-weight:700;color:#003229;">Duke ngarkuar…</h3>
-                <button onclick="document.getElementById('ud-activity-modal').remove()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:#6b7280;line-height:1;">×</button>
-            </div>
-            <div id="ud-activity-modal-body" style="padding:20px 24px;">
-                <div class="db-loading">${loadingText}</div>
-            </div>
-        </div>`;
-
-    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-    document.body.appendChild(modal);
-}
-
-function updateUserActivityModal(title, bodyHtml) {
-    const titleEl = document.getElementById('ud-activity-modal-title');
-    const bodyEl = document.getElementById('ud-activity-modal-body');
-    if (titleEl) titleEl.textContent = title;
-    if (bodyEl) bodyEl.innerHTML = bodyHtml;
-}
-
 
 
 // Change role from detail panel
@@ -789,90 +548,47 @@ window.reactivateUser = async function (userId) {
 //  OVERRIDE: Help Requests
 // ═══════════════════════════════════════════════════════
 
-window._requestFilters = window._requestFilters || {
-    status: 'all',
-    tipi: 'all',
-    search: ''
-};
-
 window.loadHelpRequests = async function (page = 1) {
     const container = document.getElementById('help-request-list');
     if (!container) return;
 
-    const filters = window._requestFilters;
-    const wasSearchFocused = document.activeElement?.classList.contains('db-filter-select') &&
-                             document.activeElement?.type === 'text';
+    // Gather filter values
+    const filterSearch = document.getElementById('admin-req-filter-search')?.value.trim() || '';
+    const filterStatus = document.getElementById('admin-req-filter-status')?.value || '';
+    const filterType = document.getElementById('admin-req-filter-type')?.value || '';
 
-    const json = await apiCall(`help_requests.php?action=list&page=1&limit=1000`);
+    const filters = {};
+    if (filterSearch) filters.search = filterSearch;
+    if (filterStatus) filters.statusi = filterStatus;
+    if (filterType) filters.tipi = filterType;
+
+    const params = new URLSearchParams({ action: 'list', page, limit: 10, ...filters });
+    const json = await apiCall(`help_requests.php?${params}`);
     if (!json.success) return;
 
-    let requests = json.data.requests;
+    const { requests, total, total_pages } = json.data;
 
-    // ── Rendit: Open para, Closed pas ──
-    requests.sort((a, b) => {
-        if (a.statusi === 'Open' && b.statusi !== 'Open') return -1;
-        if (a.statusi !== 'Open' && b.statusi === 'Open') return 1;
-        return new Date(b.krijuar_me) - new Date(a.krijuar_me);
-    });
-
-    // ── Filter: statusi ──
-    if (filters.status === 'open') {
-        requests = requests.filter(r => r.statusi === 'Open');
-    } else if (filters.status === 'closed') {
-        requests = requests.filter(r => r.statusi === 'Closed');
-    }
-
-    // ── Filter: tipi ──
-    if (filters.tipi !== 'all') {
-        requests = requests.filter(r => r.tipi === filters.tipi);
-    }
-
-    // ── Filter: search ──
-    if (filters.search.trim() !== '') {
-        const q = filters.search.toLowerCase();
-        requests = requests.filter(r => r.titulli.toLowerCase().includes(q));
-    }
-
-    // ── Pagination client-side ──
-    const limit = 10;
-    const totalFiltered = requests.length;
-    const totalPages = Math.ceil(totalFiltered / limit) || 1;
-    const offset = (page - 1) * limit;
-    const pageRequests = requests.slice(offset, offset + limit);
-
-    let html = `
-    <div class="db-filter-bar">
-        <div class="db-filter-group">
-            <label>Statusi</label>
-            <select class="db-filter-select" onchange="window._requestFilters.status = this.value; loadHelpRequests(1)">
-                <option value="all"    ${filters.status === 'all'    ? 'selected' : ''}>Të gjitha</option>
-                <option value="open"   ${filters.status === 'open'   ? 'selected' : ''}>Të hapura</option>
-                <option value="closed" ${filters.status === 'closed' ? 'selected' : ''}>Të mbyllura</option>
-            </select>
-        </div>
-        <div class="db-filter-group">
-            <label>Tipi</label>
-            <select class="db-filter-select" onchange="window._requestFilters.tipi = this.value; loadHelpRequests(1)">
-                <option value="all"     ${filters.tipi === 'all'     ? 'selected' : ''}>Të gjitha</option>
-                <option value="Kërkesë" ${filters.tipi === 'Kërkesë' ? 'selected' : ''}>Kërkoj ndihmë</option>
-                <option value="Ofertë"  ${filters.tipi === 'Ofertë'  ? 'selected' : ''}>Dua të ndihmoj</option>
-            </select>
-        </div>
-        <div class="db-filter-group">
-            <input
-                type="text"
-                class="db-filter-select"
-                placeholder="Kërko titull..."
-                value="${escapeHtml(filters.search)}"
-                oninput="window._requestFilters.search = this.value; clearTimeout(window._reqSearchTimeout); window._reqSearchTimeout = setTimeout(() => { loadHelpRequests(1); }, 350)"
-                style="min-width:180px;"
-            >
-        </div>
-        <span class="db-filter-count"><strong>${totalFiltered}</strong> kërkesa</span>
+    // Filter bar
+    let html = `<div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+        <input id="admin-req-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadHelpRequests(1)">
+        <select id="admin-req-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
+            <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
+            <option value="Open"${filterStatus === 'Open' ? ' selected' : ''}>Open</option>
+            <option value="Closed"${filterStatus === 'Closed' ? ' selected' : ''}>Closed</option>
+        </select>
+        <select id="admin-req-filter-type" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
+            <option value=""${!filterType ? ' selected' : ''}>Të gjitha tipet</option>
+            <option value="Kërkesë"${filterType === 'Kërkesë' ? ' selected' : ''}>Kërkesë</option>
+            <option value="Ofertë"${filterType === 'Ofertë' ? ' selected' : ''}>Ofertë</option>
+        </select>
+        <button class="db-btn db-btn--primary db-btn--sm" onclick="loadHelpRequests(1)">Filtro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
-    if (pageRequests.length === 0) {
-        html += '<div class="db-loading">Nuk ka kërkesa për këto filtra.</div>';
+    html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> kërkesa</div>`;
+
+    if (requests.length === 0) {
+        html += '<div class="db-loading">Nuk ka kërkesa për momentin.</div>';
         container.innerHTML = html;
         return;
     }
@@ -881,13 +597,13 @@ window.loadHelpRequests = async function (page = 1) {
         + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Nga</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
-    pageRequests.forEach(r => {
+    requests.forEach(r => {
         const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
         const statClass = r.statusi === 'Open' ? 'open' : 'closed';
 
         html += `<tr>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
-            <td><span class="db-badge db-badge--${tipClass}">${r.tipi === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span></td>
+            <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
             <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${formatDate(r.krijuar_me)}</td>
@@ -900,22 +616,13 @@ window.loadHelpRequests = async function (page = 1) {
             </td>
         </tr>`;
     });
-
     html += '</tbody></table></div>';
 
-    if (totalPages > 1) {
-        html += dbPagination(page, totalPages, 'loadHelpRequests');
+    if (total_pages > 1) {
+        html += dbPagination(page, total_pages, 'loadHelpRequests');
     }
 
     container.innerHTML = html;
-
-    if (wasSearchFocused) {
-        const inp = container.querySelector('input[type="text"]');
-        if (inp) {
-            inp.focus();
-            inp.setSelectionRange(inp.value.length, inp.value.length);
-        }
-    }
 };
 
 // Close request action
@@ -985,7 +692,7 @@ window.renderEventList = function (data) {
     let html = '<div class="db-event-grid">';
     data.events.forEach((ev, i) => {
         html += `<div class="db-event-card" style="animation-delay:${i * 0.04}s">
-            ${ev.banner ? `<img src="${escapeHtml(ev.banner)}" class="db-event-card__img" alt="">` : ''}
+            <img src="${ev.banner ? escapeHtml(ev.banner) : '/TiranaSolidare/public/assets/images/default-event.svg'}" class="db-event-card__img" alt="" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
             <div class="db-event-card__body">
                 <h4 class="db-event-card__title">${escapeHtml(ev.titulli)}</h4>
                 <p class="db-event-card__desc">${escapeHtml((ev.pershkrimi || '').substring(0, 120))}...</p>
@@ -1056,6 +763,10 @@ window.renderApplicationList = function (data) {
 //  OVERRIDE: Toast (styled)
 // ═══════════════════════════════════════════════════════
 
+window.showToast = function (message, type = 'info') {
+    dbToast(message, type);
+};
+
 function dbToast(message, type = 'info') {
     const container = document.getElementById('db-toast-container');
     if (!container) return;
@@ -1109,368 +820,8 @@ function dbPagination(current, totalPages, callbackName) {
     }
     html += '</div>';
     return html;
-};
-
-//CHARTS
-async function renderDashboardCharts(overviewData) {
-    if (typeof Chart === 'undefined') return;
-
-    const anchor = document.getElementById('dashboard-substats');
-    if (!anchor) return;
-
-    const existing = document.getElementById('dashboard-charts');
-    if (existing) existing.remove();
-
-    const PRIMARY = '#00715D';
-    const ACCENT = '#E17254';
-    const PRIMARY_SOFT = 'rgba(0,113,93,0.15)';
-    const ACCENT_SOFT = 'rgba(225,114,84,0.16)';
-    const PRIMARY_TINT = '#e8f5f1';
-    const ACCENT_TINT = '#fdf0eb';
-    const TEXT = '#0F172A';
-    const MUTED = '#64748B';
-    const GRID = 'rgba(15,23,42,0.08)';
-
-    const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const lastNMonths = (n = 6) => {
-        const out = [];
-        const now = new Date();
-        for (let i = n - 1; i >= 0; i--) out.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
-        return out;
-    };
-    const toMap = (rows = []) => {
-        const m = new Map();
-        rows.forEach(r => m.set(r.muaji, Number.parseInt(r.total, 10) || 0));
-        return m;
-    };
-    const sum = (arr = []) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
-
-    const g = (ctx, area, c1, c2) => {
-        const grad = ctx.createLinearGradient(0, area.top, 0, area.bottom);
-        grad.addColorStop(0, c1);
-        grad.addColorStop(1, c2);
-        return grad;
-    };
-
-    let monthly = {};
-    try {
-        const monthlyJson = await apiCall('stats.php?action=monthly');
-        monthly = monthlyJson?.success ? (monthlyJson.data || {}) : {};
-    } catch (_) {
-        monthly = {};
-    }
-
-    const appsMap = toMap(monthly.monthly_apps);
-    const reqMap = toMap(monthly.monthly_requests);
-    const eventsMap = toMap(monthly.monthly_events);
-
-    const allMonthKeys = Array.from(new Set([
-        ...appsMap.keys(),
-        ...reqMap.keys(),
-        ...eventsMap.keys()
-    ])).sort();
-
-    const months = allMonthKeys.length ? allMonthKeys : lastNMonths(6);
-    const labels = months.map(k => {
-        const [y, m] = k.split('-').map(Number);
-        return new Date(y, m - 1, 1).toLocaleDateString('sq-AL', { month: 'short', year: '2-digit' });
-    });
-
-    const appsData = months.map(k => appsMap.get(k) || 0);
-    const reqData = months.map(k => reqMap.get(k) || 0);
-    const eventsData = months.map(k => eventsMap.get(k) || 0);
-    const categoryRows = monthly.apps_by_category || [];
-
-    const appStats = overviewData?.applications || {};
-    const statusData = [
-        Number.parseInt(appStats.ne_pritje, 10) || 0,
-        Number.parseInt(appStats.pranuar, 10) || 0,
-        Number.parseInt(appStats.refuzuar, 10) || 0
-    ];
-
-    const totals = {
-        aplikime: sum(appsData),
-        kerkesa: sum(reqData),
-        evente: sum(eventsData),
-        statuse: sum(statusData),
-        kategori: sum(categoryRows.map(c => Number.parseInt(c.total, 10) || 0))
-    };
-
-    const wrapper = document.createElement('section');
-    wrapper.id = 'dashboard-charts';
-    wrapper.style.cssText = `
-        display:grid;
-        grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);
-        gap:20px;
-        margin-top:20px;
-        padding:0 24px 28px;
-    `;
-
-    const createCard = (title, totalText, chipBg) => {
-        const card = document.createElement('article');
-        card.className = 'db-overview-card';
-        card.style.cssText = `
-            display:flex;
-            flex-direction:column;
-            min-height:320px;
-            padding:16px;
-            border-radius:16px;
-        `;
-
-        const head = document.createElement('div');
-        head.style.cssText = `
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            margin-bottom:10px;
-            gap:10px;
-        `;
-
-        const h = document.createElement('h4');
-        h.textContent = title;
-        h.style.cssText = `margin:0;color:${TEXT};font-size:14px;font-weight:700;letter-spacing:.2px;`;
-        h.style.borderBottom = 'none';
-
-        const total = document.createElement('span');
-        total.textContent = totalText;
-        total.style.cssText = `
-            font-size:12px;
-            font-weight:600;
-            color:${MUTED};
-            background:${chipBg};
-            border:1px solid rgba(15,23,42,.08);
-            border-radius:999px;
-            padding:4px 10px;
-            white-space:nowrap;
-        `;
-
-        const body = document.createElement('div');
-        body.style.cssText = 'position:relative;flex:1;min-height:240px;';
-        const canvas = document.createElement('canvas');
-        body.appendChild(canvas);
-
-        head.appendChild(h);
-        head.appendChild(total);
-        card.appendChild(head);
-        card.appendChild(body);
-
-        return { card, canvas };
-    };
-
-    const tooltip = {
-        backgroundColor: '#0B1220',
-        titleColor: '#F8FAFC',
-        bodyColor: '#E2E8F0',
-        borderColor: 'rgba(255,255,255,0.14)',
-        borderWidth: 1,
-        cornerRadius: 12,
-        padding: 12,
-        displayColors: true,
-        titleFont: { weight: '700', size: 12 },
-        bodyFont: { size: 12 }
-    };
-
-    const axis = {
-        x: {
-            grid: { display: false, drawBorder: false },
-            ticks: { color: MUTED, font: { size: 11, weight: '600' } },
-            border: { display: false }
-        },
-        y: {
-            beginAtZero: true,
-            grid: { color: GRID, drawBorder: false },
-            ticks: { color: MUTED, precision: 0, font: { size: 11, weight: '600' } },
-            border: { display: false }
-        }
-    };
-
-    Chart.defaults.font.family = "Inter, Segoe UI, Roboto, Arial, sans-serif";
-    Chart.defaults.color = MUTED;
-
-    // 1) Aplikime Mujore 
-    const c1 = createCard('Aplikime Mujore', `Totali: ${totals.aplikime}`, PRIMARY_TINT);
-    c1.card.style.gridColumn = '1';
-    c1.card.style.gridRow = '1';
-    wrapper.appendChild(c1.card);
-
-    new Chart(c1.canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Aplikime',
-                data: appsData,
-                borderColor: PRIMARY,
-                backgroundColor: (ctx) => {
-                    const ca = ctx.chart.chartArea;
-                    if (!ca) return PRIMARY_SOFT;
-                    return g(ctx.chart.ctx, ca, 'rgba(0,113,93,0.30)', 'rgba(0,113,93,0.03)');
-                },
-                fill: true,
-                tension: 0.42,
-                borderWidth: 2.8,
-                pointRadius: 3,
-                pointHoverRadius: 6,
-                pointBackgroundColor: PRIMARY,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip },
-            scales: axis
-        }
-    });
-
-    // 2) Statuset e Aplikimeve 
-    const c2 = createCard('Statuset e Aplikimeve', `Totali: ${totals.statuse}`, ACCENT_TINT);
-    c2.card.style.gridColumn = '2';
-    c2.card.style.gridRow = '1';
-    wrapper.appendChild(c2.card);
-
-    new Chart(c2.canvas.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Në pritje', 'Pranuar', 'Refuzuar'],
-            datasets: [{
-                data: statusData,
-                backgroundColor: [
-                    'rgba(225,114,84,0.75)',
-                    'rgba(0,113,93,0.90)',
-                    'rgba(225,114,84,0.50)'
-                ],
-                borderColor: '#fff',
-                borderWidth: 3,
-                spacing: 3,
-                hoverOffset: 8
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            cutout: '68%',
-            plugins: {
-                tooltip,
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 8,
-                        padding: 14,
-                        color: TEXT,
-                        font: { size: 11, weight: '600' }
-                    }
-                }
-            }
-        }
-    });
-
-    // 3) Kërkesa për Ndihmë vs Evente (poshtë majtas)
-    const c3 = createCard('Kërkesa vs Evente', `Kërkesa: ${totals.kerkesa} • Evente: ${totals.evente}`, ACCENT_TINT);
-    c3.card.style.gridColumn = '1';
-    c3.card.style.gridRow = '2';
-    wrapper.appendChild(c3.card);
-
-    new Chart(c3.canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Kërkesa',
-                    data: reqData,
-                    borderColor: ACCENT,
-                    backgroundColor: (ctx) => {
-                        const ca = ctx.chart.chartArea;
-                        if (!ca) return ACCENT_SOFT;
-                        return g(ctx.chart.ctx, ca, 'rgba(225,114,84,0.24)', 'rgba(225,114,84,0.02)');
-                    },
-                    fill: true,
-                    tension: 0.38,
-                    borderWidth: 2.4,
-                    pointRadius: 2.5,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: ACCENT,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
-                },
-                {
-                    label: 'Evente',
-                    data: eventsData,
-                    borderColor: PRIMARY,
-                    backgroundColor: (ctx) => {
-                        const ca = ctx.chart.chartArea;
-                        if (!ca) return PRIMARY_SOFT;
-                        return g(ctx.chart.ctx, ca, 'rgba(0,113,93,0.20)', 'rgba(0,113,93,0.02)');
-                    },
-                    fill: true,
-                    tension: 0.38,
-                    borderWidth: 2.4,
-                    pointRadius: 2.5,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: PRIMARY,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
-                }
-            ]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip,
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 8,
-                        padding: 12,
-                        color: TEXT,
-                        font: { size: 11, weight: '600' }
-                    }
-                }
-            },
-            scales: axis
-        }
-    });
-
-    // 4) Aplikime sipas Kategorisë (poshtë djathtas)
-    const c4 = createCard('Aplikime sipas Kategorisë', `Totali: ${totals.kategori}`, PRIMARY_TINT);
-    c4.card.style.gridColumn = '2';
-    c4.card.style.gridRow = '2';
-    wrapper.appendChild(c4.card);
-
-    new Chart(c4.canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: categoryRows.map(c => c.emri),
-            datasets: [{
-                label: 'Aplikime',
-                data: categoryRows.map(c => Number.parseInt(c.total, 10) || 0),
-                backgroundColor: categoryRows.map((_, i) => i % 2 === 0 ? 'rgba(0,113,93,0.88)' : 'rgba(225,114,84,0.82)'),
-                borderColor: categoryRows.map((_, i) => i % 2 === 0 ? PRIMARY : ACCENT),
-                borderWidth: 1,
-                borderRadius: 12,
-                borderSkipped: false,
-                maxBarThickness: 36
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip },
-            scales: {
-                ...axis,
-                x: {
-                    ...axis.x,
-                    ticks: { ...axis.x.ticks, maxRotation: 0, minRotation: 0, autoSkip: true }
-                }
-            }
-        }
-    });
-
-    anchor.insertAdjacentElement('afterend', wrapper);
 }
+
 
 // ═══════════════════════════════════════════════════════
 //  INIT
@@ -1490,13 +841,4 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNotifications();
         loadHelpRequests();
     }, 100);
-
-    // Rikthe tab-in nga URL pas refresh
-    if (location.hash) {
-        const panelId = location.hash.replace('#', '');
-        const navBtn = document.querySelector(`[data-panel="${panelId}"]`);
-        if (document.getElementById(`panel-${panelId}`)) {
-            switchPanel(panelId, navBtn);
-        }
-     }
 });

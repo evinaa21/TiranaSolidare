@@ -174,10 +174,16 @@ switch ($action) {
         }
 
         // Check existence
-        $check = $pdo->prepare('SELECT id_eventi FROM Eventi WHERE id_eventi = ?');
+        $check = $pdo->prepare('SELECT id_eventi, data FROM Eventi WHERE id_eventi = ?');
         $check->execute([$id]);
-        if (!$check->fetch()) {
+        $event = $check->fetch();
+        if (!$event) {
             json_error('Eventi nuk u gjet.', 404);
+        }
+
+        // Block editing past events
+        if (!empty($event['data']) && strtotime($event['data']) < time()) {
+            json_error('Eventet e kaluara nuk mund të ndryshohen.', 403);
         }
 
         // Build dynamic SET clause

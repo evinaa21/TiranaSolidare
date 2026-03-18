@@ -6,13 +6,13 @@
  *
  * GET    ?action=list                     – List all users (Admin)
  * GET    ?action=get&id=<id>              – User detail (Admin)
+ * GET    ?action=public_profile&id=<id>   – Public profile (Public)
  * PUT    ?action=update_profile           – Update own profile (Auth)
  * PUT    ?action=block&id=<id>            – Block a user (Admin), optional JSON: { arsye_bllokimi }
  * PUT    ?action=unblock&id=<id>          – Unblock a user (Admin)
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
  * PUT    ?action=deactivate&id=<id>       – Soft-delete / deactivate (Admin)
  * PUT    ?action=reactivate&id=<id>       – Undo deactivation (Admin)
- * PUT    ?action=reset_password&id=<id>   – Admin password reset (Admin)
  * ---------------------------------------------------
  */
 require_once __DIR__ . '/helpers.php';
@@ -34,8 +34,24 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
-        $stmt = $pdo->prepare('UPDATE Perdoruesi SET emri = ? WHERE id_perdoruesi = ?');
-        $stmt->execute([$emri, $user['id']]);
+        $bio = isset($body['bio']) ? trim((string) $body['bio']) : null;
+        $profilePicture = isset($body['profile_picture']) ? trim((string) $body['profile_picture']) : null;
+        $profilePublic = isset($body['profile_public']) ? ((int) $body['profile_public'] ? 1 : 0) : 1;
+
+        if ($bio !== null && mb_strlen($bio) > 500) {
+            json_error('Bio nuk mund të kalojë 500 karaktere.', 422);
+        }
+        if ($profilePicture !== null && mb_strlen($profilePicture) > 500) {
+            json_error('URL e fotos nuk mund të kalojë 500 karaktere.', 422);
+        }
+        if ($profilePicture !== null && $profilePicture !== '' && !filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            json_error('URL e fotos nuk është e vlefshme.', 422);
+        }
+
+        $stmt = $pdo->prepare(
+            'UPDATE Perdoruesi SET emri = ?, bio = ?, profile_picture = ?, profile_public = ? WHERE id_perdoruesi = ?'
+        );
+        $stmt->execute([$emri, $bio, $profilePicture ?: null, $profilePublic, $user['id']]);
 
         // Keep session name in sync for UI consistency
         $_SESSION['emri'] = $emri;
@@ -326,36 +342,73 @@ switch ($action) {
         json_success(['message' => 'Llogaria u riaktivizua me sukses.']);
         break;
 
-    // ── RESET PASSWORD (Admin) ─────────────────────
-    case 'reset_password':
-        require_method('PUT');
-        $admin = require_admin();
-        $id    = (int) ($_GET['id'] ?? 0);
-        $body  = get_json_body();
+    // ── PUBLIC PROFILE ─────────────────────────────
+    case 'public_profile':
+        require_method('GET');
+        $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
         }
 
-        $newPassword = $body['password'] ?? '';
-        if (strlen($newPassword) < 6) {
-            json_error('Fjalëkalimi duhet të ketë të paktën 6 karaktere.', 422);
+        $stmt = $pdo->prepare(
+            "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, krijuar_me
+             FROM Perdoruesi
+             WHERE id_perdoruesi = ? AND statusi_llogarise = 'Aktiv'"
+        );
+        $stmt->execute([$id]);
+        $profile = $stmt->fetch();
+
+        if (!$profile) {
+            json_error('Profili nuk u gjet.', 404);
         }
 
-        // Verify user exists
-        $check = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
-        $check->execute([$id]);
-        if (!$check->fetch()) {
-            json_error('Përdoruesi nuk u gjet.', 404);
+        // Privacy: if profile is not public, only the owner can see full details
+        $isOwner = isset($_SESSION['user_id']) && (int) $_SESSION['user_id'] === $id;
+        if (!(int) $profile['profile_public'] && !$isOwner) {
+            json_success([
+                'id_perdoruesi' => $profile['id_perdoruesi'],
+                'emri' => $profile['emri'],
+                'roli' => $profile['roli'],
+                'profile_public' => 0,
+                'private' => true,
+            ]);
+            break;
         }
 
-        $hashed = password_hash($newPassword, PASSWORD_DEFAULT);
-        $stmt   = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ? WHERE id_perdoruesi = ?');
-        $stmt->execute([$hashed, $id]);
+        // Public stats
+        $appCount = $pdo->prepare(
+            "SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'Pranuar'"
+        );
+        $appCount->execute([$id]);
 
-        json_success(['message' => 'Fjalëkalimi u rivendos me sukses.']);
+        $helpCount = $pdo->prepare('SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?');
+        $helpCount->execute([$id]);
+
+        $helpAppCount = $pdo->prepare(
+            "SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'Pranuar'"
+        );
+        $helpAppCount->execute([$id]);
+
+        // Recent accepted events
+        $recentEvents = $pdo->prepare(
+            "SELECT e.titulli, e.data, e.vendndodhja
+             FROM Aplikimi a
+             JOIN Eventi e ON e.id_eventi = a.id_eventi
+             WHERE a.id_perdoruesi = ? AND a.statusi = 'Pranuar'
+             ORDER BY e.data DESC
+             LIMIT 10"
+        );
+        $recentEvents->execute([$id]);
+
+        $profile['evente_pranuar'] = (int) $appCount->fetchColumn();
+        $profile['total_kerkesa'] = (int) $helpCount->fetchColumn();
+        $profile['kerkesa_pranuar'] = (int) $helpAppCount->fetchColumn();
+        $profile['evente_te_fundit'] = $recentEvents->fetchAll();
+
+        json_success($profile);
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: update_profile, list, get, block, unblock, change_role, deactivate, reactivate, reset_password.', 400);
+        json_error('Veprim i panjohur. Përdorni: update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile.', 400);
 }

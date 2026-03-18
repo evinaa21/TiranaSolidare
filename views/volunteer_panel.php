@@ -383,16 +383,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
           <?php foreach ($myRequests as $req): ?>
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
               <div class="vp-request-card__visual">
-                <?php if (!empty($req['imazhi'])): ?>
-                  <img src="<?= htmlspecialchars($req['imazhi']) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                  <div class="vp-request-card__img vp-request-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'vp-request-card__img--offer' : '' ?>" style="display:none;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                  </div>
-                <?php else: ?>
-                  <div class="vp-request-card__img vp-request-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'vp-request-card__img--offer' : '' ?>">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                  </div>
-                <?php endif; ?>
+                <img src="<?= !empty($req['imazhi']) ? htmlspecialchars($req['imazhi']) : '/TiranaSolidare/public/assets/images/default-request.svg' ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
                 <div class="vp-request-card__overlay">
                   <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
                   <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>

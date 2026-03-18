@@ -52,7 +52,7 @@ $kategorite = $pdo->query(
   <link rel="stylesheet" href="assets/styles/requests.css?v=20260318a">
   <link rel="stylesheet" href="assets/styles/index.css?v=20260308d">
 </head>
-<body>
+<body class="page-home">
 <?php include 'components/header.php' ?>
 
 <main>
@@ -261,19 +261,10 @@ $kategorite = $pdo->query(
         <?php foreach ($eventet as $ev): ?>
           <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card">
             <div class="rq-card__visual">
-              <?php if (!empty($ev['banner'])): ?>
-                <img src="<?= htmlspecialchars($ev['banner']) ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                <div class="rq-card__img rq-card__img--placeholder" style="display:none;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </div>
-              <?php else: ?>
-                <div class="rq-card__img rq-card__img--placeholder">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </div>
-              <?php endif; ?>
+              <img src="<?= !empty($ev['banner']) ? htmlspecialchars($ev['banner']) : '/TiranaSolidare/public/assets/images/default-event.svg' ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
               <div class="rq-card__overlay">
                 <span class="rq-badge rq-badge--event-spotlight">Event</span>
-                <span class="rq-badge rq-badge--event\"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Kategori') ?></span>
+                <span class="rq-badge rq-badge--event"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Kategori') ?></span>
               </div>
             </div>
             <div class="rq-card__content">
@@ -313,16 +304,13 @@ $kategorite = $pdo->query(
         <?php foreach ($kerkesat as $k): ?>
           <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="rq-card">
             <div class="rq-card__visual">
-              <?php if (!empty($k['imazhi'])): ?>
-                <img src="<?= htmlspecialchars(strpos($k['imazhi'], '/') === 0 ? $k['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $k['imazhi']) ?>" alt="<?= htmlspecialchars($k['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                <div class="rq-card__img rq-card__img--placeholder <?= $k['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>" style="display:none;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </div>
-              <?php else: ?>
-                <div class="rq-card__img rq-card__img--placeholder <?= $k['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </div>
-              <?php endif; ?>
+              <?php
+                $kImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
+                if (!empty($k['imazhi'])) {
+                    $kImgSrc = strpos($k['imazhi'], '/') === 0 ? $k['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $k['imazhi'];
+                }
+              ?>
+              <img src="<?= htmlspecialchars($kImgSrc) ?>" alt="<?= htmlspecialchars($k['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
               <div class="rq-card__overlay">
                 <span class="rq-badge rq-badge--<?= $k['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $k['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
                 <span class="rq-badge rq-badge--<?= strtolower($k['statusi']) ?>"><?= htmlspecialchars($k['statusi']) ?></span>

@@ -217,7 +217,7 @@ switch ($action) {
         $user = require_auth();
 
         $stmt = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me
+            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, roli, statusi_llogarise, krijuar_me
              FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $stmt->execute([$user['id']]);

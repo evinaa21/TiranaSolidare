@@ -76,6 +76,43 @@ body.page-requests {
   50%      { opacity: 0.15; }
 }
 
+/* ─── Requests Hero — Animated Blob Keyframes ─── */
+@keyframes rqOrbDrift1 {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.35; }
+  20%  { transform: translate(60px, -40px) scale(1.12); opacity: 0.5; }
+  40%  { transform: translate(-30px, -80px) scale(0.95); opacity: 0.3; }
+  60%  { transform: translate(80px, 20px) scale(1.08); opacity: 0.55; }
+  80%  { transform: translate(-20px, 50px) scale(1.02); opacity: 0.25; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+}
+
+@keyframes rqOrbDrift2 {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.25; }
+  25%  { transform: translate(-50px, 30px) scale(1.15); opacity: 0.45; }
+  50%  { transform: translate(40px, 60px) scale(0.9); opacity: 0.2; }
+  75%  { transform: translate(-70px, -30px) scale(1.1); opacity: 0.5; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.25; }
+}
+
+@keyframes rqOrbDrift3 {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.2; }
+  33%  { transform: translate(40px, -50px) scale(1.2) rotate(120deg); opacity: 0.45; }
+  66%  { transform: translate(-60px, 30px) scale(0.85) rotate(240deg); opacity: 0.15; }
+  100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.2; }
+}
+
+@keyframes rqOrbDrift4 {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  30%  { transform: translate(70px, 40px) scale(1.1); opacity: 0.15; }
+  60%  { transform: translate(-40px, -60px) scale(1.18); opacity: 0.5; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+}
+
+@keyframes rqSvgFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.06; }
+  50%      { transform: translateY(-15px) rotate(2deg); opacity: 0.09; }
+}
+
 
 /* ═══════════════════════════════════════════════════════════
    HERO SECTION
@@ -102,13 +139,111 @@ body.page-requests {
   background-color: #002b23;
 }
 
-/* Modifier for Requests Page (Soft Charcoal/Neutral Theme) */
+/* ═══════════════════════════════════════════════════════════
+   REQUESTS HERO — Stunning Warm Gradient + SVG Illustration
+   ═══════════════════════════════════════════════════════════ */
 .rq-hero.rq-hero--requests {
-  background-image: 
-    radial-gradient(circle at 0% 0%, rgba(100,110,140,0.5) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(26,31,46,0.6) 0%, transparent 50%),
-    linear-gradient(135deg, #1a1f2e 0%, #3d4663 100%);
-  background-color: #1a1f2e;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,113,93,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(225,114,84,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(108,99,255,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 80%, rgba(0,80,65,0.2) 0%, transparent 50%),
+    linear-gradient(145deg, #0d1f1a 0%, #142b24 25%, #1a3a2a 50%, #1e2a22 75%, #0f1c17 100%);
+  background-size: 100% 100%;
+  animation: none;
+  border-bottom: none;
+}
+
+/* Noise / grain texture for tactile depth */
+.rq-hero--requests::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Undraw SVG illustration — positioned as background art */
+.rq-hero--requests .rq-hero__illustration {
+  position: absolute;
+  right: -2%;
+  bottom: -10%;
+  width: 420px;
+  height: auto;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 1;
+  filter: brightness(2) saturate(0.3);
+  animation: rqSvgFloat 8s ease-in-out infinite;
+}
+
+/* ─── Animated Orbs — fading & drifting ─── */
+.rq-hero--requests .rq-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(80px);
+  will-change: transform, opacity;
+}
+
+.rq-hero--requests .rq-orb--1 {
+  width: 340px;
+  height: 340px;
+  top: -60px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(0,113,93,0.6) 0%, rgba(0,113,93,0) 70%);
+  animation: rqOrbDrift1 16s ease-in-out infinite;
+}
+
+.rq-hero--requests .rq-orb--2 {
+  width: 280px;
+  height: 280px;
+  bottom: -40px;
+  left: 5%;
+  background: radial-gradient(circle, rgba(225,114,84,0.5) 0%, rgba(225,114,84,0) 70%);
+  animation: rqOrbDrift2 20s ease-in-out infinite;
+}
+
+.rq-hero--requests .rq-orb--3 {
+  width: 200px;
+  height: 200px;
+  top: 30%;
+  left: 55%;
+  background: radial-gradient(circle, rgba(108,99,255,0.45) 0%, rgba(108,99,255,0) 70%);
+  animation: rqOrbDrift3 22s ease-in-out infinite;
+}
+
+.rq-hero--requests .rq-orb--4 {
+  width: 260px;
+  height: 260px;
+  top: 10%;
+  left: -5%;
+  background: radial-gradient(circle, rgba(0,180,140,0.35) 0%, rgba(0,180,140,0) 70%);
+  animation: rqOrbDrift4 18s ease-in-out infinite;
+}
+
+/* Soft vignette at bottom for seamless transition */
+.rq-hero--requests::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(245,245,247,0.08) 0%, transparent 100%);
+}
+
+/* Hide old blob elements if still in DOM */
+.rq-hero--requests .rq-blob,
+.rq-hero--requests .rq-grid-overlay {
+  display: none;
 }
 
 /* Dot grid overlay — disabled */
@@ -573,6 +708,19 @@ body.page-requests .rq-blob--filters {
 .rq-card__overlay .rq-badge--closed,
 .rq-card__overlay .rq-badge--past {
   background: rgba(55, 65, 81, 0.82);
+}
+
+/* Gradient scrim at top of image — keeps badges readable on bright/dark images */
+.rq-card__visual::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.35), transparent);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Gradient scrim at bottom of image */
@@ -1576,6 +1724,79 @@ body.page-requests .rq-btn-full:hover {
 
 .rq-applicant-email {
   margin: 0 0 10px;
+}
+
+.rq-applicant-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rq-btn-accept,
+.rq-btn-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--rq-transition);
+}
+
+.rq-btn-accept {
+  background: #d1fae5;
+  color: #065f46;
+}
+.rq-btn-accept:hover { background: #a7f3d0; }
+
+.rq-btn-reject {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.rq-btn-reject:hover { background: #fecaca; }
+
+.rq-btn-accept:disabled,
+.rq-btn-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rq-applicant-decided {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--rq-text-muted);
+  padding: 4px 0;
+}
+
+.rq-applicant-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rq-applicant-status--në\ pritje,
+.rq-applicant-status--në-pritje {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rq-applicant-status--pranuar {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.rq-applicant-status--refuzuar {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .rq-contact-form {

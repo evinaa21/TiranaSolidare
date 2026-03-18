@@ -272,6 +272,67 @@ switch ($action) {
         }
         break;
 
+    // ── UPDATE APPLICANT STATUS (Accept/Reject) ───
+    case 'update_applicant_status':
+        require_method('PUT');
+        $user = require_auth();
+        $body = get_json_body();
+
+        $applicationId = isset($body['id_aplikimi_kerkese']) ? (int) $body['id_aplikimi_kerkese'] : 0;
+        $newStatus = trim((string) ($body['statusi'] ?? ''));
+
+        if ($applicationId <= 0) {
+            json_error('ID-ja e aplikimit është e pavlefshme.', 422);
+        }
+        if (!in_array($newStatus, ['Pranuar', 'Refuzuar'], true)) {
+            json_error("Statusi duhet të jetë 'Pranuar' ose 'Refuzuar'.", 422);
+        }
+
+        try {
+            $appStmt = $pdo->prepare(
+                'SELECT ak.id_aplikimi_kerkese, ak.id_kerkese_ndihme, ak.id_perdoruesi, ak.statusi,
+                        kn.id_perdoruesi AS pronari_id, kn.titulli,
+                        p.emri AS aplikuesi_emri, p.email AS aplikuesi_email
+                 FROM Aplikimi_Kerkese ak
+                 JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
+                 JOIN Perdoruesi p ON p.id_perdoruesi = ak.id_perdoruesi
+                 WHERE ak.id_aplikimi_kerkese = ?'
+            );
+            $appStmt->execute([$applicationId]);
+            $app = $appStmt->fetch();
+
+            if (!$app) {
+                json_error('Aplikimi nuk u gjet.', 404);
+            }
+
+            if ((int) $app['pronari_id'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+                json_error('Nuk keni leje për këtë veprim.', 403);
+            }
+
+            $update = $pdo->prepare('UPDATE Aplikimi_Kerkese SET statusi = ? WHERE id_aplikimi_kerkese = ?');
+            $update->execute([$newStatus, $applicationId]);
+
+            $statusLabel = $newStatus === 'Pranuar' ? 'pranua' : 'refuzua';
+            $notifMessage = "Aplikimi juaj për \"{$app['titulli']}\" u {$statusLabel}.";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([$app['id_perdoruesi'], $notifMessage]);
+
+            if (filter_var($app['aplikuesi_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $app['aplikuesi_email'],
+                    $app['aplikuesi_emri'] ?? 'Vullnetar',
+                    "Aplikimi juaj u {$statusLabel}",
+                    $notifMessage
+                );
+            }
+
+            json_success(['message' => "Statusi i aplikimit u ndryshua në '{$newStatus}'."]);
+        } catch (\Exception $e) {
+            error_log('help_requests update_applicant_status: ' . $e->getMessage());
+            json_error('Gabim gjatë përditësimit të statusit.', 500);
+        }
+        break;
+
     // ── LIST HELP REQUESTS ─────────────────────────
     case 'list':
         require_method('GET');

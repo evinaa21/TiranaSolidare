@@ -60,10 +60,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const header = document.getElementById('header');
   if (!header) return;
 
+  var scrollThreshold = document.body.classList.contains('page-home') ? 50 : 0;
+
   window.addEventListener('scroll', function () {
-    const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+    var currentScroll = window.pageYOffset || document.documentElement.scrollTop;
     
-    if (currentScroll > 0) {
+    if (currentScroll > scrollThreshold) {
       header.classList.add('scrolled');
     } else {
       header.classList.remove('scrolled');

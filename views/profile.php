@@ -98,6 +98,30 @@ if (!isset($_SESSION['user_id'])) {
 					</form>
 				</div>
 			</div>
+
+			<div class="profile-panels">
+				<div class="form-card">
+					<div class="inline-actions">
+						<h3>Profili publik</h3>
+						<span class="muted">Përditëso bio-n, foton e profilit dhe vendos privatësinë.</span>
+					</div>
+					<form id="profile-extra-form" class="auth-form" autocomplete="off">
+						<div class="auth-field">
+							<label for="bio">Bio (përshkrim i shkurtër)</label>
+							<textarea class="auth-input" id="bio" name="bio" rows="3" maxlength="500" placeholder="Shkruaj diçka për veten..."></textarea>
+						</div>
+						<div class="auth-field">
+							<label for="profile_picture">URL e fotos së profilit</label>
+							<input class="auth-input" type="url" id="profile_picture" name="profile_picture" placeholder="https://example.com/photo.jpg" maxlength="500">
+						</div>
+						<div class="auth-field" style="display:flex;align-items:center;gap:10px">
+							<input type="checkbox" id="profile_public" name="profile_public" checked style="width:18px;height:18px;accent-color:#00715D">
+							<label for="profile_public" style="margin:0;cursor:pointer">Profili im është publik</label>
+						</div>
+						<button type="submit" class="btn_primary auth-submit">Ruaj ndryshimet</button>
+					</form>
+				</div>
+			</div>
 		</div>
 	</section>
 </main>
@@ -139,6 +163,9 @@ if (!isset($_SESSION['user_id'])) {
 			roliEl.textContent = data.roli || '—';
 			statusiEl.textContent = data.statusi_llogarise || '—';
 			document.getElementById('emri').value = data.emri || '';
+			document.getElementById('bio').value = data.bio || '';
+			document.getElementById('profile_picture').value = data.profile_picture || '';
+			document.getElementById('profile_public').checked = data.profile_public !== 0 && data.profile_public !== '0';
 		} catch (err) {
 			setStatus('error', err.message);
 		}
@@ -212,6 +239,33 @@ if (!isset($_SESSION['user_id'])) {
 
 	loadProfile();
 	loadStats();
+
+	const profileExtraForm = document.getElementById('profile-extra-form');
+	profileExtraForm.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const bio = (document.getElementById('bio').value || '').trim();
+		const profile_picture = (document.getElementById('profile_picture').value || '').trim();
+		const profile_public = document.getElementById('profile_public').checked ? 1 : 0;
+
+		if (bio.length > 500) {
+			setStatus('error', 'Bio nuk mund të kalojë 500 karaktere.');
+			return;
+		}
+
+		try {
+			const res = await fetch(updateNameApi, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+				credentials: 'same-origin',
+				body: JSON.stringify({ emri: emriEl.textContent, bio, profile_picture, profile_public }),
+			});
+			const payload = await res.json();
+			if (!res.ok || !payload.success) throw new Error(payload.message || 'Nuk u ruajtën ndryshimet.');
+			setStatus('success', 'Profili publik u përditësua me sukses.');
+		} catch (err) {
+			setStatus('error', err.message);
+		}
+	});
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
 </body>
