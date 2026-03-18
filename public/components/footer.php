@@ -15,11 +15,9 @@
       <ul>
         <li>Navigim</li>
         <li><a href="/TiranaSolidare/public/">Kreu</a></li>
-        <li><a href="/TiranaSolidare/public/#si-funksionon">Si Funksionon</a></li>
-        <li><a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a></li>
         <li><a href="/TiranaSolidare/views/events.php">Evente</a></li>
-        <li><a href="/TiranaSolidare/public/#regjistrohu">Misioni</a></li>
-      </ul>
+        <li><a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a></li>
+        <li><a href="/TiranaSolidare/views/map.php">Harta</a></li></ul>
       <ul>
         <li>Legal</li>
         <li><a href="#">Termat dhe Kushtet</a></li>

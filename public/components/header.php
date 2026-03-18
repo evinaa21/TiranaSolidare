@@ -5,6 +5,22 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
+$isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin');
+
+$firstChar = function_exists('mb_substr') ? mb_substr($userName ?: 'P', 0, 1) : substr($userName ?: 'P', 0, 1);
+$userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : strtoupper($firstChar);
+
+$avatarSessionValue = $_SESSION['avatar'] ?? $_SESSION['photo'] ?? $_SESSION['foto'] ?? $_SESSION['profile_image'] ?? '';
+$avatarUrl = '';
+if (is_string($avatarSessionValue) && $avatarSessionValue !== '') {
+  if (preg_match('/^https?:\/\//i', $avatarSessionValue) || strpos($avatarSessionValue, '/TiranaSolidare/') === 0 || strpos($avatarSessionValue, '/') === 0) {
+    $avatarUrl = $avatarSessionValue;
+  } else {
+    $avatarUrl = '/TiranaSolidare/public/assets/uploads/' . ltrim($avatarSessionValue, '/');
+  }
+}
+
+$avatarHue = abs(crc32((string) $userName)) % 360;
 ?>
 <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
 <meta name="theme-color" content="#00715D">
@@ -17,19 +33,41 @@ $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
     <button onclick="toggleMenu()">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
-    <a href="/TiranaSolidare/public/">Kreu</a>
-    <a href="/TiranaSolidare/public/#si-funksionon">Si Funksionon</a>
-    <a href="/TiranaSolidare/views/help_requests.php">Kërkesat</a>
-    <a href="/TiranaSolidare/views/events.php">Evente</a>
-    <a href="/TiranaSolidare/views/map.php">Harta</a>
-    <a href="/TiranaSolidare/public/#regjistrohu">Misioni</a>
+    <a href="/TiranaSolidare/public/" class="header-main-link">Kreu</a>
+    <a href="/TiranaSolidare/public/#regjistrohu" class="header-main-link">Misioni</a>
+    <a href="/TiranaSolidare/public/#si-funksionon" class="header-main-link">Si Funksionon</a>
+    <a href="/TiranaSolidare/views/events.php" class="header-main-link">Evente</a>
+    <a href="/TiranaSolidare/views/help_requests.php" class="header-main-link">Kërkesat</a>
+    <a href="/TiranaSolidare/views/map.php" class="header-main-link">Harta</a>
     <span></span>
     <?php if ($isLoggedIn): ?>
-      <span id="notif-badge"></span>
-      <?php $isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin'); ?>
-      <a href="/TiranaSolidare/views/<?= $isAdminUser ? 'dashboard.php' : 'volunteer_panel.php' ?>" class="header-user"><?= htmlspecialchars($userName) ?></a>
-      <a href="/TiranaSolidare/views/<?= $isAdminUser ? 'dashboard.php' : 'volunteer_panel.php' ?>" class="btn_primary">Paneli</a>
-      <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="btn_secondary">Dil</a>
+      <?php if ($isAdminUser): ?>
+        <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary header-admin-btn">Paneli Admin</a>
+      <?php else: ?>
+        <div class="header-user-menu" id="header-user-menu">
+          <button type="button" class="header-user-avatar" aria-haspopup="true" aria-expanded="false" aria-controls="header-user-dropdown" onclick="toggleUserMenu(event)">
+            <?php if ($avatarUrl !== ''): ?>
+              <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="<?= htmlspecialchars($userName) ?>" onerror="this.style.display='none'; this.parentElement.classList.add('has-fallback'); this.parentElement.querySelector('.header-user-fallback').style.display='grid';">
+            <?php endif; ?>
+            <span class="header-user-fallback" style="--avatar-hue: <?= (int) $avatarHue ?>;<?= $avatarUrl !== '' ? 'display:none;' : '' ?>"><?= htmlspecialchars($userInitial) ?></span>
+            <span id="notif-badge"></span>
+          </button>
+
+          <div class="header-user-dropdown" id="header-user-dropdown">
+            <div class="header-user-dropdown__head">
+              <strong><?= htmlspecialchars($userName) ?></strong>
+              <small>Paneli i vullnetarit</small>
+            </div>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile">Profili</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=applications">Aplikimet e mia</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=requests">Kërkesat e mia</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request">Dërgo kërkesë</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
+            <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="header-user-signout">Dil</a>
+          </div>
+        </div>
+      <?php endif; ?>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">
         Bëhu Vullnetar 

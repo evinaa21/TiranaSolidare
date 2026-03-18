@@ -15,8 +15,6 @@ html, body {
 }
 
 main{
-  margin-top: 0px;
-  padding-top: 60px;
   overflow-y: hidden;
 }
 
@@ -396,15 +394,15 @@ button{
   align-items: center;
   gap: 32px;
   z-index: 10000;
-  transition: all 0.35s ease;
-}
-
-.header.scrolled{
   background-color: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  box-shadow: unset;
+  transition: 0.3s ease;
+}
+
+.header.scrolled{
   box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
-  height: 70px;
 }
 
 .header-logo{
@@ -441,14 +439,14 @@ button{
   width: 100%;
 }
 
-.header-nav a:not(.btn_primary, .btn_secondary){
+.header-nav .header-main-link{
   position: relative;
   text-decoration: none;
   color: #00715D;
   font-weight: 500;
 }
 
-.header-nav a:not(.btn_primary, .btn_secondary):before{
+.header-nav .header-main-link:before{
   content: "";
   position: absolute;
   bottom: -4px;
@@ -460,7 +458,7 @@ button{
   transition: 0.5s ease;
 }
 
-.header-nav a:not(.btn_primary, .btn_secondary):hover:before{
+.header-nav .header-main-link:hover:before{
   right: unset;
   left: 0;
   width: 100%;
@@ -470,13 +468,135 @@ button{
   margin-left: auto;
 }
 
-.header-user {
-  font-weight: 600;
-  color: #00715D;
-  font-size: 0.95rem;
+.header-user-menu{
+  position: relative;
+  margin-left: 6px;
 }
 
-.header-nav button{
+.header-user-avatar{
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #00715d26;
+  background-color: #fff;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #003229;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header-user-avatar:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 113, 93, 0.16);
+}
+
+.header-user-avatar > img,
+.header-user-fallback{
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.header-user-avatar > img{
+  object-fit: cover;
+}
+
+.header-user-fallback{
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 700;
+  background: hsl(var(--avatar-hue) 72% 92%);
+  color: hsl(var(--avatar-hue) 48% 27%);
+}
+
+.header-user-avatar.has-fallback > img{
+  display: none;
+}
+
+#notif-badge{
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  padding: 0 6px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background-color: #d84d27;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid #fff;
+}
+
+.header-user-dropdown{
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 260px;
+  background-color: #fff;
+  border-radius: 14px;
+  border: 1px solid #00715d22;
+  box-shadow: 0 14px 40px rgba(0, 44, 37, 0.14);
+  padding: 10px;
+  display: none;
+  z-index: 10001;
+}
+
+.header-user-dropdown.active{
+  display: block;
+}
+
+.header-user-dropdown__head{
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid #00715d14;
+  margin-bottom: 6px;
+}
+
+.header-user-dropdown__head strong{
+  display: block;
+  color: #003229;
+  font-size: 0.97rem;
+}
+
+.header-user-dropdown__head small{
+  color: #00715daa;
+  font-size: 0.78rem;
+}
+
+.header-user-dropdown a{
+  display: block;
+  text-decoration: none;
+  color: #004d3f;
+  font-size: 0.93rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-user-dropdown a:hover{
+  background-color: #e7f5f1;
+  color: #003229;
+}
+
+.header-user-signout{
+  margin-top: 4px;
+  border-top: 1px solid #00715d14;
+  color: #b13c1e !important;
+}
+
+.header-admin-btn{
+  margin-left: 6px;
+}
+
+.header-nav > button{
   display: flex;
   justify-content: center;
   align-items: center;
@@ -488,7 +608,7 @@ button{
   display: none;
 }
 
-.header-nav button .lucide{
+.header-nav > button .lucide{
   width: 32px;
   height: 32px;
 }
@@ -523,7 +643,7 @@ button{
 
 @media screen and (max-width: 1280px) {
   .header-btn button,
-  .header-nav button {
+  .header-nav > button {
     display: flex;
   }
 
@@ -547,6 +667,25 @@ button{
     padding: 50px 20px;
     overflow-y: auto;
     transition: 0.5s ease;
+  }
+
+  .header-user-menu{
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .header-user-avatar{
+    margin-inline: auto;
+  }
+
+  .header-user-dropdown{
+    position: static;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .header-admin-btn{
+    width: 100%;
   }
 
   .header-nav.active{

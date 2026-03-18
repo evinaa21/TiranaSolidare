@@ -131,7 +131,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
     </a>
     <a href="?tab=new-request" class="vp-tab <?= $tab === 'new-request' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-      Dërgo kërkesë
+      Krijo kërkesë
     </a><a href="?tab=score" class="vp-tab <?= $tab === 'score' ? 'active' : '' ?>">
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   Pikët e mia
@@ -178,7 +178,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
             <strong><?= $totalApps ?></strong>
           </div>
           <div class="vp-meta-item">
-            <span>Kërkesa dërguar</span>
+            <span>Kërkesa krijuar</span>
             <strong><?= $totalRequests ?></strong>
           </div>
           <div class="vp-meta-item">
@@ -305,20 +305,20 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
   <div class="vp-card">
     <div class="vp-card__header">
       <h3>Kërkesat e mia</h3>
-      <a href="?tab=new-request" class="btn_primary vp-btn-sm">+ Dërgo kërkesë</a>
+      <a href="?tab=new-request" class="btn_primary vp-btn-sm">+ Krijo kërkesë</a>
     </div>
     <div class="vp-card__body">
       <?php if (empty($myRequests)): ?>
         <div class="vp-empty">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-          <p>Nuk keni dërguar kërkesa ende. <a href="?tab=new-request">Dërgoni një tani!</a></p>
+          <p>Nuk keni krijuar kërkesa ende. <a href="?tab=new-request">Krijo një tani!</a></p>
         </div>
       <?php else: ?>
         <div class="vp-request-grid">
           <?php foreach ($myRequests as $req): ?>
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
               <div class="vp-request-card__top">
-                <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= htmlspecialchars($req['tipi']) ?></span>
+                <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>\"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
                 <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
               </div>
               <?php if (!empty($req['imazhi'])): ?>
@@ -340,8 +340,8 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
 <div class="vp-panel">
   <div class="vp-card">
     <div class="vp-card__header">
-      <h3>Dërgo kërkesë për ndihmë</h3>
-      <p>Posto kërkesën ose ofertën tënde dhe komuniteti do të përgjigjet.</p>
+      <h3>Krijo kërkesë për ndihmë</h3>
+      <p>Posto kërkesën ose kontributin tënd dhe komuniteti do të përgjigjet.</p>
     </div>
     <div class="vp-card__body">
       <form id="vp-request-form" class="vp-form">
@@ -353,8 +353,8 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
           <div class="vp-field">
             <label for="vp-req-type">Tipi</label>
             <select id="vp-req-type" name="tipi" required class="vp-input">
-              <option value="Kërkesë">Kërkesë</option>
-              <option value="Ofertë">Ofertë</option>
+              <option value="Kërkesë">Kërkoj ndihmë</option>
+              <option value="Ofertë">Dua të ndihmoj</option>
             </select>
           </div>
         </div>
@@ -385,7 +385,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
             </div>
           </div>
         </div>
-        <button type="submit" class="btn_primary">Dërgo kërkesën</button>
+        <button type="submit" class="btn_primary">Krijo kërkesën</button>
         <div id="vp-req-status" class="vp-status" style="display:none"></div>
       </form>
     </div>
@@ -413,7 +413,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
             <strong><?= $totalApps * 1 ?> pikë</strong>
         </div>
         <div class="vp-score-item">
-             <span>Kërkesa dërguar (<?= $totalRequests ?>)</span>
+             <span>Kërkesa krijuar (<?= $totalRequests ?>)</span>
              <strong><?= $totalRequests * 2 ?> pikë</strong>
         </div>
       </div>
@@ -562,7 +562,7 @@ if (reqForm) {
       reqForm.reset();
       const coordDisplay = document.getElementById('req-coord-display');
       if (coordDisplay) coordDisplay.style.display = 'none';
-      vpStatus('vp-req-status', 'success', 'Kërkesa u dërgua me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
+      vpStatus('vp-req-status', 'success', 'Kërkesa u krijuar me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
     } catch (err) { vpStatus('vp-req-status', 'error', err.message); }
   });
 }

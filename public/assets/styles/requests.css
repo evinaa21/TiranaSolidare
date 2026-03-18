@@ -83,7 +83,7 @@ body.page-requests {
 
 .rq-hero {
   position: relative;
-  padding: 120px 24px 80px;
+  padding: 180px 24px 80px;
   background-size: 200% 200%;
   animation: rqGradientShift 14s ease infinite;
   overflow: hidden;
@@ -201,10 +201,10 @@ body.page-requests {
 
 .rq-trust-bar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  gap: 24px;
   flex-wrap: wrap;
+  gap: 24px;
   padding: 20px 32px;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
@@ -216,6 +216,7 @@ body.page-requests {
 
 .rq-trust-item {
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
 }
@@ -223,6 +224,8 @@ body.page-requests {
 .rq-trust-item svg {
   flex-shrink: 0;
   color: var(--rq-accent);
+  width: 30px;
+  height: 30px;
 }
 
 .rq-trust-item div {
@@ -533,6 +536,45 @@ body.page-requests .rq-blob--filters {
   z-index: 2;
 }
 
+/* Ensure badges remain readable on any image tone */
+.rq-card__overlay .rq-badge {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px) saturate(135%);
+  -webkit-backdrop-filter: blur(10px) saturate(135%);
+}
+
+.rq-card__overlay .rq-badge--event {
+  background: rgba(0, 55, 45, 0.78);
+  font-weight: 700;
+}
+
+.rq-card__overlay .rq-badge--event-spotlight {
+  background: linear-gradient(135deg, #ffb703 0%, #fb5607 55%, #ff006e 100%);
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 10px 24px rgba(251, 86, 7, 0.45), 0 4px 10px rgba(0,0,0,0.28);
+}
+
+.rq-card__overlay .rq-badge--request {
+  background: rgba(170, 35, 23, 0.86);
+}
+
+.rq-card__overlay .rq-badge--offer {
+  background: rgba(7, 103, 70, 0.86);
+}
+
+.rq-card__overlay .rq-badge--open {
+  background: rgba(12, 102, 58, 0.82);
+}
+
+.rq-card__overlay .rq-badge--closed,
+.rq-card__overlay .rq-badge--past {
+  background: rgba(55, 65, 81, 0.82);
+}
+
 /* Gradient scrim at bottom of image */
 .rq-card__visual::after {
   content: '';
@@ -643,45 +685,62 @@ body.page-requests .rq-blob--filters {
   border-radius: 100px;
   font-family: 'Raleway', sans-serif;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* Priority labels: Event / Kërkoj ndihmë / Dua të ndihmoj */
+.rq-badge--event,
+.rq-badge--event-spotlight,
+.rq-badge--request,
+.rq-badge--offer {
+  font-weight: 700;
+  letter-spacing: 0.58px;
+}
+
 .rq-badge--event {
-  background: rgba(0,113,93,0.12);
+  background: rgba(0, 255, 208, 0.12);
   color: #00715D;
   border: 1px solid rgba(0,113,93,0.2);
 }
 
+.rq-badge--event-spotlight {
+  background: linear-gradient(135deg, #ff9f1c 0%, #ff3d00 55%, #ff0054 100%);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: 0 10px 24px rgba(255, 61, 0, 0.38), 0 3px 10px rgba(0,0,0,0.2);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+}
+
 .rq-badge--request {
-  background: rgba(61,70,99,0.12);
-  color: #3d4663;
-  border: 1px solid rgba(61,70,99,0.2);
+  background: rgba(255, 71, 43, 0.14);
+  color: #b42318;
+  border: 1px solid rgba(180,35,24,0.28);
 }
 
 .rq-badge--offer {
-  background: rgba(0,113,93,0.15);
-  color: #00715D;
-  border: 1px solid rgba(0,113,93,0.25);
+  background: rgba(16, 185, 129, 0.16);
+  color: #065f46;
+  border: 1px solid rgba(5,150,105,0.32);
 }
 
 .rq-badge--open {
-  background: rgba(34,197,94,0.12);
+  background: rgba(44, 255, 121, 0.12);
   color: #16a34a;
   border: 1px solid rgba(34,197,94,0.2);
 }
 
 .rq-badge--closed {
-  background: rgba(107,114,128,0.12);
+  background: rgba(209, 224, 255, 0.12);
   color: #6b7280;
   border: 1px solid rgba(107,114,128,0.2);
 }
 
 .rq-badge--past {
-  background: rgba(239,68,68,0.12);
+  background: rgba(255, 74, 74, 0.12);
   color: #dc2626;
   border: 1px solid rgba(239,68,68,0.2);
 }
@@ -693,20 +752,27 @@ body.page-requests .rq-blob--filters {
   border-color: rgba(255,255,255,0.25);
 }
 
+.rq-detail-hero .rq-badge--event-spotlight {
+  background: linear-gradient(135deg, #ffb703 0%, #fb5607 50%, #ff006e 100%);
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 12px 26px rgba(251, 86, 7, 0.42);
+}
+
 .rq-detail-hero .rq-badge--request {
-  background: rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.9);
-  border-color: rgba(255,255,255,0.25);
+  background: rgba(255, 71, 43, 0.26);
+  color: #ffd8d2;
+  border-color: rgba(255, 163, 147, 0.45);
 }
 
 .rq-detail-hero .rq-badge--offer {
-  background: rgba(34,197,94,0.25);
-  color: #a8f0c4;
-  border-color: rgba(34,197,94,0.35);
+  background: rgba(16, 185, 129, 0.28);
+  color: #d1fae5;
+  border-color: rgba(110, 231, 183, 0.5);
 }
 
 .rq-detail-hero .rq-badge--open {
-  background: rgba(34,197,94,0.25);
+  background: rgba(37, 255, 117, 0.25);
   color: #a8f0c4;
   border-color: rgba(34,197,94,0.35);
 }
@@ -715,6 +781,36 @@ body.page-requests .rq-blob--filters {
   background: rgba(255,255,255,0.15);
   color: rgba(255,255,255,0.7);
   border-color: rgba(255,255,255,0.2);
+}
+
+/* Event page: make events visually dominant */
+body.page-events .rq-grid {
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 30px;
+}
+
+body.page-events .rq-card {
+  border-color: rgba(0,113,93,0.2);
+  box-shadow: 0 10px 28px rgba(0,113,93,0.16), 0 4px 12px rgba(0,0,0,0.08);
+}
+
+body.page-events .rq-card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 22px 50px rgba(0,113,93,0.23), 0 10px 20px rgba(0,0,0,0.12);
+}
+
+body.page-events .rq-card__visual {
+  height: 240px;
+}
+
+body.page-events .rq-card__title {
+  font-size: 1.24rem;
+}
+
+@media (max-width: 900px) {
+  body.page-events .rq-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
 }
 
 

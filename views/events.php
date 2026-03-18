@@ -90,7 +90,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260308W">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
-<body>
+<body class="page-events">
 <?php include __DIR__ . '/../public/components/header.php'; ?>
 
 <main>
@@ -111,10 +111,13 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
       Kthehu te eventet
     </a>
     <div class="rq-detail-hero__badges">
-      <span class="rq-badge rq-badge--request">
+      <span class="rq-badge rq-badge--event-spotlight">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
         Event
       </span>
+      <?php if (!empty($event['kategoria_emri'])): ?>
+      <span class="rq-badge rq-badge--event"><?= htmlspecialchars($event['kategoria_emri']) ?></span>
+      <?php endif; ?>
     </div>
     <h1><?= htmlspecialchars($event['titulli']) ?></h1>
     <div class="rq-detail-hero__meta">
@@ -319,7 +322,8 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
               </div>
             <?php endif; ?>
             <div class="rq-card__overlay">
-              <span class="rq-badge rq-badge--request"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Event') ?></span>
+              <span class="rq-badge rq-badge--event-spotlight">Event</span>
+              <span class="rq-badge rq-badge--event\"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Kategori') ?></span>
             </div>
           </div>
           <div class="rq-card__content">
@@ -371,7 +375,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
     <?php if ($isLoggedIn): ?>
       <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-event" class="btn_primary">Shko te paneli</a>
     <?php else: ?>
-      <a href="/TiranaSolidare/views/register.php" class="btn_primary">Regjistrohu tani</a>
+      <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar</a>
     <?php endif; ?>
   </div>
 </section>

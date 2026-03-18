@@ -700,7 +700,7 @@ window.loadUserRequests = async function(userId, userName) {
             const statClass = r.statusi === 'Open' ? 'open' : 'closed';
             body += `<tr>
                 <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
-                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${tipClass}">${r.tipi === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span></td>
                 <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
             </tr>`;
@@ -854,8 +854,8 @@ window.loadHelpRequests = async function (page = 1) {
             <label>Tipi</label>
             <select class="db-filter-select" onchange="window._requestFilters.tipi = this.value; loadHelpRequests(1)">
                 <option value="all"     ${filters.tipi === 'all'     ? 'selected' : ''}>Të gjitha</option>
-                <option value="Kërkesë" ${filters.tipi === 'Kërkesë' ? 'selected' : ''}>Kërkesë</option>
-                <option value="Ofertë"  ${filters.tipi === 'Ofertë'  ? 'selected' : ''}>Ofertë</option>
+                <option value="Kërkesë" ${filters.tipi === 'Kërkesë' ? 'selected' : ''}>Kërkoj ndihmë</option>
+                <option value="Ofertë"  ${filters.tipi === 'Ofertë'  ? 'selected' : ''}>Dua të ndihmoj</option>
             </select>
         </div>
         <div class="db-filter-group">
@@ -887,7 +887,7 @@ window.loadHelpRequests = async function (page = 1) {
 
         html += `<tr>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
-            <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+            <td><span class="db-badge db-badge--${tipClass}">${r.tipi === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span></td>
             <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${formatDate(r.krijuar_me)}</td>

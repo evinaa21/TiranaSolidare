@@ -5,7 +5,7 @@
 
 /* ── PAGE HERO ── */
 .page-hero {
-  padding: 80px clamp(20px, 8%, 8%) 60px;
+  padding: 160px clamp(20px, 8%, 8%) 120px;
   background: #003229;
   color: #fff;
   text-align: center;
@@ -13,7 +13,7 @@
 .page-hero h1 {
   color: #fff;
   font-size: calc(2.8rem * var(--font-coeff, 1));
-  margin-bottom: 12px;
+  margin-block: 24px;
 }
 .page-hero p {
   color: rgba(255,255,255,0.8);

@@ -16,7 +16,6 @@
   grid-template-columns: 1fr 1fr;
   gap: 50px;
   min-height: calc(100vh - 0px);
-  padding-block: 40px 100px;
   
   background: #ffffff;
   
@@ -450,6 +449,7 @@
   right: 24px;
   height: 3px;
   border-radius: 0 0 3px 3px;
+  opacity: 0.5;
 }
 #si-funksionon .sf-card--1::before { background: #00715D; }
 #si-funksionon .sf-card--2::before { background: #E17254; }
@@ -465,6 +465,7 @@
 .sf-card__top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -903,8 +904,11 @@
 
 #eventet{
   padding-inline: 0;
-  padding-block: 80px;
-  background-color: #eef5f3;
+  padding-block: 104px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(0,113,93,0.08), transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(225,114,84,0.08), transparent 42%),
+    #eef5f3;
 }
 
 #eventet-title{
@@ -941,22 +945,74 @@
 }
 
 /* Eventet cards – green-accented variant */
-#eventet .help_card{
-  border: 1px solid rgba(0,113,93,0.08);
-  background: #fff;
+#eventet .hs_Wrapper > *{
+  flex: 0 0 calc((100% - 24px) / 2);
+  width: calc((100% - 24px) / 2) !important;
+  min-width: 340px;
 }
 
-#eventet .help_card:hover{
-  border-color: rgba(0,113,93,0.2);
-  box-shadow: 0 16px 40px rgba(0,113,93,0.12);
+#eventet .rq-card{
+  border: 1px solid rgba(0,113,93,0.16);
+  box-shadow: 0 10px 28px rgba(0,113,93,0.14), 0 4px 10px rgba(0,0,0,0.06);
 }
 
-#eventet .help_card_status.request{
-  background-color: #00715D;
+#eventet .rq-card:hover{
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 20px 48px rgba(0,113,93,0.2), 0 8px 16px rgba(0,0,0,0.08);
+  border-color: rgba(0,113,93,0.35);
 }
 
-#eventet .help_card_btn{
-  color: #00715D;
+#eventet .rq-card__visual{
+  height: 245px;
+}
+
+#eventet .rq-card__title{
+  font-size: 1.28rem;
+}
+
+#eventet .rq-card__desc{
+  font-size: 0.95rem;
+}
+
+#eventet .rq-card__overlay .rq-badge{
+  font-size: 0.78rem;
+  padding: 6px 14px;
+}
+
+#eventet .rq-card__overlay{
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#eventet .rq-card__overlay .rq-badge--event-spotlight{
+  transform: translateY(-1px);
+}
+
+#kerkesat .rq-card{
+  opacity: 0.94;
+  border-color: rgba(61,70,99,0.12);
+  box-shadow: 0 4px 16px rgba(26,31,46,0.06);
+}
+
+@media screen and (max-width: 900px) {
+  #eventet .hs_Wrapper > *{
+    flex: 0 0 calc((100% - 24px) / 2);
+    width: calc((100% - 24px) / 2) !important;
+    min-width: 280px;
+  }
+}
+
+@media screen and (max-width: 680px) {
+  #eventet{
+    padding-block: 88px;
+  }
+  #eventet .hs_Wrapper > *{
+    flex: 0 0 86%;
+    width: 86% !important;
+  }
+  #eventet .rq-card__visual{
+    height: 220px;
+  }
 }
 
 
@@ -1102,9 +1158,6 @@
   display: block;
   width: 100%;
   border-radius: 16px;
-  box-shadow:
-    0 20px 50px rgba(0,50,41,0.15),
-    0 6px 16px rgba(0,0,0,0.08);
   z-index: 1;
   transform: rotate(-2deg);
   transition: transform 0.4s ease, box-shadow 0.4s ease;
@@ -1112,9 +1165,6 @@
 
 .regjistrohu-img-stack:hover .regjistrohu-img-front{
   transform: rotate(-2deg) translateY(-6px);
-  box-shadow:
-    0 28px 60px rgba(0,50,41,0.20),
-    0 8px 20px rgba(0,0,0,0.10);
 }
 
 .regjistrohu-img-stack:hover .regjistrohu-img-back{

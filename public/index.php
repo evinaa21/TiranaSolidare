@@ -49,6 +49,7 @@ $kategorite = $pdo->query(
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
   <link rel="stylesheet" href="assets/styles/main.css?v=20260308d">
+  <link rel="stylesheet" href="assets/styles/requests.css?v=20260318a">
   <link rel="stylesheet" href="assets/styles/index.css?v=20260308d">
 </head>
 <body>
@@ -95,6 +96,28 @@ $kategorite = $pdo->query(
     
   </section>
 
+  <section id="regjistrohu">
+      <!-- Decorative SVG blobs -->
+      <svg class="reg-blob reg-blob--1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(68, 139, 119, 0.07)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
+      <svg class="reg-blob reg-blob--2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.05)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
+
+      <div id="regjistrohu-content">
+        <span class="regjistrohu-label">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+          Bëhu pjesë e komunitetit
+        </span>
+        <h2>Çdo veprim i vogël krijon<br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
+        <p>Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
+        <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      </div>
+      <div id="regjistrohu-image">
+        <div class="regjistrohu-img-stack">
+          <img src="assets/images/vullnetare.png" alt="Vullnetarë" class="regjistrohu-img-front">
+          <div class="regjistrohu-img-back"></div>
+        </div>
+      </div>
+  </section>
+
   <section id="si-funksionon">
     <div class="sf-wrapper">
       <div class="sf-header">
@@ -106,10 +129,10 @@ $kategorite = $pdo->query(
       <div class="sf-grid">
         <div class="sf-card sf-card--1">
           <div class="sf-card__top">
-            <span class="sf-card__step">01</span>
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
             </div>
+            <span class="sf-card__step">01</span>
           </div>
           <h3>Krijo llogarinë</h3>
           <p>Regjistrohu në pak sekonda si vullnetar ose si qytetar që kërkon ndihmë. Procesi është i shpejtë dhe i sigurtë.</p>
@@ -117,10 +140,10 @@ $kategorite = $pdo->query(
 
         <div class="sf-card sf-card--2">
           <div class="sf-card__top">
-            <span class="sf-card__step">02</span>
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
             </div>
+            <span class="sf-card__step">02</span>
           </div>
           <h3>Eksploro mundësitë</h3>
           <p>Shfleto kërkesat e hapura për ndihmë dhe eventet e ardhshme. Gjej ku mund të kontribuosh.</p>
@@ -128,10 +151,10 @@ $kategorite = $pdo->query(
 
         <div class="sf-card sf-card--3">
           <div class="sf-card__top">
-            <span class="sf-card__step">03</span>
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/></svg>
             </div>
+            <span class="sf-card__step">03</span>
           </div>
           <h3>Merr pjesë aktivisht</h3>
           <p>Apliko për vullnetarizëm, ndihmo në evente, ose posto kërkesa për ndihmë në komunitet.</p>
@@ -139,10 +162,10 @@ $kategorite = $pdo->query(
 
         <div class="sf-card sf-card--4">
           <div class="sf-card__top">
-            <span class="sf-card__step">04</span>
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg>
             </div>
+            <span class="sf-card__step">04</span>
           </div>
           <h3>Ndërto komunitetin</h3>
           <p>Shiko ndikimin tënd real dhe ndërto një Tiranë më solidare për të gjithë qytetarët.</p>
@@ -226,43 +249,6 @@ $kategorite = $pdo->query(
     </div>
   </section>
 
-  <section id="kerkesat">
-    <div id="kerkesat-title">
-      <h2>Kërkesat e fundit</h2>
-      <a href="/TiranaSolidare/views/help_requests.php" class="btn_secondary">Shiko te gjitha <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-right-icon lucide-move-right"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg></a>
-    </div>
-    <?php include 'components/horizontalScroller/hs_start.php' ?>
-      <?php if (empty($kerkesat)): ?>
-        <p style="padding: 40px; color: #888;">Nuk ka kërkesa për momentin.</p>
-      <?php else: ?>
-        <?php foreach ($kerkesat as $k): ?>
-          <div class="help_card">
-              <?php if (!empty($k['imazhi'])): ?>
-                <img src="<?= htmlspecialchars($k['imazhi']) ?>" alt="<?= htmlspecialchars($k['titulli']) ?>" class="help_card_img">
-              <?php endif; ?>
-              <span class="help_card_status <?= $k['tipi'] === 'Kërkesë' ? 'request' : 'offer' ?>">
-                <?= $k['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Ofroj ndihmë' ?>
-              </span>
-              <span class="help_card_title"><?= htmlspecialchars($k['titulli']) ?></span>
-              
-              <div class="help_card_info">
-                <div class="help_card_info_location">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-icon"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <?= htmlspecialchars($k['krijuesi_emri']) ?>
-                </div>
-                <div class="help_card_info_time">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                  <?= koheParapake($k['krijuar_me']) ?>
-                </div>
-              </div>
-              <p class="help_card_description"><?= htmlspecialchars($k['pershkrimi'] ?? '') ?></p>
-              <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="help_card_btn btn_secondary">Shiko <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg></a>
-          </div>
-        <?php endforeach; ?>
-      <?php endif; ?>
-    <?php include 'components/horizontalScroller/hs_end.php' ?>
-  </section>
-
   <section id="eventet">
     <div id="eventet-title">
       <h2>Eventet e fundit</h2>
@@ -273,51 +259,98 @@ $kategorite = $pdo->query(
         <p style="padding: 40px; color: #888;">Nuk ka evente për momentin.</p>
       <?php else: ?>
         <?php foreach ($eventet as $ev): ?>
-          <div class="help_card">
+          <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card">
+            <div class="rq-card__visual">
               <?php if (!empty($ev['banner'])): ?>
-                <img src="<?= htmlspecialchars($ev['banner']) ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>">
+                <img src="<?= htmlspecialchars($ev['banner']) ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                <div class="rq-card__img rq-card__img--placeholder" style="display:none;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
+              <?php else: ?>
+                <div class="rq-card__img rq-card__img--placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
               <?php endif; ?>
-              <span class="help_card_status request"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Event') ?></span>
-              <span class="help_card_title"><?= htmlspecialchars($ev['titulli']) ?></span>
-              
-              <div class="help_card_info">
-                <div class="help_card_info_location">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-                  <?= htmlspecialchars($ev['vendndodhja'] ?? 'Tiranë') ?>
-                </div>
-                <div class="help_card_info_time">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-icon"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                  <?= date('d M Y, H:i', strtotime($ev['data'])) ?>
-                </div>
+              <div class="rq-card__overlay">
+                <span class="rq-badge rq-badge--event-spotlight">Event</span>
+                <span class="rq-badge rq-badge--event\"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Kategori') ?></span>
               </div>
-              <p class="help_card_description"><?= htmlspecialchars(mb_substr($ev['pershkrimi'] ?? '', 0, 150)) ?></p>
-              <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="help_card_btn btn_secondary">Shiko <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg></a>
-          </div>
+            </div>
+            <div class="rq-card__content">
+              <h3 class="rq-card__title"><?= htmlspecialchars($ev['titulli']) ?></h3>
+              <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($ev['pershkrimi'] ?? '', 0, 110)) ?>...</p>
+              <div class="rq-card__footer">
+                <div class="rq-card__meta">
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                    <?= htmlspecialchars($ev['vendndodhja'] ?? 'Tiranë') ?>
+                  </span>
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <?= date('d M Y', strtotime($ev['data'])) ?>
+                  </span>
+                </div>
+                <span class="rq-card__arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </span>
+              </div>
+            </div>
+          </a>
         <?php endforeach; ?>
       <?php endif; ?>
     <?php include 'components/horizontalScroller/hs_end.php' ?>
   </section>
 
-  <section id="regjistrohu">
-      <!-- Decorative SVG blobs -->
-      <svg class="reg-blob reg-blob--1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(68, 139, 119, 0.07)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
-      <svg class="reg-blob reg-blob--2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.05)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
-
-      <div id="regjistrohu-content">
-        <span class="regjistrohu-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-          Bëhu pjesë e komunitetit
-        </span>
-        <h2>Çdo veprim i vogël krijon<br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
-        <p>Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
-        <a href="/TiranaSolidare/views/register.php" class="btn_primary">Regjistrohu tani <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-      </div>
-      <div id="regjistrohu-image">
-        <div class="regjistrohu-img-stack">
-          <img src="assets/images/vullnetare.png" alt="Vullnetarë" class="regjistrohu-img-front">
-          <div class="regjistrohu-img-back"></div>
-        </div>
-      </div>
+  <section id="kerkesat">
+    <div id="kerkesat-title">
+      <h2>Kërkesat e fundit</h2>
+      <a href="/TiranaSolidare/views/help_requests.php" class="btn_secondary">Shiko te gjitha <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-right-icon lucide-move-right"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg></a>
+    </div>
+    <?php include 'components/horizontalScroller/hs_start.php' ?>
+      <?php if (empty($kerkesat)): ?>
+        <p style="padding: 40px; color: #888;">Nuk ka kërkesa për momentin.</p>
+      <?php else: ?>
+        <?php foreach ($kerkesat as $k): ?>
+          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="rq-card">
+            <div class="rq-card__visual">
+              <?php if (!empty($k['imazhi'])): ?>
+                <img src="<?= htmlspecialchars(strpos($k['imazhi'], '/') === 0 ? $k['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $k['imazhi']) ?>" alt="<?= htmlspecialchars($k['titulli']) ?>" class="rq-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                <div class="rq-card__img rq-card__img--placeholder <?= $k['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>" style="display:none;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
+              <?php else: ?>
+                <div class="rq-card__img rq-card__img--placeholder <?= $k['tipi'] === 'Ofertë' ? 'rq-card__img--offer' : '' ?>">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
+              <?php endif; ?>
+              <div class="rq-card__overlay">
+                <span class="rq-badge rq-badge--<?= $k['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $k['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+                <span class="rq-badge rq-badge--<?= strtolower($k['statusi']) ?>"><?= htmlspecialchars($k['statusi']) ?></span>
+              </div>
+            </div>
+            <div class="rq-card__content">
+              <h3 class="rq-card__title"><?= htmlspecialchars($k['titulli']) ?></h3>
+              <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($k['pershkrimi'] ?? '', 0, 110)) ?>...</p>
+              <div class="rq-card__footer">
+                <div class="rq-card__meta">
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <?= htmlspecialchars($k['krijuesi_emri'] ?? 'Anonim') ?>
+                  </span>
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <?= koheParapake($k['krijuar_me']) ?>
+                  </span>
+                </div>
+                <span class="rq-card__arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </span>
+              </div>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    <?php include 'components/horizontalScroller/hs_end.php' ?>
   </section>
 
 </main>
