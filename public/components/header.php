@@ -61,7 +61,6 @@ $avatarHue = abs(crc32((string) $userName)) % 360;
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile">Profili</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=applications">Aplikimet e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=requests">Kërkesat e mia</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request">Dërgo kërkesë</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
             <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="header-user-signout">Dil</a>

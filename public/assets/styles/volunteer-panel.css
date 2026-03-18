@@ -159,6 +159,27 @@
   color: #6b7a8d;
 }
 
+.vp-card__header--requests {
+  flex-wrap: nowrap;
+}
+
+.vp-card__header--requests .vp-card__action {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .vp-card__header--requests {
+    flex-wrap: wrap;
+  }
+
+  .vp-card__header--requests .vp-card__action {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .vp-card__body {
   padding: 24px;
 }
@@ -482,51 +503,111 @@ select.vp-input {
 }
 
 .vp-request-card {
-  background: #fafbfc;
-  border-radius: 12px;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
   border: 1px solid #e8ecf0;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.05);
 }
 
 .vp-request-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.1);
+  border-color: rgba(0, 113, 93, 0.2);
 }
 
-.vp-request-card__top {
+.vp-request-card__visual {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+}
+
+.vp-request-card__overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  z-index: 2;
 }
 
 .vp-request-card__img {
   width: 100%;
-  height: 140px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  transition: transform 0.45s ease;
+}
+
+.vp-request-card:hover .vp-request-card__img {
+  transform: scale(1.05);
+}
+
+.vp-request-card__img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+  color: #8b9bb4;
+}
+
+.vp-request-card__img--placeholder.vp-request-card__img--offer {
+  background: linear-gradient(135deg, #e8f5f0 0%, #d1e7e0 100%);
+  color: #22a68a;
+}
+
+.vp-request-card__content {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .vp-request-card h4 {
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: #1a2332;
-  margin: 0 0 6px;
+  margin: 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.vp-request-card p {
-  font-size: 0.85rem;
-  color: #6b7a8d;
-  margin: 0 0 8px;
-  line-height: 1.5;
+.vp-request-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
 }
 
 .vp-request-card__time {
   font-size: 0.78rem;
-  color: #b0b8c4;
+  color: #8a96a3;
+}
+
+.vp-request-card__arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 113, 93, 0.08);
+  color: #00715D;
+  transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.vp-request-card:hover .vp-request-card__arrow {
+  transform: translateX(2px);
+  background: #00715D;
+  color: #fff;
 }
 
 /* ── Notification Items ────────────────────────────── */

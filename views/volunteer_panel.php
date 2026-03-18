@@ -42,6 +42,25 @@ $stmtApps = $pdo->prepare(
 $stmtApps->execute([$userId]);
 $myApps = $stmtApps->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch my help request applications
+$stmtHelpApps = $pdo->prepare(
+    "SELECT ak.*, kn.titulli AS kerkesa_titulli, kn.tipi AS kerkesa_tipi,
+            kn.statusi AS kerkesa_statusi, kn.krijuar_me AS kerkesa_krijuar_me,
+            p.emri AS postuesi_emri
+     FROM Aplikimi_Kerkese ak
+     JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
+     JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+     WHERE ak.id_perdoruesi = ?
+     ORDER BY ak.aplikuar_me DESC"
+);
+try {
+  $stmtHelpApps->execute([$userId]);
+  $myHelpApps = $stmtHelpApps->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+  // Backward compatibility if DB schema is not yet migrated.
+  $myHelpApps = [];
+}
+
 // Fetch my help requests
 $stmtReqs = $pdo->prepare(
     "SELECT * FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ? ORDER BY krijuar_me DESC"
@@ -129,10 +148,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
       Kërkesat e mia
     </a>
-    <a href="?tab=new-request" class="vp-tab <?= $tab === 'new-request' ? 'active' : '' ?>">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-      Krijo kërkesë
-    </a><a href="?tab=score" class="vp-tab <?= $tab === 'score' ? 'active' : '' ?>">
+    <a href="?tab=score" class="vp-tab <?= $tab === 'score' ? 'active' : '' ?>">
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   Pikët e mia
 </a>
@@ -242,10 +258,10 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
       <a href="/TiranaSolidare/views/events.php" class="btn_secondary vp-btn-sm">Zbulo evente</a>
     </div>
     <div class="vp-card__body">
-      <?php if (empty($myApps)): ?>
+      <?php if (empty($myApps) && empty($myHelpApps)): ?>
         <div class="vp-empty">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          <p>Nuk keni aplikime ende. <a href="/TiranaSolidare/views/events.php">Zbuloni eventet</a> dhe aplikoni!</p>
+          <p>Nuk keni aplikime ende. <a href="/TiranaSolidare/views/events.php">Zbuloni eventet</a> ose <a href="/TiranaSolidare/views/help_requests.php">kërkesat për ndihmë</a> dhe aplikoni!</p>
         </div>
       <?php else: ?>
         <div class="vp-table-wrap">
@@ -294,6 +310,55 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
             </tbody>
           </table>
         </div>
+
+        <div class="vp-table-wrap" style="margin-top:18px;">
+          <table class="vp-table">
+            <thead>
+              <tr>
+                <th>Kërkesa</th>
+                <th>Tipi</th>
+                <th>Postuar nga</th>
+                <th>Statusi i kërkesës</th>
+                <th>Aplikimi im</th>
+                <th>Aplikuar më</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php if (empty($myHelpApps)): ?>
+                <tr>
+                  <td colspan="6" class="vp-muted">Nuk keni aplikime për kërkesa ndihme ende.</td>
+                </tr>
+              <?php else: ?>
+                <?php foreach ($myHelpApps as $app): ?>
+                  <tr>
+                    <td>
+                      <a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $app['id_kerkese_ndihme'] ?>" class="vp-link">
+                        <?= htmlspecialchars($app['kerkesa_titulli']) ?>
+                      </a>
+                    </td>
+                    <td>
+                      <span class="vp-badge vp-badge--<?= $app['kerkesa_tipi'] === 'Ofertë' ? 'offer' : 'request' ?>">
+                        <?= $app['kerkesa_tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+                      </span>
+                    </td>
+                    <td><?= htmlspecialchars($app['postuesi_emri']) ?></td>
+                    <td>
+                      <span class="vp-badge vp-badge--<?= strtolower($app['kerkesa_statusi']) ?>">
+                        <?= htmlspecialchars($app['kerkesa_statusi']) ?>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="vp-badge vp-badge--<?= $app['statusi'] === 'Pranuar' ? 'success' : ($app['statusi'] === 'Refuzuar' ? 'danger' : 'pending') ?>">
+                        <?= htmlspecialchars($app['statusi']) ?>
+                      </span>
+                    </td>
+                    <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
       <?php endif; ?>
     </div>
   </div>
@@ -303,9 +368,9 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
 <!-- ════════════ MY REQUESTS TAB ════════════ -->
 <div class="vp-panel">
   <div class="vp-card">
-    <div class="vp-card__header">
+    <div class="vp-card__header vp-card__header--requests">
       <h3>Kërkesat e mia</h3>
-      <a href="?tab=new-request" class="btn_primary vp-btn-sm">+ Krijo kërkesë</a>
+      <a href="?tab=new-request" class="btn_secondary vp-btn-sm vp-card__action">+ Krijo kërkesë</a>
     </div>
     <div class="vp-card__body">
       <?php if (empty($myRequests)): ?>
@@ -317,16 +382,32 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
         <div class="vp-request-grid">
           <?php foreach ($myRequests as $req): ?>
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
-              <div class="vp-request-card__top">
-                <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>\"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-                <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
+              <div class="vp-request-card__visual">
+                <?php if (!empty($req['imazhi'])): ?>
+                  <img src="<?= htmlspecialchars($req['imazhi']) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                  <div class="vp-request-card__img vp-request-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'vp-request-card__img--offer' : '' ?>" style="display:none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  </div>
+                <?php else: ?>
+                  <div class="vp-request-card__img vp-request-card__img--placeholder <?= $req['tipi'] === 'Ofertë' ? 'vp-request-card__img--offer' : '' ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  </div>
+                <?php endif; ?>
+                <div class="vp-request-card__overlay">
+                  <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+                  <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
+                </div>
               </div>
-              <?php if (!empty($req['imazhi'])): ?>
-                <img src="<?= htmlspecialchars($req['imazhi']) ?>" alt="" class="vp-request-card__img">
-              <?php endif; ?>
-              <h4><?= htmlspecialchars($req['titulli']) ?></h4>
-              <p><?= htmlspecialchars(mb_substr($req['pershkrimi'] ?? '', 0, 120)) ?>...</p>
-              <span class="vp-request-card__time"><?= koheParapake($req['krijuar_me']) ?></span>
+
+              <div class="vp-request-card__content">
+                <h4><?= htmlspecialchars($req['titulli']) ?></h4>
+                <div class="vp-request-card__footer">
+                  <span class="vp-request-card__time"><?= koheParapake($req['krijuar_me']) ?></span>
+                  <span class="vp-request-card__arrow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  </span>
+                </div>
+              </div>
             </a>
           <?php endforeach; ?>
         </div>
@@ -640,7 +721,7 @@ async function updateNotifBadge() {
     if (json.success) {
       const count = json.data.unread;
       if (badge) { badge.textContent = count > 0 ? count : ''; badge.style.display = count > 0 ? 'inline-block' : 'none'; }
-      if (headerBadge) { headerBadge.textContent = count > 0 ? count : ''; headerBadge.style.display = count > 0 ? 'inline-block' : 'none'; }
+      if (headerBadge) { headerBadge.textContent = count > 0 ? count : ''; headerBadge.style.display = count > 0 ? 'flex' : 'none'; }
     }
   } catch (e) {}
 }

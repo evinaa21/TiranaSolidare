@@ -20,6 +20,53 @@ if (isset($_GET['id'])) {
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+  $isOwner = false;
+  $canApplyToRequest = false;
+  $myRequestApplication = null;
+  $requestApplicants = [];
+  $requestApplicantsTotal = 0;
+
+  if (isset($request) && $request) {
+    $isOwner = $isLoggedIn && ((int) $request['id_perdoruesi'] === (int) $currentUserId);
+    $canApplyToRequest = $isLoggedIn
+      && !$isAdmin
+      && !$isOwner
+      && (($request['statusi'] ?? '') === 'Open');
+
+    try {
+      if ($isLoggedIn && !$isAdmin && !$isOwner) {
+        $myApplyStmt = $pdo->prepare(
+          'SELECT id_aplikimi_kerkese, statusi, aplikuar_me
+           FROM Aplikimi_Kerkese
+           WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ?
+           LIMIT 1'
+        );
+        $myApplyStmt->execute([(int) $request['id_kerkese_ndihme'], (int) $currentUserId]);
+        $myRequestApplication = $myApplyStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+      }
+
+      if ($isOwner || $isAdmin) {
+        $appCountStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme = ?');
+        $appCountStmt->execute([(int) $request['id_kerkese_ndihme']]);
+        $requestApplicantsTotal = (int) $appCountStmt->fetchColumn();
+
+        $applicantsStmt = $pdo->prepare(
+          'SELECT ak.id_aplikimi_kerkese, ak.statusi, ak.aplikuar_me,
+              p.id_perdoruesi, p.emri, p.email
+           FROM Aplikimi_Kerkese ak
+           JOIN Perdoruesi p ON p.id_perdoruesi = ak.id_perdoruesi
+           WHERE ak.id_kerkese_ndihme = ?
+           ORDER BY ak.aplikuar_me DESC'
+        );
+        $applicantsStmt->execute([(int) $request['id_kerkese_ndihme']]);
+        $requestApplicants = $applicantsStmt->fetchAll(PDO::FETCH_ASSOC);
+      }
+    } catch (Throwable $e) {
+      // Keep the page functional even if the DB table has not been migrated yet.
+      error_log('help_requests view applications: ' . $e->getMessage());
+    }
+  }
+
 // ── List view: paginated & filterable (only when not viewing detail) ──
 $page = $limit = $offset = $total = $totalPages = 0;
 $requests = [];
@@ -86,6 +133,7 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260308V">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <?= csrf_meta() ?>
 </head>
 <body class="page-requests">
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -179,6 +227,14 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             </div>
             <div><span>Statusi</span><strong><?= htmlspecialchars($request['statusi']) ?></strong></div>
           </li>
+          <?php if ($isOwner || $isAdmin): ?>
+          <li>
+            <div class="rq-info-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div><span>Aplikime</span><strong><?= (int) $requestApplicantsTotal ?></strong></div>
+          </li>
+          <?php endif; ?>
           <li>
             <div class="rq-info-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
@@ -199,18 +255,73 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
           <?php if (!$isLoggedIn): ?>
             <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/help_requests.php?id=' . $request['id_kerkese_ndihme']) ?>" class="rq-btn-full rq-btn-login">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
-              Kyçu për të kontaktuar
+              Kyçu për të aplikuar
             </a>
-            <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të kontaktuar postuesin. <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/help_requests.php?id=' . $request['id_kerkese_ndihme']) ?>" class="rq-hint-link">Kyçu këtu &rarr;</a></p>
-          <?php elseif (($isAdmin || (int)$request['id_perdoruesi'] === (int)$currentUserId) && !empty($request['krijuesi_email'])): ?>
-            <a href="mailto:<?= htmlspecialchars($request['krijuesi_email']) ?>" class="btn_primary rq-btn-full">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              Kontakto përmes email
-            </a>
+            <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të aplikuar. <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/help_requests.php?id=' . $request['id_kerkese_ndihme']) ?>" class="rq-hint-link">Kyçu këtu &rarr;</a></p>
+          <?php elseif ($canApplyToRequest && !$myRequestApplication): ?>
+            <button type="button" class="rq-btn-full" id="rq-apply-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              Apliko për këtë kërkesë
+            </button>
+            <p class="rq-sidebar-hint">Postuesi do të njoftohet menjëherë dhe do të mund t'ju kontaktojë me email.</p>
+            <div class="rq-inline-status" id="rq-apply-status" style="display:none"></div>
+          <?php elseif ($myRequestApplication): ?>
+            <div class="rq-applied-box">
+              <strong>Ju keni aplikuar për këtë kërkesë.</strong>
+              <span>Statusi: <?= htmlspecialchars($myRequestApplication['statusi'] ?? 'Në pritje') ?></span>
+              <span>Aplikuar: <?= date('d/m/Y H:i', strtotime($myRequestApplication['aplikuar_me'] ?? 'now')) ?></span>
+            </div>
+            <p class="rq-sidebar-hint">Këtë kërkesë e gjeni edhe te paneli juaj në seksionin “Aplikimet e mia”.</p>
+          <?php elseif ($isOwner || $isAdmin): ?>
+            <p class="rq-sidebar-hint">Më poshtë mund të shihni të gjithë aplikantët dhe t'i kontaktoni individualisht.</p>
           <?php elseif ($isLoggedIn): ?>
-            <p class="rq-sidebar-hint">Kontakti i postuesit është i disponueshëm vetëm për pronarin e kërkesës.</p>
+            <p class="rq-sidebar-hint">Kjo kërkesë nuk është e disponueshme për aplikim.</p>
           <?php endif; ?>
         </div>
+
+        <?php if ($isOwner || $isAdmin): ?>
+          <div class="rq-applicants-wrap">
+            <h4>Aplikantët (<?= (int) $requestApplicantsTotal ?>)</h4>
+            <?php if (empty($requestApplicants)): ?>
+              <p class="rq-sidebar-hint">Nuk ka aplikime ende për këtë kërkesë.</p>
+            <?php else: ?>
+              <div class="rq-applicants-list">
+                <?php foreach ($requestApplicants as $index => $applicant): ?>
+                  <details class="rq-applicant-item rq-applicant-dropdown <?= $index >= 5 ? 'is-extra' : '' ?>">
+                    <summary class="rq-applicant-summary">
+                      <div class="rq-applicant-meta">
+                        <strong><?= htmlspecialchars($applicant['emri'] ?? 'Vullnetar') ?></strong>
+                        <span><?= date('d/m/Y H:i', strtotime($applicant['aplikuar_me'])) ?></span>
+                      </div>
+                      <svg class="rq-applicant-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="rq-applicant-content">
+                      <div class="rq-applicant-email"><?= htmlspecialchars($applicant['email'] ?? '—') ?></div>
+                      <form class="rq-contact-form"
+                            data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>"
+                            data-applicant-id="<?= (int) $applicant['id_perdoruesi'] ?>">
+                        <input type="text" name="subjekti" value="Kontakt për kërkesën: <?= htmlspecialchars($request['titulli']) ?>" maxlength="180" required>
+                        <textarea name="mesazhi" rows="3" maxlength="2000" required placeholder="Përshëndetje, jam postuesi i kërkesës. Ja si mund të lidhemi..."></textarea>
+                        <button type="submit" class="rq-btn-full rq-btn-sm">
+                          Dërgo email aplikantit
+                        </button>
+                        <div class="rq-inline-status" style="display:none"></div>
+                      </form>
+                    </div>
+                  </details>
+                <?php endforeach; ?>
+              </div>
+              <?php if (count($requestApplicants) > 5): ?>
+                <button type="button"
+                        class="rq-btn-full rq-btn-sm rq-btn-more-applicants"
+                        id="rq-show-more-applicants"
+                        data-hidden-count="<?= count($requestApplicants) - 5 ?>">
+                  Shfaq më shumë aplikantë (<?= count($requestApplicants) - 5 ?>)
+                </button>
+              <?php endif; ?>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- Trust box -->
@@ -402,7 +513,107 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/TiranaSolidare/assets/js/map-component.js"></script>
 <script>
+const API = '/TiranaSolidare/api';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+function setInlineStatus(el, type, message) {
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'rq-inline-status rq-inline-status--' + type;
+  el.textContent = message;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  const applyBtn = document.getElementById('rq-apply-btn');
+  const applyStatus = document.getElementById('rq-apply-status');
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async function() {
+      const requestId = parseInt(this.dataset.requestId || '0', 10);
+      if (!requestId) return;
+
+      this.disabled = true;
+      this.textContent = 'Duke dërguar aplikimin...';
+
+      try {
+        const res = await fetch(API + '/help_requests.php?action=apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          credentials: 'same-origin',
+          body: JSON.stringify({ id_kerkese_ndihme: requestId })
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.message || 'Gabim gjatë aplikimit.');
+        setInlineStatus(applyStatus, 'success', json.data.message || 'Aplikimi u dërgua me sukses.');
+        window.setTimeout(() => window.location.reload(), 900);
+      } catch (err) {
+        setInlineStatus(applyStatus, 'error', err.message || 'Gabim gjatë aplikimit.');
+        this.disabled = false;
+        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Apliko për këtë kërkesë';
+      }
+    });
+  }
+
+  document.querySelectorAll('.rq-contact-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statusEl = form.querySelector('.rq-inline-status');
+      const requestId = parseInt(form.dataset.requestId || '0', 10);
+      const applicantId = parseInt(form.dataset.applicantId || '0', 10);
+      const subjekti = (form.querySelector('input[name="subjekti"]')?.value || '').trim();
+      const mesazhi = (form.querySelector('textarea[name="mesazhi"]')?.value || '').trim();
+
+      if (!requestId || !applicantId) {
+        setInlineStatus(statusEl, 'error', 'Kërkesa ose aplikuesi është i pavlefshëm.');
+        return;
+      }
+      if (!mesazhi) {
+        setInlineStatus(statusEl, 'error', 'Mesazhi është i detyrueshëm.');
+        return;
+      }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Duke dërguar...';
+      }
+
+      try {
+        const res = await fetch(API + '/help_requests.php?action=contact_applicant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            id_kerkese_ndihme: requestId,
+            id_aplikuesi: applicantId,
+            subjekti,
+            mesazhi
+          })
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.message || 'Gabim gjatë dërgimit të email-it.');
+        setInlineStatus(statusEl, 'success', json.data.message || 'Email-i u dërgua me sukses.');
+      } catch (err) {
+        setInlineStatus(statusEl, 'error', err.message || 'Gabim gjatë dërgimit të email-it.');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Dërgo email aplikantit';
+        }
+      }
+    });
+  });
+
+  const showMoreApplicantsBtn = document.getElementById('rq-show-more-applicants');
+  if (showMoreApplicantsBtn) {
+    showMoreApplicantsBtn.addEventListener('click', () => {
+      document.querySelectorAll('.rq-applicant-item.is-extra').forEach((item) => {
+        item.classList.remove('is-extra');
+      });
+      showMoreApplicantsBtn.remove();
+    });
+  }
+
   const mapEl = document.getElementById('request-detail-map');
   if (mapEl) {
     TSMap.display('request-detail-map', {

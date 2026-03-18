@@ -35,6 +35,20 @@ CREATE TABLE `aplikimi` (
   `aplikuar_me` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Junction table for Many-to-Many relationship';
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `aplikimi_kerkese`
+--
+
+CREATE TABLE `aplikimi_kerkese` (
+  `id_aplikimi_kerkese` int(11) NOT NULL,
+  `id_kerkese_ndihme` int(11) NOT NULL,
+  `id_perdoruesi` int(11) NOT NULL,
+  `statusi` enum('Në pritje','Pranuar','Refuzuar') DEFAULT 'Në pritje',
+  `aplikuar_me` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Aplikime të vullnetarëve për kërkesat e ndihmës';
+
 --
 -- Dumping data for table `aplikimi`
 --
@@ -255,6 +269,16 @@ ALTER TABLE `aplikimi`
   ADD KEY `idx_statusi` (`statusi`);
 
 --
+-- Indexes for table `aplikimi_kerkese`
+--
+ALTER TABLE `aplikimi_kerkese`
+  ADD PRIMARY KEY (`id_aplikimi_kerkese`),
+  ADD UNIQUE KEY `uq_user_request` (`id_kerkese_ndihme`, `id_perdoruesi`),
+  ADD KEY `id_kerkese_ndihme` (`id_kerkese_ndihme`),
+  ADD KEY `id_perdoruesi` (`id_perdoruesi`),
+  ADD KEY `idx_statusi_kerkese` (`statusi`);
+
+--
 -- Indexes for table `eventi`
 --
 ALTER TABLE `eventi`
@@ -311,6 +335,12 @@ ALTER TABLE `aplikimi`
   MODIFY `id_aplikimi` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
+-- AUTO_INCREMENT for table `aplikimi_kerkese`
+--
+ALTER TABLE `aplikimi_kerkese`
+  MODIFY `id_aplikimi_kerkese` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `eventi`
 --
 ALTER TABLE `eventi`
@@ -356,6 +386,13 @@ ALTER TABLE `raporti`
 ALTER TABLE `aplikimi`
   ADD CONSTRAINT `aplikimi_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE,
   ADD CONSTRAINT `aplikimi_ibfk_2` FOREIGN KEY (`id_eventi`) REFERENCES `eventi` (`id_eventi`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `aplikimi_kerkese`
+--
+ALTER TABLE `aplikimi_kerkese`
+  ADD CONSTRAINT `aplikimi_kerkese_ibfk_1` FOREIGN KEY (`id_kerkese_ndihme`) REFERENCES `kerkesa_per_ndihme` (`id_kerkese_ndihme`) ON DELETE CASCADE,
+  ADD CONSTRAINT `aplikimi_kerkese_ibfk_2` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `eventi`

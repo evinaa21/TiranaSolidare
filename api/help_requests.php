@@ -18,6 +18,260 @@ $action = $_GET['action'] ?? 'list';
 
 switch ($action) {
 
+    // ── APPLY TO HELP REQUEST ─────────────────────
+    case 'apply':
+        require_method('POST');
+        $user = require_auth();
+
+        if ($user['roli'] === 'Admin') {
+            json_error('Administratorët nuk mund të aplikojnë për kërkesa ndihme.', 403);
+        }
+
+        $body = get_json_body();
+        $requestId = isset($body['id_kerkese_ndihme']) ? (int) $body['id_kerkese_ndihme'] : 0;
+
+        if ($requestId <= 0) {
+            json_error('ID-ja e kërkesës është e pavlefshme.', 422);
+        }
+
+        try {
+            $check = $pdo->prepare(
+                "SELECT kn.id_kerkese_ndihme, kn.id_perdoruesi, kn.titulli, kn.statusi, p.emri AS krijuesi_emri, p.email AS krijuesi_email
+                 FROM Kerkesa_per_Ndihme kn
+                 JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                 WHERE kn.id_kerkese_ndihme = ?"
+            );
+            $check->execute([$requestId]);
+            $request = $check->fetch();
+
+            if (!$request) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+
+            if ($request['statusi'] !== 'Open') {
+                json_error('Mund të aplikoni vetëm për kërkesa të hapura.', 422);
+            }
+
+            if ((int) $request['id_perdoruesi'] === (int) $user['id']) {
+                json_error('Nuk mund të aplikoni në kërkesën tuaj.', 409);
+            }
+
+            $dup = $pdo->prepare(
+                'SELECT id_aplikimi_kerkese FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ? LIMIT 1'
+            );
+            $dup->execute([$requestId, $user['id']]);
+
+            if ($dup->fetch()) {
+                json_error('Ju keni aplikuar tashmë për këtë kërkesë.', 409);
+            }
+
+            $insert = $pdo->prepare(
+                "INSERT INTO Aplikimi_Kerkese (id_kerkese_ndihme, id_perdoruesi, statusi)
+                 VALUES (?, ?, 'Në pritje')"
+            );
+            $insert->execute([$requestId, $user['id']]);
+            $applicationId = (int) $pdo->lastInsertId();
+
+            $ownerMessage = "{$user['emri']} aplikoi për kërkesën tuaj \"{$request['titulli']}\".";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([$request['id_perdoruesi'], $ownerMessage]);
+
+            if (filter_var($request['krijuesi_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $request['krijuesi_email'],
+                    $request['krijuesi_emri'] ?? 'Përdorues',
+                    'Aplikim i ri për kërkesën tuaj',
+                    $ownerMessage
+                );
+            }
+
+            json_success([
+                'id_aplikimi_kerkese' => $applicationId,
+                'message' => 'Aplikimi u dërgua me sukses.',
+            ], 201);
+        } catch (\PDOException $e) {
+            error_log('help_requests apply: ' . $e->getMessage());
+            if ((int) $e->getCode() === 42) {
+                json_error('Mungon tabela e aplikimeve për kërkesa. Përditësoni bazën e të dhënave.', 500);
+            }
+            json_error('Gabim gjatë dërgimit të aplikimit.', 500);
+        }
+        break;
+
+    // ── MY HELP REQUEST APPLICATIONS ──────────────
+    case 'my_applications':
+        require_method('GET');
+        $user = require_auth();
+        $pagination = get_pagination();
+
+        try {
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?');
+            $countStmt->execute([$user['id']]);
+            $total = (int) $countStmt->fetchColumn();
+
+            $stmt = $pdo->prepare(
+                "SELECT ak.*, kn.titulli, kn.tipi, kn.statusi AS kerkesa_statusi, kn.krijuar_me AS kerkesa_krijuar_me,
+                        kn.id_perdoruesi AS pronari_id, p.emri AS pronari_emri
+                 FROM Aplikimi_Kerkese ak
+                 JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
+                 JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                 WHERE ak.id_perdoruesi = ?
+                 ORDER BY ak.aplikuar_me DESC
+                 LIMIT ? OFFSET ?"
+            );
+            $stmt->execute([$user['id'], $pagination['limit'], $pagination['offset']]);
+
+            json_success([
+                'applications' => $stmt->fetchAll(),
+                'total' => $total,
+                'page' => $pagination['page'],
+                'limit' => $pagination['limit'],
+                'total_pages' => (int) ceil($total / $pagination['limit']),
+            ]);
+        } catch (\Exception $e) {
+            error_log('help_requests my_applications: ' . $e->getMessage());
+            json_error('Gabim gjatë marrjes së aplikimeve.', 500);
+        }
+        break;
+
+    // ── APPLICANTS FOR A REQUEST ──────────────────
+    case 'applicants':
+        require_method('GET');
+        $user = require_auth();
+        $requestId = (int) ($_GET['id'] ?? 0);
+        $pagination = get_pagination();
+
+        if ($requestId <= 0) {
+            json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+        }
+
+        try {
+            $ownerCheck = $pdo->prepare('SELECT id_perdoruesi FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+            $ownerCheck->execute([$requestId]);
+            $requestRow = $ownerCheck->fetch();
+
+            if (!$requestRow) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+
+            if ((int) $requestRow['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+                json_error('Nuk keni leje për këtë veprim.', 403);
+            }
+
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme = ?');
+            $countStmt->execute([$requestId]);
+            $total = (int) $countStmt->fetchColumn();
+
+            $stmt = $pdo->prepare(
+                "SELECT ak.id_aplikimi_kerkese, ak.statusi, ak.aplikuar_me,
+                        p.id_perdoruesi, p.emri, p.email
+                 FROM Aplikimi_Kerkese ak
+                 JOIN Perdoruesi p ON p.id_perdoruesi = ak.id_perdoruesi
+                 WHERE ak.id_kerkese_ndihme = ?
+                 ORDER BY ak.aplikuar_me DESC
+                 LIMIT ? OFFSET ?"
+            );
+            $stmt->execute([$requestId, $pagination['limit'], $pagination['offset']]);
+
+            json_success([
+                'applicants' => $stmt->fetchAll(),
+                'total' => $total,
+                'page' => $pagination['page'],
+                'limit' => $pagination['limit'],
+                'total_pages' => (int) ceil($total / $pagination['limit']),
+            ]);
+        } catch (\Exception $e) {
+            error_log('help_requests applicants: ' . $e->getMessage());
+            json_error('Gabim gjatë marrjes së aplikantëve.', 500);
+        }
+        break;
+
+    // ── CONTACT AN APPLICANT BY EMAIL ─────────────
+    case 'contact_applicant':
+        require_method('POST');
+        $user = require_auth();
+        $body = get_json_body();
+
+        $requestId = isset($body['id_kerkese_ndihme']) ? (int) $body['id_kerkese_ndihme'] : 0;
+        $applicantId = isset($body['id_aplikuesi']) ? (int) $body['id_aplikuesi'] : 0;
+        $subject = trim((string) ($body['subjekti'] ?? 'Kontakt për kërkesën tuaj në Tirana Solidare'));
+        $message = trim((string) ($body['mesazhi'] ?? ''));
+
+        if ($requestId <= 0 || $applicantId <= 0) {
+            json_error('Kërkesa ose aplikuesi është i pavlefshëm.', 422);
+        }
+        if ($message === '') {
+            json_error('Mesazhi është i detyrueshëm.', 422);
+        }
+        if (mb_strlen($message) > 2000) {
+            json_error('Mesazhi nuk mund të kalojë 2000 karaktere.', 422);
+        }
+        if (mb_strlen($subject) > 180) {
+            json_error('Subjekti nuk mund të kalojë 180 karaktere.', 422);
+        }
+
+        try {
+            $requestStmt = $pdo->prepare(
+                'SELECT kn.id_perdoruesi, kn.titulli, p.email AS owner_email
+                 FROM Kerkesa_per_Ndihme kn
+                 JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                 WHERE kn.id_kerkese_ndihme = ? LIMIT 1'
+            );
+            $requestStmt->execute([$requestId]);
+            $request = $requestStmt->fetch();
+
+            if (!$request) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+            if ((int) $request['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+                json_error('Nuk keni leje për këtë veprim.', 403);
+            }
+
+            $appCheck = $pdo->prepare(
+                'SELECT id_aplikimi_kerkese FROM Aplikimi_Kerkese
+                 WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ? LIMIT 1'
+            );
+            $appCheck->execute([$requestId, $applicantId]);
+            if (!$appCheck->fetch()) {
+                json_error('Aplikuesi nuk gjendet për këtë kërkesë.', 404);
+            }
+
+            $applicantStmt = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $applicantStmt->execute([$applicantId]);
+            $applicant = $applicantStmt->fetch();
+
+            if (!$applicant || !filter_var($applicant['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                json_error('Email-i i aplikuesit nuk është i vlefshëm.', 422);
+            }
+
+            $ownerEmail = trim((string) ($request['owner_email'] ?? ''));
+            $fullMessage = $message;
+            if ($ownerEmail !== '' && filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+                $fullMessage .= "\n\nKontakti i postuesit: {$ownerEmail}";
+            }
+
+            $sent = send_notification_email(
+                $applicant['email'],
+                $applicant['emri'] ?? 'Vullnetar',
+                $subject,
+                $fullMessage
+            );
+
+            if (!$sent) {
+                json_error('Email-i nuk u dërgua. Kontrolloni konfigurimin e mail-it.', 500);
+            }
+
+            $notifMessage = "Postuesi i kërkesës \"{$request['titulli']}\" ju kontaktoi me email.";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([$applicantId, $notifMessage]);
+
+            json_success(['message' => 'Email-i u dërgua me sukses.']);
+        } catch (\Exception $e) {
+            error_log('help_requests contact_applicant: ' . $e->getMessage());
+            json_error('Gabim gjatë dërgimit të email-it.', 500);
+        }
+        break;
+
     // ── LIST HELP REQUESTS ─────────────────────────
     case 'list':
         require_method('GET');
@@ -325,5 +579,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete, apply, my_applications, applicants, contact_applicant.', 400);
 }

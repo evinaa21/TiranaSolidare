@@ -31,7 +31,7 @@ async function fetchUnreadCount() {
         if (json.success && notifBadge) {
             const count = json.data.unread;
             notifBadge.textContent = count > 0 ? count : '';
-            notifBadge.style.display = count > 0 ? 'inline-block' : 'none';
+            notifBadge.style.display = count > 0 ? 'flex' : 'none';
         }
     } catch (err) {
         console.warn('[Polling] Notification check failed:', err);
