@@ -128,7 +128,7 @@ foreach ($requests as $req) {
   </button>
   <button class="map-filter-btn" data-filter="offer" onclick="filterMarkers('offer', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-    Dua të ndihmoj
+    Kontribute
     <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'Ofertë')) ?></span>
   </button>
 </div>
@@ -141,7 +141,7 @@ foreach ($requests as $req) {
   </div>
   <div class="map-legend-item">
     <div class="map-legend-dot map-legend-dot--request"></div>
-    Kërkesa për ndihmë
+    Kërkoj ndihmë
   </div>
   <div class="map-legend-item">
     <div class="map-legend-dot map-legend-dot--offer"></div>

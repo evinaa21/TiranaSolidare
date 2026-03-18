@@ -314,18 +314,46 @@ function send_verification_email(string $toEmail, string $toName, string $verifi
 
         $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
         $safeUrl = htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8');
+        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
 
         $mail->Body = "
-            <div style=\"font-family:Arial,sans-serif;line-height:1.5;color:#1f2d2a\">
-              <h2 style=\"margin:0 0 12px;color:#003229\">Mirë se erdhët në Tirana Solidare</h2>
-              <p>Përshëndetje {$safeName},</p>
-              <p>Ju lutem konfirmoni email-in tuaj duke klikuar butonin më poshtë:</p>
-              <p style=\"margin:24px 0\">
-                <a href=\"{$safeUrl}\" style=\"background:#00715D;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:600\">Konfirmo email-in</a>
-              </p>
-              <p>Nëse butoni nuk funksionon, kopjo këtë link në shfletues:</p>
-              <p><a href=\"{$safeUrl}\">{$safeUrl}</a></p>
-              <p style=\"font-size:12px;color:#667\">Ky link skadon pas 24 orësh.</p>
+            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+                <tr>
+                  <td align=\"center\" style=\"padding:24px 12px;\">
+                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                      <tr>
+                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                          <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Bëhu pjesë e ndihmës së komunitetit</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:24px 30px 20px;\">
+                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Konfirmo email-in tënd</h2>
+                          <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Faleminderit që u regjistruat në platformën tonë. Klikoni butonin më poshtë për të verifikuar adresën tuaj dhe për të aktivizuar llogarinë.</p>
+                          <p style=\"margin:20px 0; text-align:center;\">
+                            <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Konfirmo email-in</a>
+                          </p>
+                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse butoni nuk punon, kopjo dhe ngjit linkun në shfletues:</p>
+                          <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
+                          <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Ky link skadon pas 24 orësh. Nëse nuk keni kërkuar këtë email, injoroni këtë mesazh.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </div>
         ";
 
@@ -335,6 +363,204 @@ function send_verification_email(string $toEmail, string $toName, string $verifi
         return true;
     } catch (Throwable $e) {
         error_log('Verification email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Send password reset email via PHPMailer using the site design.
+ */
+function send_password_reset_email(string $toEmail, string $toName, string $resetUrl): bool
+{
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        error_log('PHPMailer autoload not found at vendor/autoload.php');
+        return false;
+    }
+
+    require_once $autoload;
+
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        error_log('PHPMailer class not found after loading autoload.');
+        return false;
+    }
+
+    $mailConfigPath = __DIR__ . '/../config/mail.php';
+    if (!file_exists($mailConfigPath)) {
+        error_log('Mail config not found at config/mail.php');
+        return false;
+    }
+
+    $cfg = require $mailConfigPath;
+    if (!is_array($cfg)) {
+        error_log('Mail config is invalid (expected array).');
+        return false;
+    }
+
+    try {
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = (string) ($cfg['host'] ?? '');
+        $mail->SMTPAuth   = true;
+        $mail->Username   = (string) ($cfg['username'] ?? '');
+        $mail->Password   = (string) ($cfg['password'] ?? '');
+        $mail->Port       = (int) ($cfg['port'] ?? 587);
+        $mail->CharSet    = 'UTF-8';
+
+        $secure = (string) ($cfg['encryption'] ?? 'tls');
+        if ($secure === 'ssl') {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        } else {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        }
+
+        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
+        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
+
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($toEmail, $toName);
+        $mail->isHTML(true);
+        $mail->Subject = 'Rivendos fjalëkalimin - Tirana Solidare';
+
+        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+        $safeUrl = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+
+        $mail->Body = "
+            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+                <tr>
+                  <td align=\"center\" style=\"padding:24px 12px;\">
+                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                      <tr>
+                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                          <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Rivendos fjalëkalimin tënd</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:24px 30px 20px;\">
+                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkesë për rivendosjen e fjalëkalimit</h2>
+                          <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Ne morëm kërkesë për të rivendosur fjalëkalimin tuaj. Klikoni butonin më poshtë për të zgjedhur fjalëkalim të ri. Ky link skadon pas 1 ore.</p>
+                          <p style=\"margin:20px 0; text-align:center;\">
+                            <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Rivendos fjalëkalimin</a>
+                          </p>
+                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse nuk keni kërkuar këtë, mos e merrni parasysh këtë email.</p>
+                          <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
+                          <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Nëse keni bërë më shumë se një kërkesë, përdorni linkun e fundit të dërguar. Ky link skadon pas 1 ore.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </div>
+        ";
+
+        $mail->AltBody = "Përshëndetje {$toName},\n\nPër të rivendosur fjalëkalimin, hapni: {$resetUrl}\n\nKy link skadon pas 1 ore.";
+
+        $mail->send();
+        return true;
+    } catch (Throwable $e) {
+        error_log('Password reset email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Send a generic user notification email in the same site style.
+ */
+function send_notification_email(string $toEmail, string $toName, string $subject, string $message): bool
+{
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        error_log('PHPMailer autoload not found at vendor/autoload.php');
+        return false;
+    }
+    require_once $autoload;
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        error_log('PHPMailer class not found after loading autoload.');
+        return false;
+    }
+    $mailConfigPath = __DIR__ . '/../config/mail.php';
+    if (!file_exists($mailConfigPath)) {
+        error_log('Mail config not found at config/mail.php');
+        return false;
+    }
+    $cfg = require $mailConfigPath;
+    if (!is_array($cfg)) {
+        error_log('Mail config is invalid (expected array).');
+        return false;
+    }
+    try {
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = (string) ($cfg['host'] ?? '');
+        $mail->SMTPAuth   = true;
+        $mail->Username   = (string) ($cfg['username'] ?? '');
+        $mail->Password   = (string) ($cfg['password'] ?? '');
+        $mail->Port       = (int) ($cfg['port'] ?? 587);
+        $mail->CharSet    = 'UTF-8';
+        $secure = (string) ($cfg['encryption'] ?? 'tls');
+        if ($secure === 'ssl') {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        } else {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        }
+        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
+        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($toEmail, $toName);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+        $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+        $mail->Body = "
+            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+                <tr>
+                  <td align=\"center\" style=\"padding:24px 12px;\">
+                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                      <tr>
+                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:24px 30px 20px;\">
+                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">{$subject}</h2>
+                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeMessage}</p>
+                          <p style=\"margin:0; color:#6b6b6b; font-size:12px;\">Ky mesazh është nga Tirana Solidare.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </div>
+        ";
+        $mail->AltBody = "Përshëndetje {$toName},\n\n{$message}\n\nTirana Solidare";
+        $mail->send();
+        return true;
+    } catch (Throwable $e) {
+        error_log('Notification email failed: ' . $e->getMessage());
         return false;
     }
 }

@@ -174,3 +174,32 @@ document.addEventListener('DOMContentLoaded', function () {
   window.addEventListener('load', equalizeCards);
   window.addEventListener('resize', equalizeCards);
 })();
+
+function initPasswordVisibilityToggles() {
+  const passwordFields = document.querySelectorAll('input[type="password"]');
+  if (!passwordFields.length) return;
+  passwordFields.forEach((input) => {
+    if (input.closest('.auth-password-wrap')) return;
+    if (input.closest('.password-input-wrapper')) return;
+    if (input.dataset.hasPasswordToggle) return;
+    input.dataset.hasPasswordToggle = '1';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'password-input-wrapper';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'password-toggle-btn';
+    btn.setAttribute('aria-label', 'Shfaq ose fshih fjalëkalimin');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    btn.addEventListener('click', () => {
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.innerHTML = isPassword
+        ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.41 21.41 0 0 1 5.06-5.94"/><path d="M1 1l22 22"/><path d="M9.53 9.53A3 3 0 1 0 14.47 14.47"/><path d="M22 12s-4 7-11 7a10.94 10.94 0 0 1-5.94-1.94"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    });
+    wrapper.appendChild(btn);
+  });
+}
+document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);

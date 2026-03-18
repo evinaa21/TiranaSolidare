@@ -196,6 +196,8 @@ CREATE TABLE `perdoruesi` (
   `verified` tinyint(1) NOT NULL DEFAULT 0,
   `verification_token_hash` varchar(64) DEFAULT NULL,
   `verification_token_expires` datetime DEFAULT NULL,
+  `password_reset_token_hash` varchar(64) DEFAULT NULL,
+  `password_reset_token_expires` datetime DEFAULT NULL,
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp(),
   `deaktivizuar_me` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Main user table storing auth details';

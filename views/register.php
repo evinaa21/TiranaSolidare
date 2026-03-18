@@ -79,18 +79,12 @@ $successMessages = [
         </div>
         <div class="auth-field">
           <label for="password">Fjalëkalimi</label>
-          <div class="auth-password-wrap">
-            <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
-            <button type="button" class="auth-password-toggle" data-target="password" aria-label="Shfaq ose fshih fjalëkalimin">Shfaq</button>
-          </div>
+          <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
           <small class="auth-hint">Minimumi 8 karaktere me shkronjë të madhe, të vogël, numër dhe simbol.</small>
         </div>
         <div class="auth-field">
           <label for="confirm_password">Konfirmo fjalëkalimin</label>
-          <div class="auth-password-wrap">
-            <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
-            <button type="button" class="auth-password-toggle" data-target="confirm_password" aria-label="Shfaq ose fshih konfirmimin e fjalëkalimit">Shfaq</button>
-          </div>
+          <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
         </div>
         <button type="submit" class="btn_primary auth-submit">Regjistrohu</button>
         <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Hyni këtu</a></p>
@@ -110,22 +104,6 @@ $successMessages = [
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const toggles = document.querySelectorAll('.auth-password-toggle');
-  toggles.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const targetId = btn.getAttribute('data-target');
-      const input = document.getElementById(targetId);
-      if (!input) return;
-
-      const showing = input.type === 'text';
-      input.type = showing ? 'password' : 'text';
-      btn.textContent = showing ? 'Shfaq' : 'Fshih';
-    });
-  });
-});
-</script>
 </body>
 </html>
 

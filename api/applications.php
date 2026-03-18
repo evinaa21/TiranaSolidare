@@ -227,9 +227,21 @@ switch ($action) {
 
         // Notify the volunteer
         $statusLabel = $newStatus === 'Pranuar' ? 'pranuar ✓' : ($newStatus === 'Refuzuar' ? 'refuzuar ✗' : 'në pritje');
-        $msg = "Aplikimi juaj për eventin \"{$app['eventi_titulli']}\" u {$statusLabel}.";
+        $msg = "Aplikimi juaj për eventin \"{$app['eventi_titulli']}\" është {$statusLabel}.";
         $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
         $notifStmt->execute([$app['id_perdoruesi'], $msg]);
+
+        $userContact = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $userContact->execute([$app['id_perdoruesi']]);
+        $recipient = $userContact->fetch();
+        if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $recipient['email'],
+                $recipient['emri'] ?? 'Vullnetar',
+                'Njoftim i ri nga Tirana Solidare',
+                $msg
+            );
+        }
 
         json_success(['message' => "Statusi u përditësua në '$newStatus'."]);
         break;

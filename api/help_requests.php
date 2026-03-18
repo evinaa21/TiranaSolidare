@@ -238,11 +238,21 @@ switch ($action) {
 
             // Notify the owner if closed by admin (A-02)
             if ($existing['id_perdoruesi'] != $user['id']) {
+                $message = "Kërkesa juaj \"{$existing['titulli']}\" u mbyll nga një administrator.";
                 $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-                $notifStmt->execute([
-                    $existing['id_perdoruesi'],
-                    "Kërkesa juaj \"{$existing['titulli']}\" u mbyll nga një administrator."
-                ]);
+                $notifStmt->execute([$existing['id_perdoruesi'], $message]);
+
+                $userContact = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+                $userContact->execute([$existing['id_perdoruesi']]);
+                $recipient = $userContact->fetch();
+                if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $recipient['email'],
+                        $recipient['emri'] ?? 'Vullnetar',
+                        'Njoftim i ri nga Tirana Solidare',
+                        $message
+                    );
+                }
             }
 
             json_success(['message' => 'Kërkesa u mbyll.']);

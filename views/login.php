@@ -25,6 +25,7 @@ $successMessages = [
   'verify_email_sent' => 'Llogaria u krijua. Kontrolloni email-in dhe konfirmoni adresën para hyrjes.',
   'email_verified' => 'Email-i u verifikua me sukses. Tani mund të kyçeni.',
   'email_already_verified' => 'Email-i ishte konfirmuar më parë. Mund të kyçeni.',
+  'password_updated' => 'Fjalëkalimi u rivendos me sukses. Mund të hysh tani.',
 ];
 ?>
 <!DOCTYPE html>
@@ -81,7 +82,7 @@ $successMessages = [
           <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
         </div>
         <button type="submit" class="btn_primary auth-submit">Hyr</button>
-        <p class="auth-meta">Nuk keni llogari? <a href="/TiranaSolidare/views/register.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Krijo llogari</a></p>
+        <p class="auth-meta">Keni harruar fjalëkalimin? <a href="/TiranaSolidare/views/forgot_password.php">Rikuperoje</a></p>
       </form>
 
       <div class="auth-sidecard">
