@@ -96,7 +96,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260318a">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260320a">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
 <body class="page-events">
 <?php include __DIR__ . '/../public/components/header.php'; ?>
