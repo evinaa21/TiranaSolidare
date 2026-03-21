@@ -333,6 +333,10 @@ document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);
   if (gallery && wrap && prevBtn && nextBtn) {
     var page = 0;
 
+    function isMobileGallery() {
+      return window.innerWidth <= 700;
+    }
+
     function getPerPage() {
       var w = wrap.offsetWidth;
       if (w <= 500) return 1;
@@ -347,6 +351,7 @@ document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);
     }
 
     function slide() {
+      if (isMobileGallery()) return;
       var perPage = getPerPage();
       var gap = 24;
       var cardW = (wrap.offsetWidth - gap * (perPage - 1)) / perPage;
@@ -358,14 +363,38 @@ document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);
       nextBtn.style.pointerEvents = page >= getMaxPage() ? 'none' : 'auto';
     }
 
-    prevBtn.addEventListener('click', function () {
+    function mobileScroll(dir) {
+      var card = gallery.querySelector('.cv-card');
+      var scrollAmt = card ? card.offsetWidth + 12 : 300;
+      gallery.scrollBy({ left: dir * scrollAmt, behavior: 'smooth' });
+    }
+
+    prevBtn.addEventListener('click', function (e) {
+      if (isMobileGallery()) {
+        e.stopPropagation();
+        mobileScroll(-1);
+        return;
+      }
       if (page > 0) { page--; slide(); }
     });
-    nextBtn.addEventListener('click', function () {
+    nextBtn.addEventListener('click', function (e) {
+      if (isMobileGallery()) {
+        e.stopPropagation();
+        mobileScroll(1);
+        return;
+      }
       if (page < getMaxPage()) { page++; slide(); }
     });
 
     window.addEventListener('resize', function () {
+      if (isMobileGallery()) {
+        gallery.style.transform = '';
+        prevBtn.style.opacity = '';
+        prevBtn.style.pointerEvents = '';
+        nextBtn.style.opacity = '';
+        nextBtn.style.pointerEvents = '';
+        return;
+      }
       if (page > getMaxPage()) page = getMaxPage();
       slide();
     });

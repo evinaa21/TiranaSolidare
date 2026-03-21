@@ -48,9 +48,9 @@ $kategorite = $pdo->query(
   <meta name="theme-color" content="#00715D">
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
-  <link rel="stylesheet" href="assets/styles/main.css?v=20260321d">
-  <link rel="stylesheet" href="assets/styles/requests.css?v=20260321d">
-  <link rel="stylesheet" href="assets/styles/index.css?v=20260321d">
+  <link rel="stylesheet" href="assets/styles/main.css?v=202603213">
+  <link rel="stylesheet" href="assets/styles/requests.css?v=202603213">
+  <link rel="stylesheet" href="assets/styles/index.css?v=202603217">
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
@@ -111,13 +111,13 @@ $kategorite = $pdo->query(
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
           Bëhu pjesë e komunitetit
         </span>
-        <h2 class="reveal reveal-up reveal-d1">Çdo veprim i vogël krijon<br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
+        <h2 class="reveal reveal-up reveal-d1">Çdo veprim i vogël krijon <br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
         <p class="reveal reveal-up reveal-d2">Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
         <a href="/TiranaSolidare/views/register.php" class="btn_primary reveal reveal-up reveal-d3">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       </div>
       <div id="regjistrohu-image" class="reveal reveal-right reveal-d2">
         <div class="regjistrohu-img-stack">
-          <img src="assets/images/vullnetare.png" alt="Vullnetarë" class="regjistrohu-img-front">
+          <img src="assets/images/community-volunteers.png" alt="Vullnetarë" class="regjistrohu-img-front">
           <div class="regjistrohu-img-back"></div>
         </div>
       </div>
@@ -442,10 +442,10 @@ $kategorite = $pdo->query(
           <?php endforeach; ?>
         </div>
         <!-- Gallery scroll buttons -->
-        <button class="cv-scroll-btn cv-scroll-btn--prev" aria-label="Para" onclick="document.getElementById('cv-gallery').scrollBy({left:-340,behavior:'smooth'})">
+        <button class="cv-scroll-btn cv-scroll-btn--prev" aria-label="Para">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button class="cv-scroll-btn cv-scroll-btn--next" aria-label="Pas" onclick="document.getElementById('cv-gallery').scrollBy({left:340,behavior:'smooth'})">
+        <button class="cv-scroll-btn cv-scroll-btn--next" aria-label="Pas">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
@@ -459,6 +459,6 @@ $kategorite = $pdo->query(
 
 <?php include 'components/footer.php' ?>
 
-<script src="assets/scripts/main.js?v=20260321d"></script>
+<script src="assets/scripts/main.js?v=20260321e"></script>
 </body>
 </html>
