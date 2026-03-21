@@ -74,11 +74,16 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <span>Njoftimet</span>
       <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
     </button>
+
+    <button class="db-nav-item" data-panel="profile" onclick="switchPanel('profile', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      <span>Profili im</span>
+    </button>
   </nav>
 
   <!-- Sidebar user card -->
   <div class="db-sidebar__user">
-    <div class="db-sidebar__avatar" onclick="window.location.href='/TiranaSolidare/views/profile.php'" style="cursor:pointer;">
+    <div class="db-sidebar__avatar" onclick="switchPanel('profile', document.querySelector('[data-panel=profile]'))" style="cursor:pointer;">
       <?= $userInitial ?>
     </div>
     <div class="db-sidebar__user-info">
@@ -107,31 +112,24 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
   </header>
 
-
-
-
   <!-- ═══════════════ PANEL: OVERVIEW ═══════════════ -->
   <div class="db-panel active" id="panel-overview">
-<!-- ─── WELCOME HEADER ─── -->
-  <section class="db-welcome">
-    <svg class="db-welcome__blob" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.06)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
-    <div class="db-welcome__text">
-      <h2>Mirësevini, <?= $userEmri ?>!</h2>
-      <p><?= $isAdmin ? 'Menaxhoni platformën nga paneli juaj admin.' : 'Shikoni eventet, aplikimet dhe kërkesat tuaja.' ?></p>
-    </div>
-  </section>
-    <!-- Stats cards (injected by JS) -->
+    <section class="db-welcome">
+      <svg class="db-welcome__blob" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.06)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
+      <div class="db-welcome__text">
+        <h2>Mirësevini, <?= $userEmri ?>!</h2>
+        <p><?= $isAdmin ? 'Menaxhoni platformën nga paneli juaj admin.' : 'Shikoni eventet, aplikimet dhe kërkesat tuaja.' ?></p>
+      </div>
+    </section>
     <div class="db-stats" id="dashboard-stats">
       <div class="db-stat db-stat--loading"><div class="db-stat__shimmer"></div></div>
       <div class="db-stat db-stat--loading"><div class="db-stat__shimmer"></div></div>
       <div class="db-stat db-stat--loading"><div class="db-stat__shimmer"></div></div>
       <div class="db-stat db-stat--loading"><div class="db-stat__shimmer"></div></div>
     </div>
-
     <!-- Sub-stats (injected by JS) -->
     <div class="db-overview-grid" id="dashboard-substats"></div>
   </div>
-
 
   <?php if ($isAdmin): ?>
   <!-- ═══════════════ PANEL: EVENTS (Admin) ═══════════════ -->
@@ -154,7 +152,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           </div>
           <div class="db-form__group">
             <label>Vendndodhja</label>
-           <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Vendi">
+            <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Vendi">
           </div>
           <div class="db-form__group">
             <label>Data</label>
@@ -193,7 +191,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         </div>
       </form>
     </div>
-
     <div class="db-table-wrap" id="admin-event-list">
       <div class="db-loading">Duke ngarkuar eventet…</div>
     </div>
@@ -208,7 +205,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
   </div>
 
-
   <!-- ═══════════════ PANEL: USERS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-users">
     <div class="db-panel__header">
@@ -219,7 +215,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <div class="db-loading">Duke ngarkuar përdoruesit…</div>
     </div>
   </div>
-
 
   <!-- ═══════════════ PANEL: USER DETAIL (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-user-detail">
@@ -236,7 +231,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
   </div>
 
-
   <!-- ═══════════════ PANEL: REQUESTS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-requests">
     <div class="db-panel__header">
@@ -246,10 +240,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <div class="db-loading">Duke ngarkuar kërkesat…</div>
     </div>
   </div>
-
-
   <?php endif; ?>
-
 
   <!-- ═══════════════ PANEL: NOTIFICATIONS ═══════════════ -->
   <div class="db-panel" id="panel-notifications">
@@ -265,6 +256,55 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
   </div>
 
+<!-- ═══════════════ PANEL: PROFILE (Admin) ═══════════════ -->
+<div class="db-panel" id="panel-profile">
+  <div class="db-panel__header">
+    <h3>Profili im</h3>
+  </div>
+
+  <div class="ud-header">
+    <div class="ud-avatar ud-avatar--active"><?= $userInitial ?></div>
+    <div class="ud-header__info">
+      <h2 class="ud-header__name"><?= $userEmri ?></h2>
+      <p class="ud-header__email"><?= $userEmail ?></p>
+      <div class="ud-header__badges">
+        <span class="db-badge db-badge--admin"><?= $userRoli ?></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ud-actions-grid">
+
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <h4>Ndrysho emrin</h4>
+      </div>
+      <p class="ud-card__desc">Emri shfaqet në panelin e administrimit dhe te njoftimet.</p>
+      <div class="ud-card__body">
+        <input type="text" id="admin-emri" class="ud-input" placeholder="Emri Mbiemri">
+        <button class="db-btn db-btn--primary" onclick="adminSaveName()">Ruaj emrin</button>
+        <div id="admin-name-status" style="font-size:13px;min-height:16px"></div>
+      </div>
+    </div>
+
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h4>Ndrysho fjalëkalimin</h4>
+      </div>
+      <p class="ud-card__desc">Përdor një fjalëkalim të fortë me të paktën 8 karaktere.</p>
+      <div class="ud-card__body">
+        <input type="password" id="admin-current-pw" class="ud-input" placeholder="Fjalëkalimi aktual" autocomplete="new-password">
+        <input type="password" id="admin-new-pw" class="ud-input" placeholder="Fjalëkalimi i ri">
+        <input type="password" id="admin-confirm-pw" class="ud-input" placeholder="Konfirmo fjalëkalimin">
+        <button class="db-btn db-btn--primary" onclick="adminSavePassword()">Përditëso fjalëkalimin</button>
+        <div id="admin-pw-status" style="font-size:13px;min-height:16px"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
 </main>
 
 <!-- Toast container -->
@@ -279,7 +319,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   let eventMapPicker = null;
-
   const createWrapper = document.getElementById('create-event-wrapper');
   if (createWrapper) {
 
@@ -308,47 +347,96 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     observer.observe(createWrapper, { attributes: true, attributeFilter: ['style'] });
 
-    // Forward geocoding — kur useri shkruan vendndodhjen
-const vendInput = document.getElementById('event-vendndodhja');
-if (vendInput) {
-    let geocodeTimeout = null;
-    let skipNextGeocode = false;
-
-    vendInput.addEventListener('input', function() {
-        if (skipNextGeocode) {
-            skipNextGeocode = false;
-            return;
-        }
+    const vendInput = document.getElementById('event-vendndodhja');
+    if (vendInput) {
+      let geocodeTimeout = null;
+      let skipNextGeocode = false;
+      vendInput.addEventListener('input', function() {
+        if (skipNextGeocode) { skipNextGeocode = false; return; }
         clearTimeout(geocodeTimeout);
         const q = this.value.trim();
         if (q.length < 3) return;
         geocodeTimeout = setTimeout(async () => {
-            if (!eventMapPicker) return;
-            try {
-                const res = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
-                    { headers: { 'Accept-Language': 'sq,en' } }
-                );
-                const data = await res.json();
-                if (data.length > 0) {
-                    const lat = parseFloat(data[0].lat);
-                    const lng = parseFloat(data[0].lon);
-                    eventMapPicker.setPosition(lat, lng);
-                    const coordDisplay = document.getElementById('event-coord-display');
-                    const coordText = document.getElementById('event-coord-text');
-                    if (coordDisplay && coordText) {
-                        coordDisplay.style.display = 'flex';
-                        coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-                    }
-                }
-            } catch (e) {}
+          if (!eventMapPicker) return;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
+              { headers: { 'Accept-Language': 'sq,en' } }
+            );
+            const data = await res.json();
+            if (data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lng = parseFloat(data[0].lon);
+              eventMapPicker.setPosition(lat, lng);
+              const coordDisplay = document.getElementById('event-coord-display');
+              const coordText = document.getElementById('event-coord-text');
+              if (coordDisplay && coordText) {
+                coordDisplay.style.display = 'flex';
+                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+              }
+            }
+          } catch (e) {}
         }, 600);
-    });
-
-    vendInput._skipNextGeocode = () => { skipNextGeocode = true; };
+      });
+      vendInput._skipNextGeocode = () => { skipNextGeocode = true; };
     }
-  } 
-}); 
+  }
+});
+</script>
+<script>
+const adminCsrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+async function adminSaveName() {
+  const emri = document.getElementById('admin-emri').value.trim();
+  const st = document.getElementById('admin-name-status');
+  if (!emri) { st.style.color='red'; st.textContent='Shkruaj emrin.'; return; }
+  try {
+    const res = await fetch('/TiranaSolidare/api/users.php?action=update_profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': adminCsrf },
+      credentials: 'same-origin',
+      body: JSON.stringify({ emri }),
+    });
+    const json = await res.json();
+    st.style.color = json.success ? 'green' : 'red';
+    st.textContent = json.success ? 'Emri u ruajt.' : (json.message || 'Gabim.');
+  } catch(e) { st.style.color='red'; st.textContent='Gabim rrjeti.'; }
+}
+
+async function adminSavePassword() {
+  const current_password = document.getElementById('admin-current-pw').value;
+  const new_password = document.getElementById('admin-new-pw').value;
+  const confirm_password = document.getElementById('admin-confirm-pw').value;
+  const st = document.getElementById('admin-pw-status');
+  if (new_password !== confirm_password) { st.style.color='red'; st.textContent='Fjalëkalimet nuk përputhen.'; return; }
+  try {
+    const res = await fetch('/TiranaSolidare/api/auth.php?action=change_password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': adminCsrf },
+      credentials: 'same-origin',
+      body: JSON.stringify({ current_password, new_password, confirm_password }),
+    });
+    const json = await res.json();
+    st.style.color = json.success ? 'green' : 'red';
+    st.textContent = json.success ? 'Fjalëkalimi u përditësua.' : (json.message || 'Gabim.');
+    if (json.success) {
+      document.getElementById('admin-current-pw').value='';
+      document.getElementById('admin-new-pw').value='';
+      document.getElementById('admin-confirm-pw').value='';
+    }
+  } catch(e) { st.style.color='red'; st.textContent='Gabim rrjeti.'; }
+}
+
+async function adminLoadProfile() {
+  try {
+    const res = await fetch('/TiranaSolidare/api/auth.php?action=me', { credentials: 'same-origin' });
+    const json = await res.json();
+    if (!json.success) return;
+    document.getElementById('admin-emri').value = json.data.emri || '';
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', adminLoadProfile);
 </script>
 </body>
 </html>
