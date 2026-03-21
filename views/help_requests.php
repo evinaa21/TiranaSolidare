@@ -119,9 +119,11 @@ $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Trust stats
 $statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme")->fetchColumn();
+$statOpen         = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Open'")->fetchColumn();
 $statClosed       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
 $statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
-$statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();} // end if (!isset($_GET['id']))
+$statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Ofertë'")->fetchColumn();
+$statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'Kërkesë'")->fetchColumn();} // end if (!isset($_GET['id']))
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -130,7 +132,7 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260318c">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260320b">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
   <?= csrf_meta() ?>
@@ -365,21 +367,20 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 
 <!-- ─── HERO ─── -->
 <section class="rq-hero rq-hero--requests">
-  <!-- Animated floating orbs -->
+  <!-- Warm animated orbs -->
   <div class="rq-orb rq-orb--1"></div>
   <div class="rq-orb rq-orb--2"></div>
   <div class="rq-orb rq-orb--3"></div>
   <div class="rq-orb rq-orb--4"></div>
-  <!-- Undraw illustration watermark -->
   <img class="rq-hero__illustration" src="/TiranaSolidare/public/assets/images/hero-message.svg" alt="" aria-hidden="true">
 
   <div class="rq-hero__inner">
-    <span class="rq-hero__label">
+    <span class="rq-hero__label rq-hero__label--warm">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-      Komuniteti në veprim
+      Qytetarë për qytetarë
     </span>
-    <h1>Kërkesat për Ndihmë</h1>
-    <p class="rq-hero__subtitle">Gjej ku mund të ndihmosh, ose posto kërkesën tënde dhe lejo komunitetin të të mbështesë.</p>
+    <h1>Kërkesa për <span class="rq-hero__highlight">Ndihmë</span></h1>
+    <p class="rq-hero__subtitle">Shiko kush ka nevojë për ndihmë pranë teje dhe ofro dorën tënde. Çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt.</p>
 
     <!-- Trust stats -->
     <div class="rq-trust-bar">
@@ -389,17 +390,17 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= $statTotalKerkesa ?></strong><span>Kërkesa</span></div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div><strong><?= $statOpen ?></strong><span><span class="rq-live-dot"></span>Të hapura</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-        <div><strong><?= $statClosed ?></strong><span>Të zgjidhura</span></div>
+        <div><strong><?= $statClosed ?></strong><span>Plotësuara</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         <div><strong><?= $statOferta ?></strong><span>Kontribute</span></div>
       </div>
     </div>
@@ -416,11 +417,6 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
       <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Kërko sipas titullit ose përshkrimit...">
     </div>
     <div class="rq-filters__pills">
-      <select name="tipi" onchange="this.form.submit()">
-        <option value="">Të gjitha tipet</option>
-        <option value="Kërkesë" <?= $tipi === 'Kërkesë' ? 'selected' : '' ?>>Kërkoj ndihmë</option>
-        <option value="Ofertë" <?= $tipi === 'Ofertë' ? 'selected' : '' ?>>Dua të ndihmoj</option>
-      </select>
       <select name="statusi" onchange="this.form.submit()">
         <option value="">Të gjitha statuset</option>
         <option value="Open" <?= $statusi === 'Open' ? 'selected' : '' ?>>Open</option>
@@ -430,6 +426,27 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     </div>
   </form>
 </section>
+
+<!-- ─── TABS STRIP ─── -->
+<div class="rq-tabs-strip rq-tabs-strip--below">
+  <div class="rq-tabs-strip__inner">
+    <button type="button" class="rq-tab rq-tab--all rq-tab--active" data-filter="all">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+      Të gjitha
+      <span class="rq-tab__count"><?= $statTotalKerkesa ?></span>
+    </button>
+    <button type="button" class="rq-tab rq-tab--request" data-filter="request">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      Kërkoj Ndihmë
+      <span class="rq-tab__count"><?= $statKerkesa ?></span>
+    </button>
+    <button type="button" class="rq-tab rq-tab--offer" data-filter="offer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      Ofroj Ndihmë
+      <span class="rq-tab__count"><?= $statOferta ?></span>
+    </button>
+  </div>
+</div>
 
 <!-- ─── RESULTS ─── -->
 <section class="rq-results">
@@ -447,8 +464,16 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     </div>
 
     <div class="rq-grid">
+      <div class="rq-empty rq-empty--filter" id="rq-filter-empty" style="display:none">
+        <div class="rq-empty__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        </div>
+        <h3>Asnjë rezultat për këtë filtrim</h3>
+        <p>Provo të zgjedhish një tab tjetër ose hiq filtrat.</p>
+      </div>
       <?php foreach ($requests as $i => $req): ?>
-        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card" style="animation-delay: <?= $i * 0.05 ?>s">
+        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card rq-card--typed" data-type="<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>" style="animation-delay: <?= $i * 0.05 ?>s">
+          <div class="rq-card__type-bar rq-card__type-bar--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"></div>
           <div class="rq-card__visual">
             <?php
               $cardImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
@@ -502,17 +527,46 @@ $statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <?php endif; ?>
 </section>
 
-<!-- ─── CTA SECTION ─── -->
-<section class="rq-cta">
-  <svg class="rq-blob rq-blob--cta" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.06)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
-  <div class="rq-cta__inner">
-    <h2>Ke nevojë për ndihmë?</h2>
-    <p>Posto kërkesën tënde dhe komuniteti ynë do të të mbështesë. Regjistrimi është falas dhe i shpejtë.</p>
-    <?php if ($isLoggedIn): ?>
-      <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request" class="btn_primary">Shko te paneli</a>
-    <?php else: ?>
-      <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar</a>
-    <?php endif; ?>
+<!-- ─── DUAL CTA ─── -->
+<section class="rq-dual-cta">
+  <div class="rq-dual-cta__inner">
+    <div class="rq-dual-cta__card rq-dual-cta__card--request">
+      <div class="rq-dual-cta__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </div>
+      <h3>Ke nevojë për ndihmë?</h3>
+      <p>Posto një kërkesë dhe komuniteti i Tiranës do të dëgjojë. Është falas dhe i shpejtë.</p>
+      <?php if ($isLoggedIn): ?>
+        <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request" class="rq-dual-cta__btn rq-dual-cta__btn--warm">
+          Posto kërkesën
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      <?php else: ?>
+        <a href="/TiranaSolidare/views/register.php" class="rq-dual-cta__btn rq-dual-cta__btn--warm">
+          Regjistrohu për të postuar
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      <?php endif; ?>
+    </div>
+
+    <div class="rq-dual-cta__card rq-dual-cta__card--offer">
+      <div class="rq-dual-cta__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      </div>
+      <h3>Dëshiron të ndihmosh?</h3>
+      <p>Ofroi aftesitë ose kohën tënde. Dikush pranë teje mund ta ketë shumë nevojë.</p>
+      <?php if ($isLoggedIn): ?>
+        <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-request" class="rq-dual-cta__btn rq-dual-cta__btn--green">
+          Ofroj ndihmën time
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      <?php else: ?>
+        <a href="/TiranaSolidare/views/register.php" class="rq-dual-cta__btn rq-dual-cta__btn--green">
+          Regjistrohu për të ofruar
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      <?php endif; ?>
+    </div>
   </div>
 </section>
 
@@ -670,6 +724,62 @@ document.addEventListener('DOMContentLoaded', function() {
       type: <?= json_encode(($request['tipi'] ?? '') === 'Ofertë' ? 'offer' : 'request') ?>
     });
   }
+
+  // ─── Tab filtering (client-side, no page refresh) ───
+  const tabBtns = document.querySelectorAll('.rq-tabs-strip [data-filter]');
+  const cards   = document.querySelectorAll('.rq-grid .rq-card[data-type]');
+  const countEl = document.querySelector('.rq-results__count');
+  const filterEmpty = document.getElementById('rq-filter-empty');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+
+      // Update active tab
+      tabBtns.forEach(b => b.classList.remove('rq-tab--active'));
+      btn.classList.add('rq-tab--active');
+
+      // Filter cards with animation
+      let visible = 0;
+      cards.forEach(card => {
+        const match = filter === 'all' || card.dataset.type === filter;
+        if (match) {
+          card.style.display = '';
+          card.style.animation = 'rqCardIn 0.35s ease forwards';
+          card.style.animationDelay = (visible * 0.04) + 's';
+          visible++;
+        } else {
+          card.style.animation = 'rqCardOut 0.25s ease forwards';
+          setTimeout(() => { card.style.display = 'none'; }, 250);
+        }
+      });
+
+      // Show/hide empty state
+      if (filterEmpty) {
+        filterEmpty.style.display = visible === 0 ? '' : 'none';
+      }
+
+      // Update visible count text
+      if (countEl) {
+        const totalCards = cards.length;
+        countEl.textContent = (filter === 'all' ? totalCards : visible) + ' kërkesa u gjetën';
+      }
+
+      // Sync the <select> for tipi so form still works if they search
+      const tipiSelect = document.querySelector('.rq-filters select[name="tipi"]');
+      if (tipiSelect) {
+        if (filter === 'request') tipiSelect.value = 'Kërkesë';
+        else if (filter === 'offer') tipiSelect.value = 'Ofertë';
+        else tipiSelect.value = '';
+      }
+
+      // Smooth scroll to results
+      const results = document.querySelector('.rq-results');
+      if (results) {
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
 });
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>

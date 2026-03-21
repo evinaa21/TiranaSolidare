@@ -48,9 +48,9 @@ $kategorite = $pdo->query(
   <meta name="theme-color" content="#00715D">
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
-  <link rel="stylesheet" href="assets/styles/main.css?v=20260308d">
-  <link rel="stylesheet" href="assets/styles/requests.css?v=20260318a">
-  <link rel="stylesheet" href="assets/styles/index.css?v=20260308d">
+  <link rel="stylesheet" href="assets/styles/main.css?v=20260321b">
+  <link rel="stylesheet" href="assets/styles/requests.css?v=20260321b">
+  <link rel="stylesheet" href="assets/styles/index.css?v=20260321b">
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
@@ -249,29 +249,44 @@ $kategorite = $pdo->query(
     </div>
   </section>
 
+  <!-- ═══════════════════════════════════════════
+       EVENTS — 3D Cinematic Card Carousel
+       ═══════════════════════════════════════════ -->
   <section id="eventet">
-    <div id="eventet-title">
-      <h2>Eventet e fundit</h2>
-      <a href="/TiranaSolidare/views/events.php" class="btn_secondary">Shiko te gjitha <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-right-icon lucide-move-right"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg></a>
-    </div>
-    <?php include 'components/horizontalScroller/hs_start.php' ?>
+    <div class="evs-wrapper">
+      <div class="evs-header">
+        <div>
+          <span class="evs-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            Eventet e fundit
+          </span>
+          <h2>Mos humb <span class="evs-accent">mundësinë</span></h2>
+        </div>
+        <a href="/TiranaSolidare/views/events.php" class="btn_secondary">Shiko të gjitha <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      </div>
+
       <?php if (empty($eventet)): ?>
-        <p style="padding: 40px; color: #888;">Nuk ka evente për momentin.</p>
+        <p style="padding: 40px; color: rgba(255,255,255,0.5);">Nuk ka evente për momentin.</p>
       <?php else: ?>
-        <?php foreach ($eventet as $ev): ?>
-          <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card">
-            <div class="rq-card__visual">
-              <img src="<?= !empty($ev['banner']) ? htmlspecialchars($ev['banner']) : '/TiranaSolidare/public/assets/images/default-event.svg' ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
-              <div class="rq-card__overlay">
-                <span class="rq-badge rq-badge--event-spotlight">Event</span>
-                <span class="rq-badge rq-badge--event"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Kategori') ?></span>
+      <div class="evs-stage" id="evs-stage">
+        <div class="evs-cards">
+          <?php foreach ($eventet as $idx => $ev): ?>
+          <div class="evs-card" data-idx="<?= $idx ?>">
+            <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="evs-card__link">
+              <div class="evs-card__img">
+                <img src="<?= !empty($ev['banner']) ? htmlspecialchars($ev['banner']) : '/TiranaSolidare/public/assets/images/default-event.svg' ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
+                <div class="evs-card__gradient"></div>
               </div>
-            </div>
-            <div class="rq-card__content">
-              <h3 class="rq-card__title"><?= htmlspecialchars($ev['titulli']) ?></h3>
-              <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($ev['pershkrimi'] ?? '', 0, 110)) ?>...</p>
-              <div class="rq-card__footer">
-                <div class="rq-card__meta">
+              <div class="evs-card__body">
+                <div class="evs-card__badges">
+                  <span class="evs-badge"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Event') ?></span>
+                  <?php if (strtotime($ev['data']) >= time()): ?>
+                    <span class="evs-badge evs-badge--live"><span class="evs-pulse"></span> I ardhshëm</span>
+                  <?php endif; ?>
+                </div>
+                <h3 class="evs-card__title"><?= htmlspecialchars($ev['titulli']) ?></h3>
+                <p class="evs-card__desc"><?= htmlspecialchars(mb_substr($ev['pershkrimi'] ?? '', 0, 130)) ?>...</p>
+                <div class="evs-card__meta">
                   <span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
                     <?= htmlspecialchars($ev['vendndodhja'] ?? 'Tiranë') ?>
@@ -281,70 +296,164 @@ $kategorite = $pdo->query(
                     <?= date('d M Y', strtotime($ev['data'])) ?>
                   </span>
                 </div>
-                <span class="rq-card__arrow">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                </span>
               </div>
-            </div>
-          </a>
+            </a>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <button class="evs-nav evs-nav--prev" aria-label="Para">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="evs-nav evs-nav--next" aria-label="Pas">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div class="evs-indicators" id="evs-indicators">
+        <?php foreach ($eventet as $idx => $ev): ?>
+          <button class="evs-dot-btn <?= $idx === 0 ? 'evs-dot-btn--active' : '' ?>" data-idx="<?= $idx ?>" aria-label="Event <?= $idx + 1 ?>">
+            <span class="evs-dot-fill"></span>
+          </button>
         <?php endforeach; ?>
+      </div>
       <?php endif; ?>
-    <?php include 'components/horizontalScroller/hs_end.php' ?>
+    </div>
   </section>
 
+  <!-- ═══════════════════════════════════════════
+       REQUESTS — Community Voices Editorial
+       ═══════════════════════════════════════════ -->
   <section id="kerkesat">
-    <div id="kerkesat-title">
-      <h2>Kërkesat e fundit</h2>
-      <a href="/TiranaSolidare/views/help_requests.php" class="btn_secondary">Shiko te gjitha <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-right-icon lucide-move-right"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg></a>
-    </div>
-    <?php include 'components/horizontalScroller/hs_start.php' ?>
+    <!-- Decorative floating orbs -->
+    <div class="cv-orb cv-orb--1" aria-hidden="true"></div>
+    <div class="cv-orb cv-orb--2" aria-hidden="true"></div>
+    <div class="cv-orb cv-orb--3" aria-hidden="true"></div>
+
+    <div class="cv-wrapper">
+      <div class="cv-header">
+        <div class="cv-header__left">
+          <span class="cv-label">
+            <span class="cv-label__pulse"></span>
+            Zërat e komunitetit
+          </span>
+          <h2>Dikush ka nevojë <br>për <span class="cv-accent">ty sot</span></h2>
+          <p class="cv-subtitle">Lexo kërkesat dhe ofertat e komunitetit. Çdo ndihmë e vogël krijon ndryshim.</p>
+        </div>
+        <div class="cv-header__right">
+          <div class="cv-stats">
+            <div class="cv-stat">
+              <span class="cv-stat__num"><?= count($kerkesat) ?></span>
+              <span class="cv-stat__text">Kërkesa aktive</span>
+            </div>
+            <div class="cv-stat-divider"></div>
+            <div class="cv-stat">
+              <span class="cv-stat__num"><?= count(array_filter($kerkesat, fn($k) => $k['tipi'] === 'Ofertë')) ?></span>
+              <span class="cv-stat__text">Oferta ndihme</span>
+            </div>
+          </div>
+          <a href="/TiranaSolidare/views/help_requests.php" class="cv-cta-btn">
+            Shiko të gjitha
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+
       <?php if (empty($kerkesat)): ?>
         <p style="padding: 40px; color: #888;">Nuk ka kërkesa për momentin.</p>
       <?php else: ?>
-        <?php foreach ($kerkesat as $k): ?>
-          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="rq-card">
-            <div class="rq-card__visual">
-              <?php
-                $kImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
-                if (!empty($k['imazhi'])) {
-                    $kImgSrc = strpos($k['imazhi'], '/') === 0 ? $k['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $k['imazhi'];
-                }
-              ?>
-              <img src="<?= htmlspecialchars($kImgSrc) ?>" alt="<?= htmlspecialchars($k['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
-              <div class="rq-card__overlay">
-                <span class="rq-badge rq-badge--<?= $k['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $k['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-                <span class="rq-badge rq-badge--<?= strtolower($k['statusi']) ?>"><?= htmlspecialchars($k['statusi']) ?></span>
+
+      <!-- Featured Spotlight -->
+      <?php $feat = $kerkesat[0]; ?>
+      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>">
+        <div class="cv-spotlight__deco" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.07">
+            <?php if ($feat['tipi'] === 'Kërkesë'): ?>
+              <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
+            <?php else: ?>
+              <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
+            <?php endif; ?>
+          </svg>
+        </div>
+        <div class="cv-spotlight__content">
+          <div class="cv-spotlight__badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <?php if ($feat['tipi'] === 'Kërkesë'): ?>
+                <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
+              <?php else: ?>
+                <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
+              <?php endif; ?>
+            </svg>
+            <?= $feat['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+          </div>
+          <h3 class="cv-spotlight__title"><?= htmlspecialchars($feat['titulli']) ?></h3>
+          <p class="cv-spotlight__desc"><?= htmlspecialchars(mb_substr($feat['pershkrimi'] ?? '', 0, 220)) ?>...</p>
+          <div class="cv-spotlight__meta">
+            <span class="cv-spotlight__author">
+              <span class="cv-spotlight__avatar"><?= mb_strtoupper(mb_substr($feat['krijuesi_emri'] ?? 'A', 0, 1)) ?></span>
+              <?= htmlspecialchars($feat['krijuesi_emri'] ?? 'Anonim') ?>
+            </span>
+            <span class="cv-spotlight__time">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <?= koheParapake($feat['krijuar_me']) ?>
+            </span>
+          </div>
+        </div>
+        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $feat['id_kerkese_ndihme'] ?>" class="cv-spotlight__link" aria-label="Shiko kërkesën">
+          <span>Lexo më shumë</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <!-- Horizontal Gallery -->
+      <?php if (count($kerkesat) > 1): ?>
+      <div class="cv-gallery-wrap">
+        <div class="cv-gallery" id="cv-gallery">
+          <?php foreach (array_slice($kerkesat, 1) as $ki => $k): ?>
+          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="cv-card cv-card--<?= $k['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>" style="--card-delay: <?= $ki * 0.1 ?>s">
+            <div class="cv-card__top">
+              <div class="cv-card__type">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <?php if ($k['tipi'] === 'Kërkesë'): ?>
+                    <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
+                  <?php else: ?>
+                    <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
+                  <?php endif; ?>
+                </svg>
+                <?= $k['tipi'] === 'Kërkesë' ? 'Ndihmë' : 'Ofertë' ?>
               </div>
+              <span class="cv-card__time"><?= koheParapake($k['krijuar_me']) ?></span>
             </div>
-            <div class="rq-card__content">
-              <h3 class="rq-card__title"><?= htmlspecialchars($k['titulli']) ?></h3>
-              <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($k['pershkrimi'] ?? '', 0, 110)) ?>...</p>
-              <div class="rq-card__footer">
-                <div class="rq-card__meta">
-                  <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <?= htmlspecialchars($k['krijuesi_emri'] ?? 'Anonim') ?>
-                  </span>
-                  <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <?= koheParapake($k['krijuar_me']) ?>
-                  </span>
-                </div>
-                <span class="rq-card__arrow">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                </span>
-              </div>
+            <h3 class="cv-card__title"><?= htmlspecialchars($k['titulli']) ?></h3>
+            <p class="cv-card__desc"><?= htmlspecialchars(mb_substr($k['pershkrimi'] ?? '', 0, 95)) ?>...</p>
+            <div class="cv-card__bottom">
+              <span class="cv-card__author">
+                <span class="cv-card__avatar"><?= mb_strtoupper(mb_substr($k['krijuesi_emri'] ?? 'A', 0, 1)) ?></span>
+                <?= htmlspecialchars($k['krijuesi_emri'] ?? 'Anonim') ?>
+              </span>
+              <span class="cv-card__arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+              </span>
             </div>
           </a>
-        <?php endforeach; ?>
+          <?php endforeach; ?>
+        </div>
+        <!-- Gallery scroll buttons -->
+        <button class="cv-scroll-btn cv-scroll-btn--prev" aria-label="Para" onclick="document.getElementById('cv-gallery').scrollBy({left:-340,behavior:'smooth'})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="cv-scroll-btn cv-scroll-btn--next" aria-label="Pas" onclick="document.getElementById('cv-gallery').scrollBy({left:340,behavior:'smooth'})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
       <?php endif; ?>
-    <?php include 'components/horizontalScroller/hs_end.php' ?>
+
+      <?php endif; ?>
+    </div>
   </section>
 
 </main>
 
 <?php include 'components/footer.php' ?>
 
-<script src="assets/scripts/main.js"></script>
+<script src="assets/scripts/main.js?v=20260321b"></script>
 </body>
 </html>

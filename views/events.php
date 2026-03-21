@@ -86,6 +86,33 @@ $statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE data >= 
 $statPast        = $statTotalEvents - $statUpcoming;
 $statVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
 $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
+
+// ── Calendar data ──
+$months_sq = [1=>'Janar','Shkurt','Mars','Prill','Maj','Qershor','Korrik','Gusht','Shtator','Tetor','Nëntor','Dhjetor'];
+$days_sq = ['Hën','Mar','Mër','Enj','Pre','Sht','Die'];
+
+$today = new DateTime();
+$monday = clone $today;
+$monday->modify('monday this week');
+$weekDays = [];
+for ($i = 0; $i < 7; $i++) {
+    $d = clone $monday;
+    $d->modify("+$i days");
+    $dayStr = $d->format('Y-m-d');
+    $hasEvent = false;
+    foreach ($events as $ev) {
+        if (date('Y-m-d', strtotime($ev['data'])) === $dayStr) { $hasEvent = true; break; }
+    }
+    $weekDays[] = [
+        'name' => $days_sq[$i],
+        'num'  => $d->format('d'),
+        'date' => $dayStr,
+        'isToday'   => $d->format('Y-m-d') === $today->format('Y-m-d'),
+        'hasEvents' => $hasEvent,
+    ];
+}
+$currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y');
+
 } // end if (!isset($_GET['id']))
 
 ?>
@@ -96,7 +123,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260320a">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321b">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
 <body class="page-events">
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -278,6 +305,37 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
   </div>
 </section>
 
+<!-- ─── WEEK STRIP ─── -->
+<?php
+  // Encode all event dates for client-side week navigation
+  $allEventDates = [];
+  foreach ($events as $ev) {
+      $allEventDates[] = date('Y-m-d', strtotime($ev['data']));
+  }
+?>
+<div class="rq-week-strip">
+  <div class="rq-week-strip__inner">
+    <button class="rq-week-strip__nav" id="week-prev" aria-label="Java e kaluar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <div class="rq-week-days" id="week-days">
+    <?php foreach ($weekDays as $wd): ?>
+      <div class="rq-week-day <?= $wd['isToday'] ? 'rq-week-day--active' : '' ?> <?= $wd['hasEvents'] ? 'rq-week-day--has-events' : '' ?>" data-date="<?= $wd['date'] ?>">
+        <span class="rq-week-day__name"><?= $wd['name'] ?></span>
+        <span class="rq-week-day__num"><?= $wd['num'] ?></span>
+        <span class="rq-week-day__dot"></span>
+      </div>
+    <?php endforeach; ?>
+    </div>
+    <button class="rq-week-strip__nav" id="week-next" aria-label="Java e ardhshme">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <button class="rq-week-strip__today-btn" id="week-today" style="display:none">Sot</button>
+    <button class="rq-week-strip__all-btn" id="week-show-all">Të gjitha</button>
+    <span class="rq-week-strip__month" id="week-month"><?= $currentMonth ?></span>
+  </div>
+</div>
+
 <!-- ─── FILTERS ─── -->
 <section class="rq-filters-section">
   <svg class="rq-blob rq-blob--filters" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.03)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
@@ -303,6 +361,9 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
 
 <!-- ─── RESULTS ─── -->
 <section class="rq-results">
+
+  <!-- Grid View -->
+  <div>
   <?php if (empty($events)): ?>
     <div class="rq-empty">
       <div class="rq-empty__icon">
@@ -318,7 +379,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
 
     <div class="rq-grid">
       <?php foreach ($events as $i => $ev): ?>
-        <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card" style="animation-delay: <?= $i * 0.05 ?>s">
+        <a href="/TiranaSolidare/views/events.php?id=<?= $ev['id_eventi'] ?>" class="rq-card" data-date="<?= date('Y-m-d', strtotime($ev['data'])) ?>" style="animation-delay: <?= $i * 0.05 ?>s">
           <div class="rq-card__visual">
             <img src="<?= !empty($ev['banner']) ? htmlspecialchars($ev['banner']) : '/TiranaSolidare/public/assets/images/default-event.svg' ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
             <div class="rq-card__overlay">
@@ -352,7 +413,7 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
     </div>
 
     <?php if ($totalPages > 1): ?>
-      <nav class="rq-pagination">
+      <nav class="rq-pagination" id="events-pagination">
         <?php if ($page > 1): ?>
           <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&category=<?= $category ?>" class="rq-pagination__btn rq-pagination__btn--nav">&larr; Para</a>
         <?php endif; ?>
@@ -366,16 +427,27 @@ $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchCol
       </nav>
     <?php endif; ?>
   <?php endif; ?>
+  </div>
+
+  <!-- Empty state for date filtering (hidden by default) -->
+  <div class="rq-empty rq-empty--date-filter" id="date-filter-empty" style="display:none">
+    <img src="/TiranaSolidare/public/assets/images/none.png" alt="Asnjë event" class="rq-empty__img">
+    <h3>Asnjë event për këtë datë</h3>
+    <p>Provo një datë tjetër ose kliko sërish për të parë të gjitha eventet.</p>
+  </div>
+
+  <!-- Calendar View removed — week strip serves as calendar -->
+
 </section>
 
 <!-- ─── CTA SECTION ─── -->
-<section class="rq-cta">
+<section class="rq-cta rq-cta--events">
   <svg class="rq-blob rq-blob--cta" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.06)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
   <div class="rq-cta__inner">
-    <h2>Përgatit një event?</h2>
-    <p>Krijo një event dhe përvidh vullnetarë të dashur të komunitetit tuaj. Është falas dhe i thjeshtë për t'u nisur.</p>
+    <h2>Dëshiron të marrish pjesë?</h2>
+    <p>Regjistrohu për të aplikuar në evente dhe për të qenë pjesë e komunitetit solidar të Tiranës. Është falas dhe e thjeshtë.</p>
     <?php if ($isLoggedIn): ?>
-      <a href="/TiranaSolidare/views/volunteer_panel.php?tab=new-event" class="btn_primary">Shko te paneli</a>
+      <a href="/TiranaSolidare/views/volunteer_panel.php" class="btn_primary">Shko te paneli</a>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">Regjistrohu tani</a>
     <?php endif; ?>
@@ -429,6 +501,166 @@ document.addEventListener('DOMContentLoaded', function() {
       lng: <?= json_encode($event['longitude'] ?? null) ?>,
       label: <?= json_encode($event['titulli'] ?? '') ?>,
       type: 'event'
+    });
+  }
+  <?php endif; ?>
+
+  // ── Week strip: full JS navigation ──
+  <?php if (!isset($_GET['id'])): ?>
+  const dayNamesSq = ['Hën','Mar','Mër','Enj','Pre','Sht','Die'];
+  const monthNamesSq = [,'Janar','Shkurt','Mars','Prill','Maj','Qershor','Korrik','Gusht','Shtator','Tetor','Nëntor','Dhjetor'];
+  const allEventDates = <?= json_encode($allEventDates) ?>;
+  const todayStr = '<?= $today->format('Y-m-d') ?>';
+
+  let weekOffset = 0;
+  const weekDaysContainer = document.getElementById('week-days');
+  const weekMonthEl = document.getElementById('week-month');
+  const todayBtn = document.getElementById('week-today');
+  const evCards = document.querySelectorAll('.rq-grid .rq-card[data-date]');
+  const evCountEl = document.querySelector('.rq-results__count');
+  const dateFilterEmpty = document.getElementById('date-filter-empty');
+  const paginationEl = document.getElementById('events-pagination');
+  const showAllBtn = document.getElementById('week-show-all');
+  let activeFilter = null;
+
+  function getMonday(offset) {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff + offset * 7);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function fmtDate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function renderWeek() {
+    const mon = getMonday(weekOffset);
+    weekMonthEl.textContent = monthNamesSq[mon.getMonth()+1] + ' ' + mon.getFullYear();
+    todayBtn.style.display = weekOffset === 0 ? 'none' : '';
+    activeFilter = null;
+
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      const ds = fmtDate(d);
+      const isToday = ds === todayStr;
+      const hasEv = allEventDates.includes(ds);
+      html += '<div class="rq-week-day' + (isToday ? ' rq-week-day--active' : '') + (hasEv ? ' rq-week-day--has-events' : '') + '" data-date="' + ds + '">' +
+        '<span class="rq-week-day__name">' + dayNamesSq[i] + '</span>' +
+        '<span class="rq-week-day__num">' + String(d.getDate()).padStart(2,'0') + '</span>' +
+        '<span class="rq-week-day__dot"></span>' +
+      '</div>';
+    }
+    weekDaysContainer.innerHTML = html;
+    // Show all cards when navigating weeks
+    evCards.forEach(c => { c.style.display = ''; c.style.animation = 'rqCardIn 0.3s ease forwards'; });
+    if (evCountEl) evCountEl.textContent = evCards.length + ' evente u gjet\u00ebn';
+    if (dateFilterEmpty) dateFilterEmpty.style.display = 'none';
+    if (paginationEl) paginationEl.style.display = '';
+    bindDayClicks();
+  }
+
+  function bindDayClicks() {
+    weekDaysContainer.querySelectorAll('.rq-week-day').forEach(day => {
+      day.addEventListener('click', () => {
+        const date = day.dataset.date;
+        if (activeFilter === date) {
+          activeFilter = null;
+          weekDaysContainer.querySelectorAll('.rq-week-day').forEach(d => d.classList.remove('rq-week-day--selected'));
+          evCards.forEach(c => { c.style.display = ''; c.style.animation = 'rqCardIn 0.3s ease forwards'; });
+          if (evCountEl) evCountEl.textContent = evCards.length + ' evente u gjet\u00ebn';
+          if (dateFilterEmpty) dateFilterEmpty.style.display = 'none';
+          if (paginationEl) paginationEl.style.display = '';
+          return;
+        }
+        activeFilter = date;
+        weekDaysContainer.querySelectorAll('.rq-week-day').forEach(d => d.classList.remove('rq-week-day--selected'));
+        day.classList.add('rq-week-day--selected');
+        let visible = 0;
+        evCards.forEach(card => {
+          if (card.dataset.date === date) {
+            card.style.display = '';
+            card.style.animation = 'rqCardIn 0.3s ease forwards';
+            card.style.animationDelay = (visible * 0.04) + 's';
+            visible++;
+          } else {
+            card.style.animation = 'rqCardOut 0.2s ease forwards';
+            setTimeout(() => { card.style.display = 'none'; }, 200);
+          }
+        });
+        if (evCountEl) evCountEl.textContent = visible + ' evente u gjet\u00ebn';
+        if (dateFilterEmpty) dateFilterEmpty.style.display = visible === 0 ? '' : 'none';
+        if (paginationEl) paginationEl.style.display = 'none';
+      });
+    });
+  }
+
+  document.getElementById('week-prev').addEventListener('click', () => { weekOffset--; renderWeek(); });
+  document.getElementById('week-next').addEventListener('click', () => { weekOffset++; renderWeek(); });
+  todayBtn.addEventListener('click', () => { weekOffset = 0; renderWeek(); });
+  showAllBtn.addEventListener('click', () => {
+    activeFilter = null;
+    weekDaysContainer.querySelectorAll('.rq-week-day').forEach(d => d.classList.remove('rq-week-day--selected'));
+    evCards.forEach(c => { c.style.display = ''; c.style.animation = 'rqCardIn 0.3s ease forwards'; });
+    if (evCountEl) evCountEl.textContent = evCards.length + ' evente u gjet\u00ebn';
+    if (dateFilterEmpty) dateFilterEmpty.style.display = 'none';
+    if (paginationEl) paginationEl.style.display = '';
+  });
+  bindDayClicks();
+
+  // ── AJAX pagination ──
+  if (paginationEl) {
+    paginationEl.addEventListener('click', function(e) {
+      const link = e.target.closest('a.rq-pagination__btn');
+      if (!link) return;
+      e.preventDefault();
+      const url = link.href;
+      const grid = document.querySelector('.rq-grid');
+      const resultsHeader = document.querySelector('.rq-results__header');
+
+      fetch(url)
+        .then(r => r.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+
+          // Replace grid
+          const newGrid = doc.querySelector('.rq-grid');
+          if (newGrid && grid) {
+            grid.innerHTML = newGrid.innerHTML;
+            // Re-select card references
+            const newCards = grid.querySelectorAll('.rq-card[data-date]');
+            // Animate in
+            newCards.forEach((c, i) => {
+              c.style.animation = 'rqCardIn 0.3s ease forwards';
+              c.style.animationDelay = (i * 0.04) + 's';
+            });
+          }
+
+          // Replace pagination
+          const newPag = doc.getElementById('events-pagination');
+          if (newPag) {
+            paginationEl.innerHTML = newPag.innerHTML;
+          }
+
+          // Replace count
+          const newCount = doc.querySelector('.rq-results__count');
+          if (newCount && evCountEl) {
+            evCountEl.textContent = newCount.textContent;
+          }
+
+          // Update URL without reload
+          history.pushState(null, '', url);
+
+          // Scroll to top of results
+          const resultsSection = document.querySelector('.rq-results');
+          if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(() => { window.location = url; });
     });
   }
   <?php endif; ?>

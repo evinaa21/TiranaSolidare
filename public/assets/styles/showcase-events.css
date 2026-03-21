@@ -1,0 +1,1146 @@
+/* ═══════════════════════════════════════════════════════════
+   AGJENDA E TIRANËS — Editorial / Magazine Events Layout
+   Tirana Solidare — Showcase Stylesheet
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── VARIABLES ─── */
+:root {
+  --ev-primary:     #1a3a5c;
+  --ev-primary-dk:  #0e2240;
+  --ev-accent:      #00715D;
+  --ev-accent-lt:   #00a88a;
+  --ev-gold:        #c9a84c;
+  --ev-bg:          #f7f8fa;
+  --ev-card-bg:     #ffffff;
+  --ev-text:        #1a2332;
+  --ev-text-muted:  #5e6e82;
+  --ev-border:      #e2e5ea;
+  --ev-radius:      16px;
+  --ev-radius-sm:   10px;
+  --ev-shadow-sm:   0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.03);
+  --ev-shadow-md:   0 4px 16px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+  --ev-shadow-lg:   0 12px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.05);
+  --ev-transition:  0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+
+body.page-showcase-events {
+  background-color: var(--ev-bg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes evFadeUp {
+  0%   { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes evFadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes evSlideInRight {
+  0%   { opacity: 0; transform: translateX(40px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes evCountUp {
+  0%   { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes evPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+@keyframes evShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes evGradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HERO — Institutional City Agenda Header
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-hero {
+  position: relative;
+  padding: 160px 24px 100px;
+  background:
+    linear-gradient(135deg, rgba(14,34,64,0.92) 0%, rgba(26,58,92,0.85) 40%, rgba(0,113,93,0.78) 100%);
+  overflow: hidden;
+  color: #fff;
+  text-align: center;
+}
+
+.ev-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Decorative geometric elements */
+.ev-hero__shape {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ev-hero__shape--1 {
+  width: 400px;
+  height: 400px;
+  top: -100px;
+  right: -80px;
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 50%;
+}
+
+.ev-hero__shape--2 {
+  width: 250px;
+  height: 250px;
+  bottom: -60px;
+  left: -40px;
+  border: 1.5px solid rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+
+.ev-hero__shape--3 {
+  width: 120px;
+  height: 120px;
+  top: 30%;
+  left: 10%;
+  border: 1px solid rgba(201,168,76,0.12);
+  border-radius: 4px;
+  transform: rotate(45deg);
+}
+
+.ev-hero__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ev-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: rgba(201,168,76,0.15);
+  border: 1px solid rgba(201,168,76,0.35);
+  border-radius: 100px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ev-gold);
+  margin-bottom: 28px;
+  animation: evFadeUp 0.6s ease both;
+}
+
+.ev-hero__badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--ev-gold);
+}
+
+.ev-hero h1 {
+  font-family: 'Bitter', serif;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  animation: evFadeUp 0.6s ease 0.1s both;
+}
+
+.ev-hero h1 span {
+  color: var(--ev-gold);
+}
+
+.ev-hero__subtitle {
+  font-family: 'Raleway', sans-serif;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: rgba(255,255,255,0.75);
+  line-height: 1.7;
+  max-width: 620px;
+  margin: 0 auto 44px;
+  animation: evFadeUp 0.6s ease 0.2s both;
+}
+
+/* ─── Stats Strip ─── */
+.ev-stats-strip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 0;
+  animation: evFadeUp 0.6s ease 0.35s both;
+}
+
+.ev-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 36px;
+  border-right: 1px solid rgba(255,255,255,0.12);
+}
+
+.ev-stat:last-child {
+  border-right: none;
+}
+
+.ev-stat__number {
+  font-family: 'Bitter', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  animation: evCountUp 0.6s ease 0.5s both;
+}
+
+.ev-stat__label {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   WEEK STRIP — Calendar Navigation
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-week-strip {
+  position: relative;
+  z-index: 10;
+  margin-top: -28px;
+  padding: 0 24px;
+  animation: evFadeUp 0.6s ease 0.4s both;
+}
+
+.ev-week-strip__inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--ev-card-bg);
+  border: 1px solid var(--ev-border);
+  border-radius: 16px;
+  box-shadow: var(--ev-shadow-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ev-week-strip__inner::-webkit-scrollbar {
+  display: none;
+}
+
+.ev-week-strip__nav {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--ev-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ev-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ev-week-strip__nav:hover {
+  border-color: var(--ev-accent);
+  color: var(--ev-accent);
+}
+
+.ev-week-day {
+  flex: 1;
+  min-width: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1.5px solid transparent;
+}
+
+.ev-week-day:hover {
+  background: rgba(0,113,93,0.04);
+}
+
+.ev-week-day--active {
+  background: var(--ev-accent);
+  border-color: var(--ev-accent);
+}
+
+.ev-week-day--active .ev-week-day__name,
+.ev-week-day--active .ev-week-day__num {
+  color: #fff;
+}
+
+.ev-week-day--has-events .ev-week-day__dot {
+  opacity: 1;
+}
+
+.ev-week-day__name {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ev-text-muted);
+}
+
+.ev-week-day__num {
+  font-family: 'Bitter', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ev-text);
+}
+
+.ev-week-day__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ev-accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ev-week-day--active .ev-week-day__dot {
+  background: rgba(255,255,255,0.7);
+}
+
+.ev-week-strip__month {
+  flex-shrink: 0;
+  font-family: 'Bitter', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ev-text);
+  padding: 0 16px;
+  border-left: 1.5px solid var(--ev-border);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURED EVENT — Hero Card
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-featured-section {
+  padding: 60px 24px 20px;
+}
+
+.ev-featured-section__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ev-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.ev-section-header h2 {
+  font-family: 'Bitter', serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  color: var(--ev-text);
+  margin: 0;
+}
+
+.ev-section-header h2 span {
+  color: var(--ev-accent);
+}
+
+.ev-section-header__line {
+  flex: 1;
+  height: 1px;
+  background: var(--ev-border);
+  margin-left: 24px;
+}
+
+/* Featured Card — Large Hero */
+.ev-featured-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0;
+  background: var(--ev-card-bg);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--ev-shadow-lg);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ev-featured-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.06);
+}
+
+.ev-featured-card__img {
+  position: relative;
+  overflow: hidden;
+  min-height: 380px;
+}
+
+.ev-featured-card__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.ev-featured-card:hover .ev-featured-card__img img {
+  transform: scale(1.04);
+}
+
+.ev-featured-card__countdown {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 100px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ev-featured-card__countdown svg {
+  color: var(--ev-gold);
+}
+
+.ev-featured-card__content {
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ev-featured-card__badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ev-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ev-badge--category {
+  background: rgba(0,113,93,0.08);
+  color: var(--ev-accent);
+  border: 1px solid rgba(0,113,93,0.15);
+}
+
+.ev-badge--official {
+  background: rgba(201,168,76,0.1);
+  color: #9a7b2e;
+  border: 1px solid rgba(201,168,76,0.2);
+}
+
+.ev-badge--official svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ev-featured-card__title {
+  font-family: 'Bitter', serif;
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  font-weight: 700;
+  color: var(--ev-text);
+  line-height: 1.3;
+  margin: 0 0 14px;
+}
+
+.ev-featured-card__desc {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.95rem;
+  color: var(--ev-text-muted);
+  line-height: 1.65;
+  margin: 0 0 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ev-featured-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ev-border);
+}
+
+.ev-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.88rem;
+  color: var(--ev-text-muted);
+}
+
+.ev-meta-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ev-accent);
+  flex-shrink: 0;
+}
+
+.ev-meta-item strong {
+  color: var(--ev-text);
+  font-weight: 600;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT GRID — Chronological Card Feed
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-grid-section {
+  padding: 40px 24px 80px;
+}
+
+.ev-grid-section__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Filters */
+.ev-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 36px;
+  padding: 16px 20px;
+  background: var(--ev-card-bg);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+  box-shadow: var(--ev-shadow-sm);
+}
+
+.ev-filters__search {
+  position: relative;
+  flex: 1 1 300px;
+}
+
+.ev-filters__search svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ev-text-muted);
+  pointer-events: none;
+  width: 18px;
+  height: 18px;
+}
+
+.ev-filters__search input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  border: 1.5px solid var(--ev-border);
+  border-radius: var(--ev-radius-sm);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--ev-text);
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.ev-filters__search input:focus {
+  border-color: var(--ev-accent);
+  box-shadow: 0 0 0 3px rgba(0,113,93,0.08);
+}
+
+.ev-filters select {
+  padding: 12px 16px;
+  border: 1.5px solid var(--ev-border);
+  border-radius: var(--ev-radius-sm);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ev-text);
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.ev-filters select:focus {
+  border-color: var(--ev-accent);
+}
+
+.ev-filters__view-toggle {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.ev-view-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--ev-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ev-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ev-view-btn:hover {
+  border-color: var(--ev-accent);
+  color: var(--ev-accent);
+}
+
+.ev-view-btn--active {
+  background: var(--ev-accent);
+  border-color: var(--ev-accent);
+  color: #fff;
+}
+
+/* Date Group Header */
+.ev-date-group {
+  margin-bottom: 36px;
+  animation: evFadeUp 0.5s ease both;
+}
+
+.ev-date-group__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ev-date-group__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--ev-accent), var(--ev-accent-lt));
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,113,93,0.2);
+}
+
+.ev-date-group__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ev-date-group__text h3 {
+  font-family: 'Bitter', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ev-text);
+  margin: 0;
+}
+
+.ev-date-group__text span {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.82rem;
+  color: var(--ev-text-muted);
+}
+
+.ev-date-group__line {
+  flex: 1;
+  height: 1px;
+  background: var(--ev-border);
+}
+
+/* Card Grid */
+.ev-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Individual Card */
+.ev-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--ev-card-bg);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+  overflow: hidden;
+  box-shadow: var(--ev-shadow-sm);
+  transition: all var(--ev-transition);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  animation: evFadeUp 0.5s ease both;
+}
+
+.ev-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--ev-shadow-lg);
+  border-color: rgba(0,113,93,0.15);
+}
+
+.ev-card__visual {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+
+.ev-card__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.ev-card:hover .ev-card__visual img {
+  transform: scale(1.06);
+}
+
+.ev-card__date-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  line-height: 1;
+}
+
+.ev-card__date-badge__day {
+  font-family: 'Bitter', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ev-accent);
+}
+
+.ev-card__date-badge__month {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ev-text-muted);
+  margin-top: 2px;
+}
+
+.ev-card__overlay-badges {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.ev-card__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ev-card__category {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--ev-accent);
+  margin-bottom: 8px;
+}
+
+.ev-card__title {
+  font-family: 'Bitter', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ev-text);
+  line-height: 1.35;
+  margin: 0 0 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ev-card__excerpt {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.88rem;
+  color: var(--ev-text-muted);
+  line-height: 1.55;
+  margin: 0 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.ev-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--ev-border);
+  margin-top: auto;
+}
+
+.ev-card__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ev-card__info-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.78rem;
+  color: var(--ev-text-muted);
+}
+
+.ev-card__info-item svg {
+  width: 14px;
+  height: 14px;
+  color: var(--ev-accent);
+  flex-shrink: 0;
+}
+
+.ev-card__cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ev-accent);
+  transition: gap 0.3s ease;
+}
+
+.ev-card:hover .ev-card__cta {
+  gap: 10px;
+}
+
+.ev-card__cta svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+.ev-card:hover .ev-card__cta svg {
+  transform: translateX(3px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDAR TOGGLE VIEW
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--ev-border);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+  overflow: hidden;
+}
+
+.ev-calendar-header {
+  background: var(--ev-primary);
+  color: #fff;
+  padding: 12px 8px;
+  text-align: center;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ev-calendar-cell {
+  background: #fff;
+  padding: 8px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.2s;
+}
+
+.ev-calendar-cell:hover {
+  background: rgba(0,113,93,0.02);
+}
+
+.ev-calendar-cell--today {
+  background: rgba(0,113,93,0.04);
+}
+
+.ev-calendar-cell--other {
+  opacity: 0.35;
+}
+
+.ev-calendar-cell__day {
+  font-family: 'Bitter', serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ev-text);
+  margin-bottom: 4px;
+}
+
+.ev-calendar-cell--today .ev-calendar-cell__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--ev-accent);
+  color: #fff;
+  border-radius: 50%;
+}
+
+.ev-calendar-event {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ev-calendar-event:hover {
+  opacity: 0.8;
+}
+
+.ev-calendar-event--green {
+  background: rgba(0,113,93,0.1);
+  color: var(--ev-accent);
+}
+
+.ev-calendar-event--gold {
+  background: rgba(201,168,76,0.12);
+  color: #8a6b22;
+}
+
+.ev-calendar-event--blue {
+  background: rgba(26,58,92,0.08);
+  color: var(--ev-primary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CTA BANNER
+   ═══════════════════════════════════════════════════════════ */
+
+.ev-cta {
+  padding: 0 24px 80px;
+}
+
+.ev-cta__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding: 56px 56px;
+  background: linear-gradient(135deg, var(--ev-primary-dk) 0%, var(--ev-primary) 60%, rgba(0,113,93,0.85) 100%);
+  border-radius: 24px;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+.ev-cta__inner::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 250px;
+  height: 250px;
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ev-cta__icon {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.ev-cta__icon svg {
+  width: 36px;
+  height: 36px;
+  color: var(--ev-gold);
+}
+
+.ev-cta__text {
+  flex: 1;
+}
+
+.ev-cta__text h2 {
+  font-family: 'Bitter', serif;
+  font-size: 1.6rem;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.ev-cta__text p {
+  font-family: 'Raleway', sans-serif;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ev-cta__btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  background: var(--ev-gold);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(201,168,76,0.3);
+}
+
+.ev-cta__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(201,168,76,0.4);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+@media screen and (max-width: 900px) {
+  .ev-featured-card {
+    grid-template-columns: 1fr;
+  }
+  .ev-featured-card__img {
+    min-height: 260px;
+  }
+  .ev-featured-card__content {
+    padding: 28px 24px;
+  }
+  .ev-cta__inner {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 28px;
+    gap: 24px;
+  }
+  .ev-stat {
+    padding: 0 20px;
+  }
+  .ev-calendar-grid {
+    font-size: 0.7rem;
+  }
+  .ev-calendar-cell {
+    min-height: 70px;
+    padding: 4px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .ev-hero {
+    padding: 140px 16px 70px;
+  }
+  .ev-stats-strip {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .ev-stat {
+    border-right: none;
+    padding: 0 12px;
+  }
+  .ev-week-strip {
+    margin-top: -20px;
+    padding: 0 12px;
+  }
+  .ev-card-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ev-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ev-filters__view-toggle {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+  .ev-calendar-grid {
+    display: none;
+  }
+}
