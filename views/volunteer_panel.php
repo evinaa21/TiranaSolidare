@@ -261,7 +261,40 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
         <div id="vp-pw-status" class="vp-status" style="display:none"></div>
       </div>
     </div>
+
+<!-- Bio / Foto / Privatësia -->
+  <div class="vp-card" style="grid-column: 1 / -1">
+  <div class="vp-card__header">
+    <h3>Profili publik</h3>
   </div>
+  <div class="vp-card__body">
+    <form id="vp-extra-form" class="vp-form">
+       <input type="hidden" id="vp-extra-emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>">
+      <div class="vp-field">
+        <label for="vp-bio">Bio</label>
+        <textarea id="vp-bio" name="bio" rows="3" maxlength="500"
+          placeholder="Shkruaj diçka për veten..."
+          class="vp-input"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
+      </div>
+      <div class="vp-field">
+        <label for="vp-picture">URL e fotos së profilit</label>
+        <input type="url" id="vp-picture" name="profile_picture"
+          value="<?= htmlspecialchars($user['profile_picture'] ?? '') ?>"
+          placeholder="https://example.com/photo.jpg"
+          maxlength="500" class="vp-input">
+      </div>
+      <div class="vp-field" style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="vp-public" name="profile_public"
+          style="width:18px;height:18px;accent-color:#00715D"
+          <?= ($user['profile_public'] ?? 1) ? 'checked' : '' ?>>
+        <label for="vp-public" style="margin:0;cursor:pointer">Profili im është publik</label>
+      </div>
+      <button type="submit" class="btn_primary">Ruaj ndryshimet</button>
+    </form>
+    <div id="vp-extra-status" class="vp-status" style="display:none"></div>
+   </div>
+  </div>
+ </div>
 </div>
 
 <?php elseif ($tab === 'applications'): ?>
@@ -824,6 +857,38 @@ if (scoreCtx) {
     }
   });
 }
+
+// ── Bio / Foto / Privatësia ──
+const extraForm = document.getElementById('vp-extra-form');
+if (extraForm) {
+  extraForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emri = document.getElementById('vp-extra-emri').value;
+    const bio = document.getElementById('vp-bio').value.trim();
+    const profile_picture = document.getElementById('vp-picture').value.trim();
+    const profile_public = document.getElementById('vp-public').checked ? 1 : 0;
+
+    if (bio.length > 500) {
+      vpStatus('vp-extra-status', 'error', 'Bio nuk mund të kalojë 500 karaktere.');
+      return;
+    }
+
+    try {
+      const res = await fetch(API + '/users.php?action=update_profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ emri, bio, profile_picture, profile_public }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+      vpStatus('vp-extra-status', 'success', 'Profili u përditësua me sukses.');
+    } catch (err) {
+      vpStatus('vp-extra-status', 'error', err.message);
+    }
+  });
+}
+
 </script>
 </body>
 </html>
