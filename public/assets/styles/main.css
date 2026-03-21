@@ -878,6 +878,53 @@ body.page-home .header.scrolled{
 }
 
 
+/* ═══════════════════════════════════════════
+   PREMIUM GLOBAL MOBILE POLISH
+   ═══════════════════════════════════════════ */
+
+/* Smooth scroll for the whole page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent horizontal overflow on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Better image rendering */
+img {
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* Smoother font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Mobile footer polish */
+@media screen and (max-width: 700px) {
+  .footer-main {
+    -ms-grid-columns: 1fr;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  
+  .footer-links {
+    -webkit-box-pack: start;
+        -ms-flex-pack: start;
+            justify-content: flex-start;
+    gap: 30px;
+  }
+  
+  .footer {
+    padding: 60px clamp(16px, 5%, 5%);
+  }
+}
+
+
 
 
 

@@ -48,9 +48,9 @@ $kategorite = $pdo->query(
   <meta name="theme-color" content="#00715D">
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
-  <link rel="stylesheet" href="assets/styles/main.css?v=20260321b">
-  <link rel="stylesheet" href="assets/styles/requests.css?v=20260321b">
-  <link rel="stylesheet" href="assets/styles/index.css?v=20260321b">
+  <link rel="stylesheet" href="assets/styles/main.css?v=20260321d">
+  <link rel="stylesheet" href="assets/styles/requests.css?v=20260321d">
+  <link rel="stylesheet" href="assets/styles/index.css?v=20260321d">
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
@@ -93,6 +93,11 @@ $kategorite = $pdo->query(
         <img src="assets/images/hero_img_nobg.png" class="hero-img" alt="Tirana Solidare">
       </div>
     </div>
+
+    <div class="hero-scroll-hint">
+      <span>Zbulo</span>
+      <div class="scroll-line"></div>
+    </div>
     
   </section>
 
@@ -102,15 +107,15 @@ $kategorite = $pdo->query(
       <svg class="reg-blob reg-blob--2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.05)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
 
       <div id="regjistrohu-content">
-        <span class="regjistrohu-label">
+        <span class="regjistrohu-label reveal reveal-up">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
           Bëhu pjesë e komunitetit
         </span>
-        <h2>Çdo veprim i vogël krijon<br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
-        <p>Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
-        <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+        <h2 class="reveal reveal-up reveal-d1">Çdo veprim i vogël krijon<br>ndryshim të <span class="regjistrohu-accent">madh !</span></h2>
+        <p class="reveal reveal-up reveal-d2">Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
+        <a href="/TiranaSolidare/views/register.php" class="btn_primary reveal reveal-up reveal-d3">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       </div>
-      <div id="regjistrohu-image">
+      <div id="regjistrohu-image" class="reveal reveal-right reveal-d2">
         <div class="regjistrohu-img-stack">
           <img src="assets/images/vullnetare.png" alt="Vullnetarë" class="regjistrohu-img-front">
           <div class="regjistrohu-img-back"></div>
@@ -121,13 +126,13 @@ $kategorite = $pdo->query(
   <section id="si-funksionon">
     <div class="sf-wrapper">
       <div class="sf-header">
-        <span class="sf-label">Si funksionon</span>
-        <h2>Katër hapa drejt <span class="sf-accent">ndryshimit</span></h2>
-        <p>Nga regjistrimi deri te ndikimi — procesi është i thjeshtë dhe i hapur për të gjithë qytetarët e Tiranës.</p>
+        <span class="sf-label reveal reveal-up">Si funksionon</span>
+        <h2 class="reveal reveal-up reveal-d1">Katër hapa drejt <span class="sf-accent">ndryshimit</span></h2>
+        <p class="reveal reveal-up reveal-d2">Nga regjistrimi deri te ndikimi — procesi është i thjeshtë dhe i hapur për të gjithë qytetarët e Tiranës.</p>
       </div>
 
-      <div class="sf-grid">
-        <div class="sf-card sf-card--1">
+      <div class="sf-grid reveal-stagger">
+        <div class="sf-card sf-card--1 reveal reveal-up">
           <div class="sf-card__top">
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
@@ -138,7 +143,7 @@ $kategorite = $pdo->query(
           <p>Regjistrohu në pak sekonda si vullnetar ose si qytetar që kërkon ndihmë. Procesi është i shpejtë dhe i sigurtë.</p>
         </div>
 
-        <div class="sf-card sf-card--2">
+        <div class="sf-card sf-card--2 reveal reveal-up">
           <div class="sf-card__top">
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
@@ -149,7 +154,7 @@ $kategorite = $pdo->query(
           <p>Shfleto kërkesat e hapura për ndihmë dhe eventet e ardhshme. Gjej ku mund të kontribuosh.</p>
         </div>
 
-        <div class="sf-card sf-card--3">
+        <div class="sf-card sf-card--3 reveal reveal-up">
           <div class="sf-card__top">
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/></svg>
@@ -160,7 +165,7 @@ $kategorite = $pdo->query(
           <p>Apliko për vullnetarizëm, ndihmo në evente, ose posto kërkesa për ndihmë në komunitet.</p>
         </div>
 
-        <div class="sf-card sf-card--4">
+        <div class="sf-card sf-card--4 reveal reveal-up">
           <div class="sf-card__top">
             <div class="sf-card__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg>
@@ -177,12 +182,12 @@ $kategorite = $pdo->query(
   <section id="kategorite">
     <div class="kbtn-wrapper">
       <div class="kbtn-header">
-        <span class="kbtn-label">Eksploro Mundësitë</span>
-        <h2>Zbulo kauzën tënde të <span class="kbtn-accent">radhës</span></h2>
-        <p>Bashkohu me mijëra qytetarë që po bëjnë ndryshimin. Zgjidh fushën ku dëshiron të kontribuosh.</p>
+        <span class="kbtn-label reveal reveal-up">Eksploro Mundësitë</span>
+        <h2 class="reveal reveal-up reveal-d1">Zbulo kauzën tënde të <span class="kbtn-accent">radhës</span></h2>
+        <p class="reveal reveal-up reveal-d2">Bashkohu me mijëra qytetarë që po bëjnë ndryshimin. Zgjidh fushën ku dëshiron të kontribuosh.</p>
       </div>
 
-      <div class="kbtn-grid">
+      <div class="kbtn-grid reveal-stagger">
         <?php
         // Map category names to high-quality images and content
         $katMeta = [
@@ -221,7 +226,7 @@ $kategorite = $pdo->query(
             'desc' => 'Zbuloni më shumë rreth kësaj kategorie.'
           ];
         ?>
-        <a href="/TiranaSolidare/views/events.php?category=<?= $kat['id_kategoria'] ?>" class="kbtn-card kbtn-card-<?= $index ?>">
+        <a href="/TiranaSolidare/views/events.php?category=<?= $kat['id_kategoria'] ?>" class="kbtn-card kbtn-card-<?= $index ?> reveal reveal-scale">
           <div class="kbtn-img-wrap">
             <img src="<?= htmlspecialchars($meta['img']) ?>" alt="<?= htmlspecialchars($emri) ?>">
           </div>
@@ -256,11 +261,11 @@ $kategorite = $pdo->query(
     <div class="evs-wrapper">
       <div class="evs-header">
         <div>
-          <span class="evs-label">
+          <span class="evs-label reveal reveal-up">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             Eventet e fundit
           </span>
-          <h2>Mos humb <span class="evs-accent">mundësinë</span></h2>
+          <h2 class="reveal reveal-up reveal-d1">Mos humb <span class="evs-accent">mundësinë</span></h2>
         </div>
         <a href="/TiranaSolidare/views/events.php" class="btn_secondary">Shiko të gjitha <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       </div>
@@ -331,12 +336,12 @@ $kategorite = $pdo->query(
     <div class="cv-wrapper">
       <div class="cv-header">
         <div class="cv-header__left">
-          <span class="cv-label">
+          <span class="cv-label reveal reveal-up">
             <span class="cv-label__pulse"></span>
             Zërat e komunitetit
           </span>
-          <h2>Dikush ka nevojë <br>për <span class="cv-accent">ty sot</span></h2>
-          <p class="cv-subtitle">Lexo kërkesat dhe ofertat e komunitetit. Çdo ndihmë e vogël krijon ndryshim.</p>
+          <h2 class="reveal reveal-up reveal-d1">Dikush ka nevojë <br>për <span class="cv-accent">ty sot</span></h2>
+          <p class="cv-subtitle reveal reveal-up reveal-d2">Lexo kërkesat dhe ofertat e komunitetit. Çdo ndihmë e vogël krijon ndryshim.</p>
         </div>
         <div class="cv-header__right">
           <div class="cv-stats">
@@ -363,7 +368,7 @@ $kategorite = $pdo->query(
 
       <!-- Featured Spotlight -->
       <?php $feat = $kerkesat[0]; ?>
-      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>">
+      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'Ofertë' ? 'offer' : 'request' ?> reveal reveal-up">
         <div class="cv-spotlight__deco" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.07">
             <?php if ($feat['tipi'] === 'Kërkesë'): ?>
@@ -454,6 +459,6 @@ $kategorite = $pdo->query(
 
 <?php include 'components/footer.php' ?>
 
-<script src="assets/scripts/main.js?v=20260321b"></script>
+<script src="assets/scripts/main.js?v=20260321d"></script>
 </body>
 </html>

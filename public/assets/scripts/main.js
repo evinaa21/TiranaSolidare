@@ -373,3 +373,85 @@ document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);
     slide();
   }
 })();
+
+
+/* ===========================
+   SCROLL-REVEAL ENGINE
+   =========================== */
+(function () {
+  var reveals = document.querySelectorAll('.reveal');
+  if (!reveals.length) return;
+
+  // Assign stagger index to children of .reveal-stagger containers
+  document.querySelectorAll('.reveal-stagger').forEach(function (parent) {
+    var children = parent.querySelectorAll('.reveal');
+    children.forEach(function (child, i) {
+      child.style.setProperty('--reveal-i', i);
+    });
+  });
+
+  if ('IntersectionObserver' in window) {
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.08,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    reveals.forEach(function (el) {
+      revealObserver.observe(el);
+    });
+  } else {
+    // Fallback: show everything
+    reveals.forEach(function (el) {
+      el.classList.add('revealed');
+    });
+  }
+})();
+
+
+/* ===========================
+   SMOOTH SECTION PARALLAX
+   =========================== */
+(function () {
+  var hero = document.getElementById('main');
+  if (!hero) return;
+
+  var heroBlob = hero.querySelector('.hero-blob-tr');
+  var ticking = false;
+
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      var scrollY = window.pageYOffset;
+      if (scrollY < window.innerHeight && heroBlob) {
+        heroBlob.style.transform = 'translateY(' + (scrollY * 0.15) + 'px)';
+      }
+      ticking = false;
+    });
+  }, { passive: true });
+})();
+
+
+/* ===========================
+   MOBILE TOUCH FEEDBACK
+   =========================== */
+(function () {
+  if (!('ontouchstart' in window)) return;
+
+  var touchCards = document.querySelectorAll('.sf-card, .kbtn-card, .cv-card, .cv-spotlight');
+  touchCards.forEach(function (card) {
+    card.addEventListener('touchstart', function () {
+      this.style.transform = 'scale(0.98)';
+    }, { passive: true });
+    card.addEventListener('touchend', function () {
+      this.style.transform = '';
+    }, { passive: true });
+  });
+})();

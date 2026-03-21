@@ -2413,3 +2413,480 @@
     width: 85%;
   }
 }
+
+
+/* ═══════════════════════════════════════════
+   SCROLL-REVEAL ANIMATION SYSTEM
+   ═══════════════════════════════════════════ */
+
+/* Base: all revealable elements start invisible */
+.reveal {
+  opacity: 0;
+  will-change: transform, opacity;
+  transition:
+    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.revealed {
+  opacity: 1;
+  transform: none !important;
+}
+
+/* Slide up */
+.reveal-up {
+  transform: translateY(60px);
+}
+
+/* Slide from left */
+.reveal-left {
+  transform: translateX(-60px);
+}
+
+/* Slide from right */
+.reveal-right {
+  transform: translateX(60px);
+}
+
+/* Scale up */
+.reveal-scale {
+  transform: scale(0.9);
+}
+
+/* Stagger children */
+.reveal-stagger > .reveal {
+  transition-delay: calc(var(--reveal-i, 0) * 0.1s);
+}
+
+/* Delay utilities */
+.reveal-d1 { transition-delay: 0.1s; }
+.reveal-d2 { transition-delay: 0.2s; }
+.reveal-d3 { transition-delay: 0.3s; }
+.reveal-d4 { transition-delay: 0.4s; }
+.reveal-d5 { transition-delay: 0.5s; }
+
+
+/* ═══════════════════════════════════════════
+   PREMIUM MOBILE HERO ENHANCEMENTS
+   ═══════════════════════════════════════════ */
+
+/* Floating scroll indicator on hero */
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 3;
+  animation: fadeSlideUp 1s ease-out 1.2s both;
+}
+
+.hero-scroll-hint span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(0,50,41,0.35);
+}
+
+.hero-scroll-hint .scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, rgba(0,113,93,0.4), transparent);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-scroll-hint .scroll-line::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(180deg, transparent, #00715D);
+  animation: scrollLineMove 2s ease-in-out infinite;
+}
+
+@keyframes scrollLineMove {
+  0% { top: -50%; }
+  100% { top: 120%; }
+}
+
+/* Mobile hero floating accent shapes */
+@media screen and (max-width: 1050px) {
+  #main {
+    padding-block: 140px 100px;
+    min-height: 85vh;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,113,93,0.04) 0%, transparent 60%),
+      #ffffff;
+  }
+  
+  #main-content {
+    gap: 8px;
+  }
+  
+  #main-content h1 {
+    font-size: calc(2.8rem * var(--font-coeff));
+    letter-spacing: -0.5px;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.05rem;
+    max-width: 480px;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  #main {
+    padding-block: 120px 90px;
+    min-height: auto;
+  }
+  
+  #main-content h1 {
+    font-size: clamp(1.8rem, 8vw, 2.4rem);
+    line-height: 1.2;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  
+  .hero-scroll-hint {
+    bottom: 24px;
+  }
+}
+
+/* Premium mobile stats redesign */
+@media screen and (max-width: 500px) {
+  #main-stats {
+    grid-template-columns: 1fr;
+    padding: 0;
+    gap: 0;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  
+  #main-stats:before {
+    border-radius: 20px;
+  }
+  
+  #main-stats span {
+    padding: 20px 24px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  
+  #main-stats span::after {
+    display: none;
+  }
+  
+  #main-stats span:not(:last-child) {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  #main-stats span b {
+    font-size: 2rem;
+    min-width: 60px;
+  }
+  
+  #main-stats span i {
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   PREMIUM SECTION TRANSITIONS
+   ═══════════════════════════════════════════ */
+
+/* Smooth section connectors for visual flow */
+#regjistrohu {
+  margin-top: -1px;
+}
+
+/* Si Funksionon cards - staggered mobile */
+@media (max-width: 520px) {
+  #si-funksionon .sf-card {
+    transform: none;
+  }
+}
+
+/* Categories premium mobile */
+@media (max-width: 600px) {
+  .kbtn-header {
+    margin-bottom: 40px;
+  }
+  
+  .kbtn-card {
+    min-height: 300px;
+  }
+  
+  .kbtn-card-0 {
+    min-height: 380px;
+  }
+  
+  .kbtn-dock-text h3 {
+    font-size: 1.15rem;
+  }
+  
+  .kbtn-top-badge {
+    top: 16px;
+    right: 16px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+}
+
+/* Events carousel mobile polish */
+@media (max-width: 500px) {
+  .evs-card__body {
+    padding: 16px;
+  }
+  
+  .evs-card__title {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  .evs-card__badges {
+    margin-bottom: 10px;
+  }
+  
+  .evs-badge {
+    padding: 4px 10px;
+    font-size: 0.7rem;
+  }
+  
+  .evs-card__meta {
+    font-size: 0.78rem;
+    gap: 16px;
+  }
+}
+
+/* Requests section mobile polish */
+@media (max-width: 500px) {
+  .cv-card__title {
+    font-size: 1rem;
+  }
+  
+  .cv-card__desc {
+    font-size: 0.82rem;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  
+  .cv-card__bottom {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   PREMIUM MICRO-INTERACTIONS
+   ═══════════════════════════════════════════ */
+
+/* Smooth focus states for accessibility */
+.btn_primary:focus-visible,
+.btn_secondary:focus-visible,
+.kbtn-card:focus-visible,
+.evs-nav:focus-visible,
+.cv-card:focus-visible {
+  outline: 2px solid #00715D;
+  outline-offset: 3px;
+}
+
+/* Subtle hover glow on section labels */
+.sf-label:hover,
+.kbtn-label:hover,
+.evs-label:hover,
+.cv-label:hover,
+.regjistrohu-label:hover {
+  transform: translateY(-1px);
+  transition: transform 0.3s ease;
+}
+
+/* Parallax-ready sections */
+.parallax-bg {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* Premium "Si Funksionon" connecting line on desktop */
+@media (min-width: 901px) {
+  .sf-grid {
+    position: relative;
+  }
+  
+  .sf-card {
+    position: relative;
+  }
+}
+
+/* ── Smooth page entrance ── */
+.page-home main {
+  animation: pageEnter 0.6s ease-out both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Accent text shimmer on hover ── */
+.regjistrohu-accent {
+  position: relative;
+  display: inline-block;
+}
+
+.sf-accent,
+.kbtn-accent,
+.evs-accent,
+.cv-accent {
+  position: relative;
+}
+
+/* ── Register section CTA pulse ── */
+#regjistrohu .btn_primary {
+  position: relative;
+  overflow: hidden;
+}
+
+#regjistrohu .btn_primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+#regjistrohu .btn_primary:hover::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* ── Better mobile touch targets ── */
+@media (max-width: 768px) {
+  .btn_primary {
+    padding: 16px 28px;
+    font-size: 0.95rem;
+  }
+  
+  .cv-cta-btn {
+    padding: 15px 24px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .cv-spotlight__link {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 24px;
+  }
+}
+
+/* ── Mobile smooth horizontal scroll snap ── */
+@media (max-width: 500px) {
+  .cv-gallery {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 12px;
+  }
+  
+  .cv-gallery::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .cv-card {
+    scroll-snap-align: center;
+  }
+}
+
+/* ── Regjistrohu accent color ── */
+.regjistrohu-accent {
+  color: #E17254;
+  position: relative;
+}
+
+.regjistrohu-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: rgba(225,114,84,0.15);
+  border-radius: 4px;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.revealed .regjistrohu-accent::after,
+.regjistrohu-accent.animated::after {
+  transform: scaleX(1);
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE-FIRST SECTION SPACING
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  section {
+    padding: 80px clamp(16px, 5%, 5%);
+  }
+  
+  #kategorite {
+    padding: 80px 16px;
+  }
+  
+  h2 {
+    font-size: calc(2.2rem * var(--font-coeff));
+  }
+  
+  /* Better register section mobile */
+  #regjistrohu-content h2 {
+    font-size: clamp(1.6rem, 6vw, 2.2rem);
+  }
+  
+  #regjistrohu-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+}
+
+@media (max-width: 400px) {
+  section {
+    padding: 60px 14px;
+  }
+  
+  h1 {
+    font-size: calc(2.5rem * var(--font-coeff));
+  }
+  
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 6px 14px;
+  }
+}
