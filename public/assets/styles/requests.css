@@ -1099,6 +1099,31 @@ body.page-events .rq-card__title {
   border-radius: 24px;
 }
 
+@media (max-width: 768px) {
+  .rq-cta {
+    padding: 32px 20px;
+    margin: 32px 16px 32px;
+    border-radius: 16px;
+    max-width: none;
+  }
+  .rq-cta h2 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+  }
+  .rq-cta p {
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+  }
+  .rq-cta .btn_primary {
+    font-size: 0.88rem;
+    padding: 12px 28px;
+  }
+  .rq-blob--cta {
+    width: 300px;
+    height: 300px;
+  }
+}
+
 /* Calendar section heading */
 .rq-calendar-section {
   margin-top: 48px;
@@ -2330,6 +2355,97 @@ body.page-requests .rq-sidebar-trust__icon {
   border-left: 1.5px solid var(--rq-border);
   line-height: 1;
   white-space: nowrap;
+}
+
+/* ── Week Strip Responsive ── */
+@media (max-width: 768px) {
+  .rq-week-strip {
+    padding: 0 10px;
+    margin-top: 8px;
+  }
+
+  .rq-week-strip__inner {
+    max-width: 100%;
+    padding: 10px 8px;
+    gap: 0;
+    border-radius: 12px;
+    overflow: visible;
+    position: relative;
+  }
+
+  .rq-week-strip__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    z-index: 2;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  }
+
+  #week-prev { left: -13px; }
+  #week-next { right: -13px; }
+
+  .rq-week-strip__nav svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .rq-week-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .rq-week-day {
+    min-width: 0;
+    padding: 6px 0;
+    border-radius: 8px;
+    gap: 2px;
+  }
+
+  .rq-week-day__name {
+    font-size: 0.55rem;
+    letter-spacing: 0;
+  }
+
+  .rq-week-day__num {
+    font-size: 0.88rem;
+  }
+
+  .rq-week-day__dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  .rq-week-strip__month {
+    display: none;
+  }
+
+  .rq-week-strip__today-btn,
+  .rq-week-strip__all-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .rq-week-strip__inner {
+    padding: 8px 6px;
+  }
+
+  .rq-week-day__name {
+    font-size: 0.5rem;
+  }
+
+  .rq-week-day__num {
+    font-size: 0.8rem;
+  }
 }
 
 

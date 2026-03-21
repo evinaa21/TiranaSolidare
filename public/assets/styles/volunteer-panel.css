@@ -3,6 +3,123 @@
    Same visual language as public pages (pages.css, requests.css)
    ═══════════════════════════════════════════════════════ */
 
+/* ── Hero Panel Override ──────────────────────────── */
+
+.vp-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 140px clamp(20px, 5%, 5%) 80px;
+  background: linear-gradient(135deg, #003229 0%, #00715D 50%, #009e7e 100%);
+}
+
+.vp-hero__decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vp-hero__circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.vp-hero__circle--1 {
+  width: 300px; height: 300px;
+  top: -80px; right: -60px;
+}
+
+.vp-hero__circle--2 {
+  width: 180px; height: 180px;
+  bottom: -40px; left: 10%;
+  border-color: rgba(255,255,255,0.04);
+}
+
+.vp-hero__circle--3 {
+  width: 120px; height: 120px;
+  top: 30%; right: 20%;
+  background: rgba(255,255,255,0.02);
+  border: none;
+}
+
+.vp-hero__inner {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  position: relative;
+  z-index: 2;
+}
+
+.vp-hero__avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 3px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.vp-hero__avatar--img {
+  object-fit: cover;
+}
+
+.vp-hero__text {
+  text-align: left;
+}
+
+.vp-hero__text .page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vp-hero__text h1 {
+  text-align: left;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  margin: 12px 0 8px;
+}
+
+.vp-hero__text p {
+  text-align: left;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+  .vp-hero {
+    padding: 120px 20px 60px;
+  }
+  .vp-hero__inner {
+    flex-direction: column;
+    text-align: center;
+  }
+  .vp-hero__avatar {
+    width: 72px; height: 72px;
+    font-size: 1.6rem;
+  }
+  .vp-hero__text {
+    text-align: center;
+  }
+  .vp-hero__text h1 {
+    text-align: center;
+    font-size: 1.5rem;
+  }
+  .vp-hero__text p {
+    text-align: center;
+  }
+}
+
 /* ── Stats Bar ─────────────────────────────────────── */
 
 .vp-stats-section {

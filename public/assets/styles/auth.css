@@ -162,6 +162,12 @@
   background: rgba(0,113,93,0.08);
 }
 
+/* Hide browser-native password reveal (Edge / Chrome) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none;
+}
+
 .auth-password-toggle:hover {
   background: rgba(0,113,93,0.09);
 }

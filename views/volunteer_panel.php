@@ -87,7 +87,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260321a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
   <?= csrf_meta() ?>
@@ -99,11 +99,26 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
 <main>
 
 <!-- ─── HERO ─── -->
-<section class="page-hero page-hero--green">
-  <div class="page-hero__inner">
-    <span class="page-badge">Vullnetar</span>
-    <h1>Mirë se vini, <?= $userEmri ?>!</h1>
-    <p>Menaxhoni profilin, aplikimet dhe kërkesat tuaja nga paneli personal.</p>
+<section class="page-hero page-hero--green vp-hero">
+  <div class="vp-hero__decor">
+    <div class="vp-hero__circle vp-hero__circle--1"></div>
+    <div class="vp-hero__circle vp-hero__circle--2"></div>
+    <div class="vp-hero__circle vp-hero__circle--3"></div>
+  </div>
+  <div class="vp-hero__inner">
+    <?php if (!empty($user['profile_picture'])): ?>
+      <img src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-hero__avatar vp-hero__avatar--img">
+    <?php else: ?>
+      <div class="vp-hero__avatar"><?= $userInitial ?></div>
+    <?php endif; ?>
+    <div class="vp-hero__text">
+      <span class="page-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        <?= $userRoli ?>
+      </span>
+      <h1>Mirë se vini, <?= $userEmri ?>!</h1>
+      <p>Menaxhoni profilin, aplikimet dhe kërkesat tuaja nga paneli personal.</p>
+    </div>
   </div>
 </section>
 
