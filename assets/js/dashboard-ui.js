@@ -26,6 +26,9 @@ function switchPanel(panelId, btn) {
         panel.style.animation = '';
     }
     if (btn) btn.classList.add('active');
+
+    // Ruaj tab-in aktiv në URL
+      location.hash = panelId;
 }
 
 
@@ -728,7 +731,7 @@ window.loadHelpRequests = async function (page = 1) {
         const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
         const statClass = r.statusi === 'Open' ? 'open' : 'closed';
 
-        html += `<tr>
+        html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
             <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
@@ -736,10 +739,12 @@ window.loadHelpRequests = async function (page = 1) {
             <td>${formatDate(r.krijuar_me)}</td>
             <td>
                 <div class="db-table__actions">
-                    <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
-                    ${r.statusi === 'Open' ?
-                        `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` : ''}
-                </div>
+    <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
+${r.statusi === 'Open' ?
+    `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` :
+    `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
+    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
+</div>
             </td>
         </tr>`;
     });
@@ -760,6 +765,12 @@ window.closeRequest = async function (id) {
     loadHelpRequests();
 };
 
+window.deleteRequest = async function (id) {
+    if (!confirm('Fshi këtë kërkesë?')) return;
+    const json = await apiCall(`help_requests.php?action=delete&id=${id}`, 'DELETE');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    loadHelpRequests();
+};
 
 // ═══════════════════════════════════════════════════════
 //  OVERRIDE: Notifications
@@ -968,4 +979,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNotifications();
         loadHelpRequests();
     }, 100);
+
+        // Rikthe tab-in nga URL pas refresh
+    if (location.hash) {
+        const panelId = location.hash.replace('#', '');
+        const navBtn = document.querySelector(`[data-panel="${panelId}"]`);
+        if (document.getElementById(`panel-${panelId}`)) {
+            switchPanel(panelId, navBtn);
+        }
+     }
 });
