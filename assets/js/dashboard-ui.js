@@ -187,10 +187,12 @@ window.loadAdminEvents = async function (page = 1) {
     // Gather filter values
     const filterSearch = document.getElementById('admin-ev-filter-search')?.value.trim() || '';
     const filterCategory = document.getElementById('admin-ev-filter-category')?.value || '';
+    const filterDateRange = document.getElementById('admin-ev-filter-daterange')?.value || '';
 
     const params = new URLSearchParams({ action: 'list', page, limit: 10 });
     if (filterSearch) params.set('search', filterSearch);
     if (filterCategory) params.set('category', filterCategory);
+    if (filterDateRange) params.set('dateRange', filterDateRange);
 
     const json = await apiCall(`events.php?${params}`);
     if (!json.success) return;
@@ -203,8 +205,14 @@ window.loadAdminEvents = async function (page = 1) {
         <select id="admin-ev-filter-category" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
             <option value="">Të gjitha kategorite</option>
         </select>
+        <select id="admin-ev-filter-daterange" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
+            <option value=""${!filterDateRange ? ' selected' : ''}>Të gjitha datat</option>
+            <option value="week"${filterDateRange === 'week' ? ' selected' : ''}>Kjo javë</option>
+            <option value="month"${filterDateRange === 'month' ? ' selected' : ''}>Ky muaj</option>
+            <option value="past3"${filterDateRange === 'past3' ? ' selected' : ''}>3 muajt e fundit</option>
+        </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAdminEvents(1)">Filtro</button>
-        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';document.getElementById('admin-ev-filter-daterange').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
     let html = filterHtml;
@@ -222,10 +230,12 @@ window.loadAdminEvents = async function (page = 1) {
             <td>${formatDate(ev.data)}</td>
             <td>
                 <div class="db-table__actions">
-                    ${isPast ? '' : `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>`}
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-                    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
-                </div>
+    ${!isPast 
+        ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
+        : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
+    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+</div>
             </td>
         </tr>`;
     });
@@ -313,12 +323,38 @@ window.loadUsers = async function (page = 1) {
     const container = document.getElementById('admin-user-list');
     if (!container) return;
 
-    const json = await apiCall(`users.php?action=list&page=${page}&limit=15`);
+    // Gather filter values
+    const filterSearch = document.getElementById('admin-usr-filter-search')?.value.trim() || '';
+    const filterRole = document.getElementById('admin-usr-filter-role')?.value || '';
+    const filterStatus = document.getElementById('admin-usr-filter-status')?.value || '';
+
+    const params = new URLSearchParams({ action: 'list', page, limit: 15 });
+    if (filterSearch) params.set('search', filterSearch);
+    if (filterRole) params.set('roli', filterRole);
+    if (filterStatus) params.set('statusi', filterStatus);
+
+    const json = await apiCall(`users.php?${params}`);
     if (!json.success) return;
 
     const { users, total, total_pages } = json.data;
 
-    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> përdorues</div>`;
+    let html = `<div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+        <input id="admin-usr-filter-search" type="text" placeholder="Kërko emër ose email…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadUsers(1)">
+        <select id="admin-usr-filter-role" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
+            <option value=""${!filterRole ? ' selected' : ''}>Të gjitha rolet</option>
+            <option value="Admin"${filterRole === 'Admin' ? ' selected' : ''}>Admin</option>
+            <option value="Vullnetar"${filterRole === 'Vullnetar' ? ' selected' : ''}>Vullnetar</option>
+        </select>
+        <select id="admin-usr-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
+            <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
+            <option value="Aktiv"${filterStatus === 'Aktiv' ? ' selected' : ''}>Aktiv</option>
+            <option value="Bllokuar"${filterStatus === 'Bllokuar' ? ' selected' : ''}>Bllokuar</option>
+            <option value="Çaktivizuar"${filterStatus === 'Çaktivizuar' ? ' selected' : ''}>Çaktivizuar</option>
+        </select>
+        <button class="db-btn db-btn--primary db-btn--sm" onclick="loadUsers(1)">Filtro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-usr-filter-search').value='';document.getElementById('admin-usr-filter-role').value='';document.getElementById('admin-usr-filter-status').value='';loadUsers(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+    </div>`;
+    html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> përdorues</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
         + '<th>ID</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th>'
         + '</tr></thead><tbody>';

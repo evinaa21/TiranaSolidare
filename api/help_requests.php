@@ -376,7 +376,9 @@ switch ($action) {
                     FROM Kerkesa_per_Ndihme kn
                     JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
                     $whereSQL
-                    ORDER BY kn.krijuar_me DESC
+                    ORDER BY 
+                    CASE WHEN kn.statusi = 'Open' THEN 0 ELSE 1 END ASC,
+                    kn.krijuar_me DESC
                     LIMIT ? OFFSET ?";
 
             $params[] = $pagination['limit'];

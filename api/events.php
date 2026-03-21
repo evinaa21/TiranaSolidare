@@ -49,6 +49,16 @@ switch ($action) {
             $params[] = $dateTo;
         }
 
+        // Date range preset filter
+        $dateRange = $_GET['dateRange'] ?? null;
+        if ($dateRange === 'week') {
+            $where[] = 'e.data >= DATE_SUB(CURDATE(), INTERVAL (WEEKDAY(CURDATE())) DAY) AND e.data < DATE_ADD(DATE_SUB(CURDATE(), INTERVAL (WEEKDAY(CURDATE())) DAY), INTERVAL 7 DAY)';
+        } elseif ($dateRange === 'month') {
+            $where[] = 'e.data >= DATE_FORMAT(CURDATE(), "%Y-%m-01") AND e.data < DATE_ADD(DATE_FORMAT(CURDATE(), "%Y-%m-01"), INTERVAL 1 MONTH)';
+        } elseif ($dateRange === 'past3') {
+            $where[] = 'e.data >= DATE_SUB(DATE_FORMAT(CURDATE(), "%Y-%m-01"), INTERVAL 3 MONTH) AND e.data <= CURDATE()';
+        }
+
         $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
         // Total count
