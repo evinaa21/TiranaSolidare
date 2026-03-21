@@ -414,25 +414,30 @@ window.openUserDetail = async function (userId) {
             </div>
         </div>
 
-        <!-- Stats Row -->
-        <div class="ud-stats">
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_aplikime}</div>
-                <div class="ud-stat-card__label">Aplikime</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_kerkesa}</div>
-                <div class="ud-stat-card__label">Kërkesa</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${u.total_evente || 0}</div>
-                <div class="ud-stat-card__label">Evente</div>
-            </div>
-            <div class="ud-stat-card">
-                <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
-                <div class="ud-stat-card__label">Regjistruar më</div>
-            </div>
-        </div>
+<!-- Stats Row -->
+<div class="ud-stats">
+    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+        <div class="ud-stat-card__value">${u.total_aplikime}</div>
+        <div class="ud-stat-card__label">Aplikime</div>
+        <div class="ud-stat-card__hint">Shiko →</div>
+    </div>
+    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+        <div class="ud-stat-card__value">${u.total_kerkesa}</div>
+        <div class="ud-stat-card__label">Kërkesa</div>
+        <div class="ud-stat-card__hint">Shiko →</div>
+    </div>
+    <div class="ud-stat-card">
+        <div class="ud-stat-card__value">${u.total_evente || 0}</div>
+        <div class="ud-stat-card__label">Evente</div>
+    </div>
+    <div class="ud-stat-card">
+        <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
+        <div class="ud-stat-card__label">Regjistruar më</div>
+    </div>
+</div>
+
+<!-- User Activity Section (injected by click) -->
+<div id="ud-activity-section"></div>
 
         ${isDeactivated && u.deaktivizuar_me ? `
             <div class="ud-deactivation-notice">
@@ -499,6 +504,92 @@ window.openUserDetail = async function (userId) {
         </div>
     `;
 };
+// ── User Activity: shfaq aplikimet ose kërkesat e një përdoruesi kur shtypen stat cards ──
+
+window.loadUserApplications = async function(userId, userName) {
+    showUserActivityModal('Duke ngarkuar aplikimet…');
+
+const json = await apiCall(`applications.php?action=by_user&id=${userId}`);
+if (!json.success) return;
+const apps = json.data.applications;
+
+    let body = '';
+    if (apps.length === 0) {
+        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka aplikime.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
+        apps.forEach(a => {
+            const statusClass = a.statusi === 'Pranuar' ? 'active' : a.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            body += `<tr>
+                <td><strong>${escapeHtml(a.eventi_titulli)}</strong></td>
+                <td>${formatDate(a.eventi_data)}</td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.statusi)}</span></td>
+                <td>${formatDate(a.aplikuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    updateUserActivityModal(`Aplikimet e ${escapeHtml(userName)}`, body);
+};
+
+window.loadUserRequests = async function(userId, userName) {
+    showUserActivityModal('Duke ngarkuar kërkesat…');
+
+    const json = await apiCall(`help_requests.php?action=list&user_id=${userId}&limit=100`);
+    if (!json.success) return;
+
+    const requests = json.data.requests;
+
+    let body = '';
+    if (requests.length === 0) {
+        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka kërkesa.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
+        requests.forEach(r => {
+            const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
+            const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+            body += `<tr>
+                <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
+                <td>${formatDate(r.krijuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    updateUserActivityModal(`Kërkesat e ${escapeHtml(userName)}`, body);
+};
+
+function showUserActivityModal(loadingText) {
+    const existing = document.getElementById('ud-activity-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'ud-activity-modal';
+    modal.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);`;
+    modal.innerHTML = `
+        <div id="ud-activity-modal-inner" style="background:#fff;border-radius:16px;width:100%;max-width:800px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e4e8ee;position:sticky;top:0;background:#fff;z-index:1;">
+                <h3 id="ud-activity-modal-title" style="margin:0;font-family:'Bitter',serif;font-size:1.1rem;font-weight:700;color:#003229;">Duke ngarkuar…</h3>
+                <button onclick="document.getElementById('ud-activity-modal').remove()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:#6b7280;line-height:1;">×</button>
+            </div>
+            <div id="ud-activity-modal-body" style="padding:20px 24px;">
+                <div class="db-loading">${loadingText}</div>
+            </div>
+        </div>`;
+
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+}
+
+function updateUserActivityModal(title, bodyHtml) {
+    const titleEl = document.getElementById('ud-activity-modal-title');
+    const bodyEl = document.getElementById('ud-activity-modal-body');
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.innerHTML = bodyHtml;
+}
 
 
 // Change role from detail panel

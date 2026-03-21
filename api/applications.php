@@ -271,6 +271,30 @@ switch ($action) {
         json_success(['message' => 'Aplikimi u tërhoq me sukses.']);
         break;
 
+        // ── APPLICATIONS BY USER (Admin) ───────────────
+case 'by_user':
+    require_method('GET');
+    require_admin();
+    $targetId = (int) ($_GET['id'] ?? 0);
+
+    if ($targetId <= 0) {
+        json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data,
+                e.vendndodhja AS eventi_vendndodhja
+         FROM Aplikimi a
+         JOIN Eventi e ON e.id_eventi = a.id_eventi
+         WHERE a.id_perdoruesi = ?
+         ORDER BY a.aplikuar_me DESC"
+    );
+    $stmt->execute([$targetId]);
+    $applications = $stmt->fetchAll();
+
+    json_success(['applications' => $applications]);
+    break;
+
     default:
         json_error('Veprim i panjohur. Përdorni: list, by_event, apply, update_status, withdraw.', 400);
 }
