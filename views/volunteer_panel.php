@@ -342,7 +342,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
                 <td><?= date('d M Y, H:i', strtotime($app['eventi_data'])) ?></td>
                 <td>
                   <span class="vp-badge vp-badge--<?= $app['statusi'] === 'Pranuar' ? 'success' : ($app['statusi'] === 'Refuzuar' ? 'danger' : 'pending') ?>">
-                    <?= htmlspecialchars($app['statusi']) ?>
+                     <?= htmlspecialchars($app['statusi'] ?? '—') ?>
                   </span>
                 </td>
                 <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>
@@ -397,7 +397,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
                     </td>
                     <td>
                       <span class="vp-badge vp-badge--<?= $app['statusi'] === 'Pranuar' ? 'success' : ($app['statusi'] === 'Refuzuar' ? 'danger' : 'pending') ?>">
-                        <?= htmlspecialchars($app['statusi']) ?>
+                         <?= htmlspecialchars($app['statusi'] ?? '—') ?>
                       </span>
                     </td>
                     <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>

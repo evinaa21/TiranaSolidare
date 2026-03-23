@@ -457,7 +457,7 @@ window.openUserDetail = async function (userId) {
 <div class="ud-stats">
     <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
         <div class="ud-stat-card__value">${u.total_aplikime}</div>
-        <div class="ud-stat-card__label">Aplikime</div>
+        <div class="ud-stat-card__label">Aplikime Eventesh</div>
         <div class="ud-stat-card__hint">Shiko →</div>
     </div>
     <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
@@ -465,9 +465,10 @@ window.openUserDetail = async function (userId) {
         <div class="ud-stat-card__label">Kërkesa</div>
         <div class="ud-stat-card__hint">Shiko →</div>
     </div>
-    <div class="ud-stat-card">
-        <div class="ud-stat-card__value">${u.total_evente || 0}</div>
-        <div class="ud-stat-card__label">Evente</div>
+    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequestApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+        <div class="ud-stat-card__value">${u.total_aplikime_kerkesa || 0}</div>
+        <div class="ud-stat-card__label">Aplikime Kërkesash</div>
+        <div class="ud-stat-card__hint">Shiko →</div>
     </div>
     <div class="ud-stat-card">
         <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
@@ -572,6 +573,35 @@ const apps = json.data.applications;
     updateUserActivityModal(`Aplikimet e ${escapeHtml(userName)}`, body);
 };
 
+window.loadUserRequestApplications = async function(userId, userName) {
+    showUserActivityModal('Duke ngarkuar aplikimet e kërkesave…');
+
+    const json = await apiCall(`help_requests.php?action=by_user&id=${userId}`);
+    if (!json.success) return;
+    const apps = json.data.applications;
+
+    let body = '';
+    if (apps.length === 0) {
+        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka aplikime për kërkesa.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Kërkesa</th><th>Tipi</th><th>Pronari</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
+        apps.forEach(a => {
+            const statusClass = a.aplikimi_statusi === 'Pranuar' ? 'active' : a.aplikimi_statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            const tipClass = a.tipi === 'Kërkesë' ? 'request' : a.tipi === 'Ofertë' ? 'offer' : 'vol';
+            body += `<tr>
+                <td><strong>${escapeHtml(a.titulli)}</strong></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(a.tipi)}</span></td>
+                <td>${escapeHtml(a.pronari_emri)}</td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.aplikimi_statusi)}</span></td>
+                <td>${formatDate(a.aplikuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    updateUserActivityModal(`Aplikimet e kërkesave — ${escapeHtml(userName)}`, body);
+};
+
 window.loadUserRequests = async function(userId, userName) {
     showUserActivityModal('Duke ngarkuar kërkesat…');
 
@@ -591,7 +621,7 @@ window.loadUserRequests = async function(userId, userName) {
             body += `<tr>
                 <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
                 <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
-                <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
+                <td><span class="db-badge db-badge--${statClass}">${escapeHtml(r.statusi)}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
             </tr>`;
         });
@@ -636,6 +666,14 @@ window.changeUserRoleFromDetail = async function (userId) {
     const sel = document.getElementById('ud-role-select');
     if (!sel) return;
     const newRole = sel.value;
+
+    // Double confirmation for role changes
+    const msg = newRole === 'Admin'
+        ? 'Jeni të sigurt? Ky vullnetar do të fitojë akses admin të plotë.'
+        : 'Jeni të sigurt? Ky admin do të humbasë privilegjet administrative.';
+
+    if (!confirm(msg)) return;
+    if (!confirm('Konfirmoni përsëri: Dëshironi vërtet të ndryshoni rolin?')) return;
 
     const json = await apiCall(`users.php?action=change_role&id=${userId}`, 'PUT', { roli: newRole });
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');

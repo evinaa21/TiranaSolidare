@@ -641,6 +641,37 @@ switch ($action) {
         }
         break;
 
+    // ── APPLICATIONS BY USER (Admin) ────────────────
+    case 'by_user':
+        require_method('GET');
+        require_admin();
+        $targetId = (int) ($_GET['id'] ?? 0);
+
+        if ($targetId <= 0) {
+            json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
+        }
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT ak.id_aplikimi_kerkese, ak.id_kerkese_ndihme, ak.id_perdoruesi,
+                        ak.statusi AS aplikimi_statusi, ak.aplikuar_me,
+                        kn.titulli, kn.tipi, kn.statusi AS kerkesa_statusi,
+                        kn.krijuar_me AS kerkesa_krijuar_me,
+                        p.emri AS pronari_emri  
+                 FROM Aplikimi_Kerkese ak
+                 JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
+                 JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                 WHERE ak.id_perdoruesi = ?
+                 ORDER BY ak.aplikuar_me DESC"
+            );
+            $stmt->execute([$targetId]);
+            json_success(['applications' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            error_log('help_requests by_user: ' . $e->getMessage());
+            json_error('Gabim gjatë marrjes së aplikimeve.', 500);
+        }
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete, apply, my_applications, applicants, contact_applicant.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete, apply, my_applications, applicants, contact_applicant, by_user.', 400);
 }

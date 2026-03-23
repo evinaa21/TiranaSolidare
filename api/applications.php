@@ -281,6 +281,7 @@ case 'by_user':
         json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
     }
 
+try {
     $stmt = $pdo->prepare(
         "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data,
                 e.vendndodhja AS eventi_vendndodhja
@@ -290,10 +291,12 @@ case 'by_user':
          ORDER BY a.aplikuar_me DESC"
     );
     $stmt->execute([$targetId]);
-    $applications = $stmt->fetchAll();
-
-    json_success(['applications' => $applications]);
-    break;
+    json_success(['applications' => $stmt->fetchAll()]);
+} catch (\Exception $e) {
+    error_log('applications by_user: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    json_error('Gabim gjatë marrjes së aplikimeve.', 500);
+}
+break;
 
     default:
         json_error('Veprim i panjohur. Përdorni: list, by_event, apply, update_status, withdraw.', 400);

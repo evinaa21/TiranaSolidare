@@ -150,6 +150,15 @@ switch ($action) {
         $user['total_kerkesa']     = (int) $helpCount->fetchColumn();
         $user['total_evente']      = (int) $eventCount->fetchColumn();
 
+        // Count help request applications by this user
+        try {
+            $reqAppCount = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?');
+            $reqAppCount->execute([$id]);
+            $user['total_aplikime_kerkesa'] = (int) $reqAppCount->fetchColumn();
+        } catch (\Exception $e) {
+            $user['total_aplikime_kerkesa'] = 0;
+        }
+
         json_success($user);
         break;
 
