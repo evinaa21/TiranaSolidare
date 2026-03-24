@@ -543,6 +543,6 @@ $profileColorTheme = $colorResolved['theme'];
 </main>
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
-<script src="/TiranaSolidare/assets/js/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
 </body>
 </html>
