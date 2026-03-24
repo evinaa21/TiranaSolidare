@@ -15,7 +15,7 @@ $isOwner = $isLoggedIn && (int) $_SESSION['user_id'] === $userId;
 
 // Fetch profile data
 $stmt = $pdo->prepare(
-    "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, krijuar_me
+    "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, profile_color, krijuar_me
      FROM Perdoruesi
      WHERE id_perdoruesi = ? AND statusi_llogarise = 'Aktiv'"
 );
@@ -36,25 +36,20 @@ if (!(int) $profile['profile_public'] && !$isOwner) {
 
 $recentEvents = [];
 $recentRequests = [];
+$earnedBadges = [];
 $eventCount = $requestCount = $helpAppCount = 0;
 
 if (!$privateProfile) {
-    // Stats
-    $acceptedEvents = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
-    $acceptedEvents->execute([$userId]);
-    $eventCount = (int) $acceptedEvents->fetchColumn();
-
-    $helpRequests = $pdo->prepare('SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?');
-    $helpRequests->execute([$userId]);
-    $requestCount = (int) $helpRequests->fetchColumn();
-
-    $helpApps = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
-    $helpApps->execute([$userId]);
-    $helpAppCount = (int) $helpApps->fetchColumn();
+    // Stats and earned badges
+    $badgeInfo = ts_get_user_profile_badges($pdo, $userId);
+    $eventCount = (int) ($badgeInfo['metrics']['accepted_events'] ?? 0);
+    $requestCount = (int) ($badgeInfo['metrics']['total_requests'] ?? 0);
+    $helpAppCount = (int) ($badgeInfo['metrics']['accepted_help_applications'] ?? 0);
+    $earnedBadges = $badgeInfo['badges'] ?? [];
 
     // Recent accepted events
     $recentStmt = $pdo->prepare(
-        "SELECT e.id_eventi, e.titulli, e.data, e.vendndodhja, k.emri AS kategoria_emri
+        "SELECT e.id_eventi, e.titulli, e.pershkrimi, e.banner, e.data, e.vendndodhja, k.emri AS kategoria_emri
          FROM Aplikimi a
          JOIN Eventi e ON e.id_eventi = a.id_eventi
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
@@ -79,6 +74,8 @@ if (!$privateProfile) {
 
 $initial = mb_strtoupper(mb_substr($profile['emri'], 0, 1));
 $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
+$colorResolved = ts_resolve_profile_color($profile['profile_color'] ?? 'emerald');
+$profileColorTheme = $colorResolved['theme'];
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -88,16 +85,19 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
     <title><?= htmlspecialchars($profile['emri']) ?> — Tirana Solidare</title>
     <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
     <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
+    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
     <style>
-        .pp-shell { max-width: 760px; margin: 100px auto 60px; padding: 0 20px; }
-        .pp-card { background: #fff; border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,.07); overflow: hidden; }
+        .pp-shell { max-width: 1180px; margin: 96px auto 60px; padding: 0 24px; }
+        .pp-card { background: transparent; border-radius: 0; box-shadow: none; overflow: visible; }
 
         /* ── Cover Banner ── */
         .pp-cover {
             position: relative;
-            height: 180px;
-            background: linear-gradient(135deg, #003229 0%, #00715D 40%, #34d399 100%);
+            height: 220px;
+            background: linear-gradient(135deg, var(--pp-color-from, #003229) 0%, var(--pp-color-mid, #00715D) 40%, var(--pp-color-to, #34d399) 100%);
             overflow: hidden;
+            border-radius: 22px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.10);
         }
         .pp-cover::before {
             content: '';
@@ -138,7 +138,7 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
         .pp-avatar {
             width: 96px; height: 96px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #00715D, #34d399);
+            background: linear-gradient(135deg, var(--pp-color-mid, #00715D), var(--pp-color-to, #34d399));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -156,7 +156,11 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
 
         /* ── Info area below avatar ── */
         .pp-header-body {
-            padding: 16px 32px 24px;
+            margin-top: 12px;
+            padding: 20px 32px 24px;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 5px 24px rgba(15, 23, 42, 0.08);
         }
         .pp-name-row {
             display: flex;
@@ -185,6 +189,24 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
             color: #00715D;
         }
         .pp-badge svg { width: 13px; height: 13px; }
+        .pp-earned-badges {
+            margin-top: 14px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pp-earned-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #bbf7d0;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
         .pp-meta {
             display: flex;
             gap: 16px;
@@ -211,7 +233,10 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0;
-            margin: 0 32px;
+            margin: 18px 0 0;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 5px 24px rgba(15, 23, 42, 0.08);
             border-top: 1px solid #f0f2f5;
             border-bottom: 1px solid #f0f2f5;
         }
@@ -242,7 +267,13 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
         }
 
         /* ── Sections ── */
-        .pp-section { padding: 24px 32px; }
+        .pp-section {
+            margin-top: 18px;
+            padding: 24px 28px;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 5px 24px rgba(15, 23, 42, 0.08);
+        }
         .pp-section h3 {
             font-family: 'Bitter', serif;
             font-size: 1.05rem;
@@ -270,22 +301,34 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 24px 32px;
+            margin-top: 14px;
+            padding: 20px 24px;
             color: #6b7280;
             font-size: 0.9rem;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
         }
         .pp-private-msg svg { flex-shrink: 0; color: #9ca3af; }
+
+        .pp-section .rq-grid {
+            margin-top: 8px;
+        }
+
+        .pp-section .rq-card {
+            animation: none;
+        }
 
         /* ── Responsive ── */
         @media (max-width: 600px) {
             .pp-shell { margin-top: 80px; }
-            .pp-cover { height: 140px; }
+            .pp-cover { height: 160px; }
             .pp-avatar-wrap { flex-direction: column; align-items: center; padding: 0 20px; margin-top: -40px; }
             .pp-avatar { width: 80px; height: 80px; font-size: 1.8rem; }
             .pp-header-body { text-align: center; padding: 12px 20px 20px; }
             .pp-name-row { justify-content: center; }
             .pp-meta { justify-content: center; }
-            .pp-stats { margin: 0 20px; grid-template-columns: repeat(3, 1fr); }
+            .pp-stats { margin: 14px 0 0; grid-template-columns: repeat(3, 1fr); }
             .pp-stat__value { font-size: 1.3rem; }
             .pp-section { padding: 20px; }
             .pp-table { font-size: 0.78rem; }
@@ -298,9 +341,9 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
 <main class="pp-shell">
     <div class="pp-card">
         <?php if ($privateProfile): ?>
-        <div class="pp-cover"><div class="pp-cover__pattern"></div></div>
+        <div class="pp-cover" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;"><div class="pp-cover__pattern"></div></div>
         <div class="pp-avatar-wrap">
-            <div class="pp-avatar"><?= htmlspecialchars($initial) ?></div>
+            <div class="pp-avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($profileColorTheme['mid']) ?>, <?= htmlspecialchars($profileColorTheme['to']) ?>)"><?= htmlspecialchars($initial) ?></div>
         </div>
         <div class="pp-header-body">
             <div class="pp-name-row">
@@ -316,12 +359,12 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
             Ky profil është privat.
         </div>
         <?php else: ?>
-        <div class="pp-cover"><div class="pp-cover__pattern"></div></div>
+        <div class="pp-cover" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;"><div class="pp-cover__pattern"></div></div>
         <div class="pp-avatar-wrap">
             <?php if (!empty($profile['profile_picture'])): ?>
                 <img src="<?= htmlspecialchars($profile['profile_picture']) ?>" alt="<?= htmlspecialchars($profile['emri']) ?>" class="pp-avatar pp-avatar--img" onerror="this.outerHTML='<div class=\'pp-avatar\'><?= htmlspecialchars($initial) ?></div>'">
             <?php else: ?>
-                <div class="pp-avatar"><?= htmlspecialchars($initial) ?></div>
+                <div class="pp-avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($profileColorTheme['mid']) ?>, <?= htmlspecialchars($profileColorTheme['to']) ?>)"><?= htmlspecialchars($initial) ?></div>
             <?php endif; ?>
         </div>
         <div class="pp-header-body">
@@ -340,6 +383,15 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
             </div>
             <?php if (!empty($profile['bio'])): ?>
                 <p class="pp-bio"><?= nl2br(htmlspecialchars($profile['bio'])) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($earnedBadges)): ?>
+                <div class="pp-earned-badges">
+                    <?php foreach ($earnedBadges as $badge): ?>
+                        <span class="pp-earned-badge" title="<?= htmlspecialchars($badge['description']) ?>">
+                            <?= htmlspecialchars($badge['name']) ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -362,24 +414,41 @@ $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
         <div class="pp-section">
             <h3>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Historiku i eventeve
+                Une kam marr pjese ne:
             </h3>
-            <div class="pp-table-wrap">
-                <table class="pp-table">
-                    <thead>
-                        <tr><th>Titulli</th><th>Kategoria</th><th>Vendndodhja</th><th>Data</th></tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($recentEvents as $ev): ?>
-                        <tr>
-                            <td><a href="/TiranaSolidare/views/events.php?id=<?= (int) $ev['id_eventi'] ?>"><?= htmlspecialchars($ev['titulli']) ?></a></td>
-                            <td><?= htmlspecialchars($ev['kategoria_emri'] ?? '—') ?></td>
-                            <td><?= htmlspecialchars($ev['vendndodhja'] ?? '—') ?></td>
-                            <td><?= date('d/m/Y', strtotime($ev['data'])) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="rq-grid">
+                <?php foreach ($recentEvents as $ev): ?>
+                    <a href="/TiranaSolidare/views/events.php?id=<?= (int) $ev['id_eventi'] ?>" class="rq-card">
+                        <div class="rq-card__visual">
+                            <img src="<?= !empty($ev['banner']) ? htmlspecialchars($ev['banner']) : '/TiranaSolidare/public/assets/images/default-event.svg' ?>" alt="<?= htmlspecialchars($ev['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
+                            <div class="rq-card__overlay">
+                                <span class="rq-badge rq-badge--event"><?= htmlspecialchars($ev['kategoria_emri'] ?? 'Event') ?></span>
+                                <?php if (strtotime($ev['data']) <= time()): ?>
+                                    <span class="rq-badge rq-badge--past">I kaluar</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="rq-card__content">
+                            <h3 class="rq-card__title"><?= htmlspecialchars($ev['titulli']) ?></h3>
+                            <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($ev['pershkrimi'] ?? '', 0, 110)) ?>...</p>
+                            <div class="rq-card__footer">
+                                <div class="rq-card__meta">
+                                    <span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                                        <?= htmlspecialchars($ev['vendndodhja'] ?? 'Tiranë') ?>
+                                    </span>
+                                    <span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                        <?= date('d M Y', strtotime($ev['data'])) ?>
+                                    </span>
+                                </div>
+                                <span class="rq-card__arrow">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php endif; ?>

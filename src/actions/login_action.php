@@ -57,6 +57,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['emri'] = $user['emri'];
         $_SESSION['roli'] = $user['roli'];
         $_SESSION['email'] = $user['email'];
+        $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
+        $sessionProfilePicture = (string) ($user['profile_picture'] ?? '');
+        $_SESSION['profile_picture'] = $sessionProfilePicture;
+        $_SESSION['avatar'] = $sessionProfilePicture;
+        $_SESSION['photo'] = $sessionProfilePicture;
+        $_SESSION['foto'] = $sessionProfilePicture;
+        $_SESSION['profile_image'] = $sessionProfilePicture;
 
         // Safe redirect validation (H-02)
         if ($redirect && is_safe_redirect($redirect)) {

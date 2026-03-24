@@ -8,6 +8,7 @@
  * POST   /api/auth.php?action=register   – Register
  * POST   /api/auth.php?action=logout     – Log out
  * PUT    /api/auth.php?action=change_password – Change password
+ * PUT    /api/auth.php?action=change_email – Change email
  * GET    /api/auth.php?action=me         – Current user
  * ---------------------------------------------------
  */
@@ -67,6 +68,7 @@ switch ($action) {
         $_SESSION['emri']    = $user['emri'];
         $_SESSION['roli']    = $user['roli'];
         $_SESSION['email']   = $user['email'];
+        $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
 
         json_success([
             'id'    => (int) $user['id_perdoruesi'],
@@ -131,8 +133,8 @@ switch ($action) {
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare(
-                "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, verification_token_hash, verification_token_expires)
-                 VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, ?, ?)"
+                 "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires)
+                VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, 0, 'emerald', ?, ?)"
             );
             $stmt->execute([$emri, $email, $hashed, $tokenHash, $expiresAt]);
 
@@ -211,13 +213,66 @@ switch ($action) {
         json_success(['message' => 'Fjalëkalimi u përditësua me sukses.']);
         break;
 
+    // ── CHANGE EMAIL ─────────────────────────────
+    case 'change_email':
+        require_method('PUT');
+        $user = require_auth();
+        $body = get_json_body();
+        $errors = [];
+
+        $newEmail = required_field($body, 'new_email', $errors);
+        $confirmEmail = required_field($body, 'confirm_email', $errors);
+        $currentPassword = required_field($body, 'current_password', $errors);
+
+        if (!empty($errors)) {
+            json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            json_error('Formati i email-it nuk është i vlefshëm.', 422);
+        }
+
+        if (mb_strtolower($newEmail) !== mb_strtolower($confirmEmail)) {
+            json_error('Email-et nuk përputhen.', 422);
+        }
+
+        $currentUserStmt = $pdo->prepare('SELECT email, fjalekalimi FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $currentUserStmt->execute([$user['id']]);
+        $currentUser = $currentUserStmt->fetch();
+
+        if (!$currentUser) {
+            json_error('Përdoruesi nuk u gjet.', 404);
+        }
+
+        if (!password_verify($currentPassword, (string) $currentUser['fjalekalimi'])) {
+            json_error('Fjalëkalimi aktual është i pasaktë.', 401);
+        }
+
+        if (mb_strtolower((string) $currentUser['email']) === mb_strtolower($newEmail)) {
+            json_error('Ky është tashmë email-i aktual.', 422);
+        }
+
+        $checkExistsStmt = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE email = ? AND id_perdoruesi <> ? LIMIT 1');
+        $checkExistsStmt->execute([$newEmail, $user['id']]);
+        if ($checkExistsStmt->fetch()) {
+            json_error('Ky email është i përdorur nga një llogari tjetër.', 409);
+        }
+
+        $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET email = ? WHERE id_perdoruesi = ?');
+        $updateStmt->execute([$newEmail, $user['id']]);
+
+        $_SESSION['email'] = $newEmail;
+
+        json_success(['message' => 'Email-i u përditësua me sukses.', 'email' => $newEmail]);
+        break;
+
     // ── ME (current user) ──────────────────────────
     case 'me':
         require_method('GET');
         $user = require_auth();
 
         $stmt = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, roli, statusi_llogarise, krijuar_me
+            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, profile_color, roli, statusi_llogarise, krijuar_me
              FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $stmt->execute([$user['id']]);
@@ -231,5 +286,5 @@ switch ($action) {
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, me.', 400);
+        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, change_email, me.', 400);
 }

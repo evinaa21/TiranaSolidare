@@ -29,6 +29,11 @@ $stmtUser = $pdo->prepare("SELECT * FROM Perdoruesi WHERE id_perdoruesi = ?");
 $stmtUser->execute([$userId]);
 $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
 
+$colorResolved = ts_resolve_profile_color($user['profile_color'] ?? 'emerald');
+$profileColorKey = $colorResolved['key'];
+$profileColorTheme = $colorResolved['theme'];
+$profileColorPalette = $colorResolved['palette'];
+
 // Fetch my applications
 $stmtApps = $pdo->prepare(
     "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data, e.vendndodhja AS eventi_vendndodhja,
@@ -77,6 +82,18 @@ $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Op
 $score        = ($acceptedApps * 5) + ($totalApps * 1) + ($totalRequests * 2);
 $scoreMax     = 150;
 $scorePercent = min(100, round(($score / $scoreMax) * 100));
+$profileBadgeInfo = ts_get_user_profile_badges($pdo, (int) $userId);
+$earnedBadges = $profileBadgeInfo['badges'];
+
+$badgeIcons = [
+  'seedling' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5 7-7.8 7-12-4.2 0-8 2.7-9.5 6.8"/><path d="M7 20c-2.5-2.2-4-5.6-4-9.5 3.2 0 5.9 1.3 7.9 3.6"/></svg>',
+  'calendar-check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9.5 16.5 2 2 4-4"/></svg>',
+  'hands-helping' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11.5 10.5 9a2.1 2.1 0 0 1 3 3L12 13.5"/><path d="M2 15c1.6-1.7 3.1-2.5 4.8-2.5h2.7"/><path d="M22 9c-1.6 1.7-3.1 2.5-4.8 2.5h-2.7"/><path d="M3 20h5l2.5-2.5"/><path d="M21 4h-5l-2.5 2.5"/></svg>',
+  'megaphone' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 11-5v12L3 13v-2Z"/><path d="M11 19a4 4 0 0 1-4 4"/><path d="M14 8a7 7 0 0 1 0 8"/><path d="M18 6a11 11 0 0 1 0 12"/></svg>',
+  'heart-handshake' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.7 0-3 .5-4.5 2C10.5 3.5 9.2 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7 7-7Z"/><path d="m8.5 12.5 2.3 2.3L15.5 10"/></svg>',
+  'shield' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  'sparkles' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.1L18 9l-4.1 1.9L12 15l-1.9-4.1L6 9l4.1-1.9L12 3Z"/><path d="M5 16l.9 2.1L8 19l-2.1.9L5 22l-.9-2.1L2 19l2.1-.9L5 16Z"/><path d="M19 13l.9 2.1L22 16l-2.1.9L19 19l-.9-2.1L16 16l2.1-.9L19 13Z"/></svg>',
+];
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -99,7 +116,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
 <main>
 
 <!-- ─── HERO ─── -->
-<section class="page-hero page-hero--green vp-hero">
+<section class="page-hero page-hero--green vp-hero" style="--vp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --vp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --vp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;">
   <div class="vp-hero__decor">
     <div class="vp-hero__circle vp-hero__circle--1"></div>
     <div class="vp-hero__circle vp-hero__circle--2"></div>
@@ -109,7 +126,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
     <?php if (!empty($user['profile_picture'])): ?>
       <img src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-hero__avatar vp-hero__avatar--img">
     <?php else: ?>
-      <div class="vp-hero__avatar"><?= $userInitial ?></div>
+      <div class="vp-hero__avatar vp-hero__avatar--letter"><?= $userInitial ?></div>
     <?php endif; ?>
     <div class="vp-hero__text">
       <span class="page-badge">
@@ -172,6 +189,10 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
       Njoftimet
       <span class="vp-tab-badge" id="notif-tab-badge" style="display:none"></span>
     </a>
+    <a href="?tab=settings" class="vp-tab <?= $tab === 'settings' ? 'active' : '' ?>">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Cilësimet
+    </a>
   </div>
 </section>
 
@@ -186,10 +207,28 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
     <div class="vp-card">
       <div class="vp-card__header">
         <h3>Informacioni i profilit</h3>
+        <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int) $userId ?>" target="_blank" rel="noopener" class="btn_secondary">Shiko profilin tënd</a>
       </div>
       <div class="vp-card__body">
         <div class="vp-profile-avatar">
-          <div class="vp-avatar"><?= $userInitial ?></div>
+          <div class="vp-avatar-uploader">
+            <button type="button" class="vp-avatar-edit-btn" id="vp-avatar-click-target" aria-label="Ndrysho foton e profilit" title="Kliko për të ndryshuar foton e profilit">
+              <?php if (!empty($user['profile_picture'])): ?>
+                <img id="vp-profile-avatar-display" src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-avatar vp-avatar--img">
+              <?php else: ?>
+                <div id="vp-profile-avatar-display" class="vp-avatar" style="background:linear-gradient(135deg, <?= htmlspecialchars($profileColorTheme['mid']) ?>, <?= htmlspecialchars($profileColorTheme['to']) ?>)"><?= $userInitial ?></div>
+              <?php endif; ?>
+              <span class="vp-avatar-edit-btn__hint" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+              </span>
+            </button>
+            <?php if (!empty($user['profile_picture'])): ?>
+              <button type="button" class="vp-avatar-delete-btn__hint" id="vp-avatar-delete-btn" aria-label="Fshi foton e profilit" title="Fshi foton e profilit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              </button>
+            <?php endif; ?>
+            <input type="file" id="vp-avatar-upload-input" accept="image/*" style="display:none;">
+          </div>
           <div class="vp-profile-info">
             <strong id="vp-profile-emri"><?= htmlspecialchars($user['emri'] ?? '—') ?></strong>
             <span id="vp-profile-email"><?= htmlspecialchars($user['email'] ?? '—') ?></span>
@@ -217,77 +256,183 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
             <strong><?= $acceptedApps ?></strong>
           </div>
         </div>
+        <div id="vp-avatar-status" class="vp-status" style="display:none"></div>
       </div>
     </div>
 
-<!-- Edit Name Card -->
-    <div class="vp-card">
-      <div class="vp-card__header">
-        <h3>Ndrysho emrin</h3>
-      </div>
-      <div class="vp-card__body">
-        <form id="vp-name-form" class="vp-form">
-          <div class="vp-field">
-            <label for="vp-emri">Emri i plotë</label>
-            <input type="text" id="vp-emri" name="emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>" required placeholder="Emri Mbiemri" class="vp-input">
-          </div>
-          <button type="submit" class="btn_primary">Ruaj emrin</button>
-        </form>
-        <div id="vp-name-status" class="vp-status" style="display:none"></div>
-      </div>
-    </div>
-
-    <!-- Bio / Foto / Privatësia -->
     <div class="vp-card" style="grid-column: 1 / -1">
       <div class="vp-card__header">
         <h3>Profili publik</h3>
       </div>
       <div class="vp-card__body">
-        <form id="vp-extra-form" class="vp-form">
-          <input type="hidden" id="vp-extra-emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>">
+        <form id="vp-profile-form" class="vp-form">
+          <input type="hidden" id="vp-current-picture" value="<?= htmlspecialchars($user['profile_picture'] ?? '') ?>">
           <div class="vp-field">
             <label for="vp-bio">Bio</label>
             <textarea id="vp-bio" name="bio" rows="3" maxlength="500" placeholder="Shkruaj diçka për veten..." class="vp-input"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
           </div>
           <div class="vp-field">
-            <label for="vp-picture">URL e fotos së profilit</label>
-            <input type="url" id="vp-picture" name="profile_picture" value="<?= htmlspecialchars($user['profile_picture'] ?? '') ?>" placeholder="https://example.com/photo.jpg" maxlength="500" class="vp-input">
+            <label>Ngjyra e profilit</label>
+            <div class="vp-color-dropdown">
+              <button type="button" class="vp-color-dropdown__trigger" id="vp-color-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="vp-color-dropdown__swatch" id="vp-color-swatch" style="background-color: <?= htmlspecialchars($profileColorTheme['mid']) ?>"></span>
+                <span class="vp-color-dropdown__label"><?= htmlspecialchars($profileColorPalette[$profileColorKey]['label'] ?? 'Emerald') ?></span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="vp-color-dropdown__menu" id="vp-color-menu" hidden>
+                <div class="vp-color-dropdown__grid">
+                  <?php foreach ($profileColorPalette as $colorKey => $theme): ?>
+                    <button type="button" class="vp-color-dropdown__option <?= $profileColorKey === $colorKey ? 'active' : '' ?>" data-color="<?= htmlspecialchars($colorKey) ?>" aria-label="<?= htmlspecialchars($theme['label']) ?>" title="<?= htmlspecialchars($theme['label']) ?>">
+                      <span class="vp-color-dropdown__color" style="background: linear-gradient(135deg, <?= htmlspecialchars($theme['from']) ?>, <?= htmlspecialchars($theme['to']) ?>)"></span>
+                      <span class="vp-color-dropdown__name"><?= htmlspecialchars($theme['label']) ?></span>
+                    </button>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="vp-profile-color" name="profile_color" value="<?= htmlspecialchars($profileColorKey) ?>">
           </div>
-          <div class="vp-field" style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="vp-public" name="profile_public" style="width:18px;height:18px;accent-color:#00715D" <?= ($user['profile_public'] ?? 1) ? 'checked' : '' ?>>
-            <label for="vp-public" style="margin:0;cursor:pointer">Profili im është publik</label>
-          </div>
-          <button type="submit" class="btn_primary">Ruaj ndryshimet</button>
+          <button type="submit" class="btn_primary">Ruaj profilin publik</button>
         </form>
-        <div id="vp-extra-status" class="vp-status" style="display:none"></div>
+        <div id="vp-profile-form-status" class="vp-status" style="display:none"></div>
       </div>
     </div>
 
-    <!-- Change Password Card -->
-    <div class="vp-card">
+    <div class="vp-card" style="grid-column: 1 / -1">
       <div class="vp-card__header">
-        <h3>Ndrysho fjalëkalimin</h3>
+        <h3>Badge të fituara</h3>
       </div>
       <div class="vp-card__body">
-        <form id="vp-password-form" class="vp-form">
-          <div class="vp-field">
-            <label for="vp-current-pw">Fjalëkalimi aktual</label>
-            <input type="password" id="vp-current-pw" name="current_password" required placeholder="********" class="vp-input">
+        <?php if (empty($earnedBadges)): ?>
+          <p class="vp-muted" style="margin:0;">Nuk ke badge ende. Kontribuo në evente dhe kërkesa për t'i fituar.</p>
+        <?php else: ?>
+          <div class="vp-earned-badges-grid">
+            <?php foreach ($earnedBadges as $badge): ?>
+              <?php $iconSvg = $badgeIcons[$badge['icon'] ?? ''] ?? $badgeIcons['sparkles']; ?>
+              <div class="vp-earned-badge" title="<?= htmlspecialchars($badge['description']) ?>">
+                <span class="vp-earned-badge__icon" aria-hidden="true"><?= $iconSvg ?></span>
+                <div class="vp-earned-badge__text">
+                  <strong><?= htmlspecialchars($badge['name']) ?></strong>
+                  <span><?= htmlspecialchars($badge['description']) ?></span>
+                </div>
+              </div>
+            <?php endforeach; ?>
           </div>
-          <div class="vp-field">
-            <label for="vp-new-pw">Fjalëkalimi i ri</label>
-            <input type="password" id="vp-new-pw" name="new_password" required placeholder="********" minlength="6" class="vp-input">
-          </div>
-          <div class="vp-field">
-            <label for="vp-confirm-pw">Konfirmo fjalëkalimin</label>
-            <input type="password" id="vp-confirm-pw" name="confirm_password" required placeholder="********" class="vp-input">
-          </div>
-          <button type="submit" class="btn_primary">Përditëso fjalëkalimin</button>
-        </form>
-        <div id="vp-pw-status" class="vp-status" style="display:none"></div>
+        <?php endif; ?>
       </div>
     </div>
 
+  </div>
+</div>
+
+<?php elseif ($tab === 'settings'): ?>
+<!-- ════════════ SETTINGS TAB ════════════ -->
+<div class="vp-panel">
+  <div class="vp-settings-layout">
+    <aside class="vp-settings-nav" role="tablist" aria-label="Kategoritë e cilësimeve">
+      <button type="button" class="vp-settings-nav__item active" data-settings-target="account" role="tab" aria-selected="true">Llogaria</button>
+      <button type="button" class="vp-settings-nav__item" data-settings-target="public-profile" role="tab" aria-selected="false">Profili publik</button>
+      <button type="button" class="vp-settings-nav__item" data-settings-target="email" role="tab" aria-selected="false">Email</button>
+      <button type="button" class="vp-settings-nav__item" data-settings-target="security" role="tab" aria-selected="false">Siguria</button>
+    </aside>
+
+    <div class="vp-settings-content">
+      <section class="vp-settings-panel" id="vp-settings-public-profile" data-settings-panel="public-profile" role="tabpanel">
+        <div class="vp-card">
+          <div class="vp-card__header">
+            <h3>Dukshmëria e profilit</h3>
+          </div>
+          <div class="vp-card__body">
+            <form id="vp-visibility-form" class="vp-form">
+              <div class="vp-field" style="display:flex;align-items:center;
+    flex-direction: row;justify-content:space-between">
+                <label for="vp-public" style="margin:0;cursor:pointer">Profili im është publik</label>
+                <div class="vp-toggle-wrapper">
+                  <input type="checkbox" id="vp-public" name="profile_public" class="vp-toggle-input" <?= ($user['profile_public'] ?? 0) ? 'checked' : '' ?>>
+                  <label for="vp-public" class="vp-toggle-label"></label>
+                </div>
+              </div>
+              <p class="vp-muted" style="margin:0;">Kur profili është privat, përmbajtja e aktivitetit shfaqet vetëm për ju.</p>
+              <button type="submit" class="btn_primary">Ruaj dukshmërinë</button>
+            </form>
+            <div id="vp-visibility-status" class="vp-status" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vp-settings-panel active" id="vp-settings-account" data-settings-panel="account" role="tabpanel" hidden>
+        <div class="vp-card">
+          <div class="vp-card__header">
+            <h3>Profili i llogarisë</h3>
+            <p>Ndrysho emrin që shfaqet në platformë.</p>
+          </div>
+          <div class="vp-card__body">
+            <form id="vp-name-form" class="vp-form">
+              <div class="vp-field">
+                <label for="vp-emri">Emri i plotë</label>
+                <input type="text" id="vp-emri" name="emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>" required placeholder="Emri Mbiemri" class="vp-input">
+              </div>
+              <button type="submit" class="btn_primary">Ruaj emrin</button>
+            </form>
+            <div id="vp-name-status" class="vp-status" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vp-settings-panel" id="vp-settings-email" data-settings-panel="email" role="tabpanel" hidden>
+        <div class="vp-card">
+          <div class="vp-card__header">
+            <h3>Ndrysho email-in</h3>
+            <p>Për arsye sigurie, konfirmo me fjalëkalimin aktual.</p>
+          </div>
+          <div class="vp-card__body">
+            <form id="vp-email-form" class="vp-form">
+              <div class="vp-field">
+                <label for="vp-new-email">Email i ri</label>
+                <input type="email" id="vp-new-email" name="new_email" required placeholder="emer@shembull.com" class="vp-input">
+              </div>
+              <div class="vp-field">
+                <label for="vp-confirm-email">Konfirmo email-in e ri</label>
+                <input type="email" id="vp-confirm-email" name="confirm_email" required placeholder="emer@shembull.com" class="vp-input">
+              </div>
+              <div class="vp-field">
+                <label for="vp-email-current-pw">Fjalëkalimi aktual</label>
+                <input type="password" id="vp-email-current-pw" name="current_password" required placeholder="********" class="vp-input">
+              </div>
+              <button type="submit" class="btn_primary">Përditëso email-in</button>
+            </form>
+            <div id="vp-email-status" class="vp-status" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vp-settings-panel" id="vp-settings-security" data-settings-panel="security" role="tabpanel" hidden>
+        <div class="vp-card">
+          <div class="vp-card__header">
+            <h3>Ndrysho fjalëkalimin</h3>
+            <p>Përdor një fjalëkalim të fortë dhe unik.</p>
+          </div>
+          <div class="vp-card__body">
+            <form id="vp-password-form" class="vp-form">
+              <div class="vp-field">
+                <label for="vp-current-pw">Fjalëkalimi aktual</label>
+                <input type="password" id="vp-current-pw" name="current_password" required placeholder="********" class="vp-input">
+              </div>
+              <div class="vp-field">
+                <label for="vp-new-pw">Fjalëkalimi i ri</label>
+                <input type="password" id="vp-new-pw" name="new_password" required placeholder="********" minlength="6" class="vp-input">
+              </div>
+              <div class="vp-field">
+                <label for="vp-confirm-pw">Konfirmo fjalëkalimin</label>
+                <input type="password" id="vp-confirm-pw" name="confirm_password" required placeholder="********" class="vp-input">
+              </div>
+              <button type="submit" class="btn_primary">Përditëso fjalëkalimin</button>
+            </form>
+            <div id="vp-pw-status" class="vp-status" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
 
@@ -541,7 +686,10 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
   <div class="vp-card">
     <div class="vp-card__header">
       <h3>Njoftimet</h3>
-      <button class="btn_secondary vp-btn-sm" id="vp-mark-all-read">Shëno të gjitha si të lexuara</button>
+      <button class="vp-notif-toolbar-btn" id="vp-mark-all-read">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a2 2 0 0 1-2.06 0L2 7"/><path d="m15.5 13.5 2 2 4-4"/></svg>
+        <span>Shëno të gjitha si të lexuara</span>
+      </button>
     </div>
     <div class="vp-card__body">
       <div id="vp-notification-list">
@@ -619,6 +767,44 @@ if (pwForm) {
       pwForm.reset();
       vpStatus('vp-pw-status', 'success', 'Fjalëkalimi u përditësua me sukses.');
     } catch (err) { vpStatus('vp-pw-status', 'error', err.message); }
+  });
+}
+
+// ── Email form ──
+const emailForm = document.getElementById('vp-email-form');
+if (emailForm) {
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const new_email = document.getElementById('vp-new-email').value.trim();
+    const confirm_email = document.getElementById('vp-confirm-email').value.trim();
+    const current_password = document.getElementById('vp-email-current-pw').value;
+
+    if (!new_email || !confirm_email || !current_password) {
+      vpStatus('vp-email-status', 'error', 'Plotësoni të gjitha fushat.');
+      return;
+    }
+    if (new_email.toLowerCase() !== confirm_email.toLowerCase()) {
+      vpStatus('vp-email-status', 'error', 'Email-et nuk përputhen.');
+      return;
+    }
+
+    try {
+      const res = await fetch(API + '/auth.php?action=change_email', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ new_email, confirm_email, current_password }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+      const updatedEmail = json?.data?.email || new_email;
+      const profileEmail = document.getElementById('vp-profile-email');
+      if (profileEmail) profileEmail.textContent = updatedEmail;
+      emailForm.reset();
+      vpStatus('vp-email-status', 'success', 'Email-i u përditësua me sukses.');
+    } catch (err) {
+      vpStatus('vp-email-status', 'error', err.message);
+    }
   });
 }
 
@@ -708,6 +894,8 @@ async function loadVPNotifications() {
     let html = '';
     notifs.forEach(n => {
       const unread = !n.is_read;
+      const markReadBtn = '<button class="vp-notif-icon-btn vp-notif-icon-btn--read" title="Shëno si të lexuar" aria-label="Shëno si të lexuar" onclick="markNotifRead(' + n.id_njoftimi + ')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>';
+      const deleteBtn = '<button class="vp-notif-icon-btn vp-notif-icon-btn--delete" title="Fshi njoftimin" aria-label="Fshi njoftimin" onclick="deleteNotif(' + n.id_njoftimi + ')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>';
       html += '<div class="vp-notif ' + (unread ? 'vp-notif--unread' : '') + '">'
         + '<div class="vp-notif__dot"></div>'
         + '<div class="vp-notif__body">'
@@ -715,8 +903,8 @@ async function loadVPNotifications() {
         + '<span>' + formatDate(n.krijuar_me) + '</span>'
         + '</div>'
         + '<div class="vp-notif__actions">'
-        + (unread ? '<button class="btn_secondary vp-btn-sm" onclick="markNotifRead(' + n.id_njoftimi + ')">✓</button>' : '')
-        + '<button class="btn_secondary vp-btn-sm vp-btn-danger" onclick="deleteNotif(' + n.id_njoftimi + ')">✕</button>'
+        + (unread ? markReadBtn : '')
+        + deleteBtn
         + '</div></div>';
     });
     container.innerHTML = html;
@@ -771,8 +959,50 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('sq-AL', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+const PROFILE_COLOR_THEME = <?= json_encode($profileColorPalette, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+function applyHeaderAvatarProfileColor(colorKey) {
+  const theme = PROFILE_COLOR_THEME[colorKey] || PROFILE_COLOR_THEME.emerald;
+  if (!theme) return;
+
+  const headerAvatar = document.querySelector('.header-user-avatar');
+  if (headerAvatar) {
+    headerAvatar.style.setProperty('--avatar-accent', theme.mid || '#00715D');
+  }
+
+  const headerFallback = document.querySelector('.header-user-fallback');
+  if (headerFallback) {
+    headerFallback.style.setProperty('--avatar-from', theme.from || '#003229');
+    headerFallback.style.setProperty('--avatar-to', theme.to || '#009e7e');
+  }
+}
+
+function initSettingsNavigation() {
+  const navItems = document.querySelectorAll('.vp-settings-nav__item');
+  const panels = document.querySelectorAll('.vp-settings-panel');
+  if (!navItems.length || !panels.length) return;
+
+  navItems.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-settings-target');
+
+      navItems.forEach((item) => {
+        item.classList.toggle('active', item === btn);
+        item.setAttribute('aria-selected', item === btn ? 'true' : 'false');
+      });
+
+      panels.forEach((panel) => {
+        const isActive = panel.getAttribute('data-settings-panel') === target;
+        panel.classList.toggle('active', isActive);
+        panel.hidden = !isActive;
+      });
+    });
+  });
+}
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
+  initSettingsNavigation();
   loadVPNotifications();
   updateNotifBadge();
   setInterval(updateNotifBadge, 15000);
@@ -852,18 +1082,84 @@ if (scoreCtx) {
   });
 }
 
-// ── Bio / Foto / Privatësia ──
-const extraForm = document.getElementById('vp-extra-form');
-if (extraForm) {
-  extraForm.addEventListener('submit', async (e) => {
+// ── Color Dropdown Initialization ──
+function initColorDropdown() {
+  const trigger = document.getElementById('vp-color-trigger');
+  const menu = document.getElementById('vp-color-menu');
+  const hiddenInput = document.getElementById('vp-profile-color');
+  const swatchTrigger = document.getElementById('vp-color-swatch');
+  const labelTrigger = document.querySelector('.vp-color-dropdown__label');
+  const options = document.querySelectorAll('.vp-color-dropdown__option');
+
+  if (!trigger || !menu) return;
+
+  // Toggle menu visibility
+  trigger.addEventListener('click', () => {
+    const isOpen = !menu.hidden;
+    menu.hidden = isOpen;
+    trigger.setAttribute('aria-expanded', !isOpen);
+  });
+
+  // Handle color selection
+  options.forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.preventDefault();
+      const colorKey = option.getAttribute('data-color');
+      const colorLabel = option.getAttribute('aria-label');
+      const colorGradient = option.querySelector('.vp-color-dropdown__color').style.background;
+      const colorMid = option.getAttribute('data-color-mid');
+
+      // Update hidden input
+      hiddenInput.value = colorKey;
+
+      // Update trigger button
+      swatchTrigger.style.backgroundColor = getComputedStyle(option.querySelector('.vp-color-dropdown__color')).backgroundColor;
+      if (labelTrigger) labelTrigger.textContent = colorLabel;
+
+      // Update active state
+      options.forEach(opt => opt.classList.remove('active'));
+      option.classList.add('active');
+
+      // Close menu
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Close menu on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+// Initialize color dropdown when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initColorDropdown);
+} else {
+  initColorDropdown();
+}
+
+// ── Profili publik (Bio + Ngjyra) ──
+const profileForm = document.getElementById('vp-profile-form');
+if (profileForm) {
+  profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const emri = document.getElementById('vp-extra-emri').value;
     const bio = document.getElementById('vp-bio').value.trim();
-    const profile_picture = document.getElementById('vp-picture').value.trim();
-    const profile_public = document.getElementById('vp-public').checked ? 1 : 0;
+    const profile_color = document.getElementById('vp-profile-color').value;
 
     if (bio.length > 500) {
-      vpStatus('vp-extra-status', 'error', 'Bio nuk mund të kalojë 500 karaktere.');
+      vpStatus('vp-profile-form-status', 'error', 'Bio nuk mund të kalojë 500 karaktere.');
       return;
     }
 
@@ -872,15 +1168,196 @@ if (extraForm) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         credentials: 'same-origin',
-        body: JSON.stringify({ emri, bio, profile_picture, profile_public }),
+        body: JSON.stringify({ bio, profile_color }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
-      vpStatus('vp-extra-status', 'success', 'Profili u përditësua me sukses.');
+      applyHeaderAvatarProfileColor(profile_color);
+      vpStatus('vp-profile-form-status', 'success', 'Profili publik u përditësua me sukses.');
     } catch (err) {
-      vpStatus('vp-extra-status', 'error', err.message);
+      vpStatus('vp-profile-form-status', 'error', err.message);
     }
   });
+}
+
+// ── Dukshmëria e profilit (vetëm publik/privat) ──
+const visibilityForm = document.getElementById('vp-visibility-form');
+if (visibilityForm) {
+  visibilityForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const profile_public = document.getElementById('vp-public').checked ? 1 : 0;
+
+    try {
+      const res = await fetch(API + '/users.php?action=update_profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ profile_public }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+      vpStatus('vp-visibility-status', 'success', 'Dukshmëria e profilit u përditësua me sukses.');
+    } catch (err) {
+      vpStatus('vp-visibility-status', 'error', err.message);
+    }
+  });
+}
+
+const avatarClickTarget = document.getElementById('vp-avatar-click-target');
+const avatarUploadInput = document.getElementById('vp-avatar-upload-input');
+const avatarDeleteBtn = document.getElementById('vp-avatar-delete-btn');
+
+if (avatarClickTarget && avatarUploadInput) {
+  avatarClickTarget.addEventListener('click', () => {
+    avatarUploadInput.click();
+  });
+
+  avatarUploadInput.addEventListener('change', async () => {
+    const file = avatarUploadInput.files?.[0];
+    if (!file) return;
+
+    if (file.size > 6 * 1024 * 1024) {
+      vpStatus('vp-avatar-status', 'error', 'Foto duhet të jetë më e vogël se 6MB.');
+      avatarUploadInput.value = '';
+      return;
+    }
+
+    try {
+      const uploadForm = new FormData();
+      uploadForm.append('image', file);
+
+      const uploadRes = await fetch(API + '/users.php?action=upload_profile_picture', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: uploadForm,
+      });
+      const uploadJson = await uploadRes.json();
+      if (!uploadRes.ok || !uploadJson.success) throw new Error(uploadJson.message || 'Ngarkimi i fotos dështoi.');
+
+      const profile_picture = uploadJson.data?.url || '';
+      if (!profile_picture) throw new Error('URL e fotos nuk u kthye nga serveri.');
+
+      const saveRes = await fetch(API + '/users.php?action=update_profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ profile_picture }),
+      });
+      const saveJson = await saveRes.json();
+      if (!saveRes.ok || !saveJson.success) throw new Error(saveJson.message || 'Gabim gjatë ruajtjes së fotos.');
+
+      const currentPictureInput = document.getElementById('vp-current-picture');
+      if (currentPictureInput) currentPictureInput.value = profile_picture;
+
+      const profileAvatar = document.getElementById('vp-profile-avatar-display');
+      if (profileAvatar) {
+        profileAvatar.outerHTML = '<img id="vp-profile-avatar-display" src="' + escapeHtml(profile_picture) + '" alt="Avatar" class="vp-avatar vp-avatar--img">';
+      }
+
+      const heroAvatar = document.querySelector('.vp-hero__avatar');
+      if (heroAvatar) {
+        heroAvatar.outerHTML = '<img src="' + escapeHtml(profile_picture) + '" alt="Avatar" class="vp-hero__avatar vp-hero__avatar--img">';
+      }
+
+      const headerAvatarImg = document.querySelector('.header-user-avatar > img');
+      const headerAvatarFallback = document.querySelector('.header-user-fallback');
+      const headerAvatarButton = document.querySelector('.header-user-avatar');
+      if (headerAvatarImg) {
+        headerAvatarImg.setAttribute('src', profile_picture);
+        headerAvatarImg.style.display = '';
+      }
+      if (!headerAvatarImg && headerAvatarButton) {
+        headerAvatarButton.insertAdjacentHTML('afterbegin', '<img src="' + escapeHtml(profile_picture) + '" alt="Avatar">');
+      }
+      if (headerAvatarFallback) headerAvatarFallback.style.display = 'none';
+      if (headerAvatarButton) headerAvatarButton.classList.remove('has-fallback');
+
+      // Show delete button if it doesn't exist
+      if (!document.getElementById('vp-avatar-delete-btn') && avatarClickTarget) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'vp-avatar-delete-btn__hint';
+        deleteBtn.id = 'vp-avatar-delete-btn';
+        deleteBtn.setAttribute('aria-label', 'Fshi foton e profilit');
+        deleteBtn.setAttribute('title', 'Fshi foton e profilit');
+        deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+        avatarClickTarget.parentElement.appendChild(deleteBtn);
+        initDeleteButton();
+      }
+
+      vpStatus('vp-avatar-status', 'success', 'Fotoja e profilit u përditësua me sukses.');
+    } catch (err) {
+      vpStatus('vp-avatar-status', 'error', err.message || 'Gabim gjatë përditësimit të fotos.');
+    } finally {
+      avatarUploadInput.value = '';
+    }
+  });
+}
+
+// ── Delete Profile Picture Handler ──
+function initDeleteButton() {
+  const deleteBtnElement = document.getElementById('vp-avatar-delete-btn');
+  if (!deleteBtnElement) return;
+
+  deleteBtnElement.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('Jeni i sigurt që doni të fshini foton e profilit?')) return;
+
+    try {
+      const deleteRes = await fetch(API + '/users.php?action=delete_profile_picture', {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+      });
+      const deleteJson = await deleteRes.json();
+      if (!deleteRes.ok || !deleteJson.success) throw new Error(deleteJson.message || 'Gabim gjatë fshirjes së fotos.');
+
+      const currentPictureInput = document.getElementById('vp-current-picture');
+      if (currentPictureInput) currentPictureInput.value = '';
+
+      // Get color theme for fallback avatar
+      const colorTheme = PROFILE_COLOR_THEME[Object.keys(PROFILE_COLOR_THEME)[0]];
+      const fallbackGradient = colorTheme ? `linear-gradient(135deg, ${colorTheme.mid}, ${colorTheme.to})` : 'linear-gradient(135deg, #00715D, #00a88a)';
+
+      const profileAvatar = document.getElementById('vp-profile-avatar-display');
+      if (profileAvatar) {
+        const initial = document.querySelector('.header-user')?.textContent?.charAt(0).toUpperCase() || 'P';
+        profileAvatar.outerHTML = '<div id="vp-profile-avatar-display" class="vp-avatar" style="background:' + fallbackGradient + '">' + initial + '</div>';
+      }
+
+      const heroAvatar = document.querySelector('.vp-hero__avatar');
+      if (heroAvatar) {
+        const initial = document.querySelector('.header-user')?.textContent?.charAt(0).toUpperCase() || 'P';
+        heroAvatar.outerHTML = '<div class="vp-hero__avatar" style="background:' + fallbackGradient + '">' + initial + '</div>';
+      }
+
+      const headerAvatarImg = document.querySelector('.header-user-avatar > img');
+      const headerAvatarFallback = document.querySelector('.header-user-fallback');
+      const headerAvatarButton = document.querySelector('.header-user-avatar');
+      if (headerAvatarImg) {
+        headerAvatarImg.remove();
+      }
+      if (headerAvatarFallback) {
+        headerAvatarFallback.style.display = '';
+      }
+      if (headerAvatarButton) {
+        headerAvatarButton.classList.add('has-fallback');
+      }
+
+      // Remove delete button
+      deleteBtnElement.remove();
+
+      vpStatus('vp-avatar-status', 'success', 'Fotoja e profilit u fshi me sukses.');
+    } catch (err) {
+      vpStatus('vp-avatar-status', 'error', err.message || 'Gabim gjatë fshirjes së fotos.');
+    }
+  });
+}
+
+// Initialize delete button if it exists on page load
+if (avatarDeleteBtn) {
+  initDeleteButton();
 }
 
 </script>

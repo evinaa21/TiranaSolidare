@@ -71,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         try {
             $pdo->beginTransaction();
 
-            $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, verification_token_hash, verification_token_expires) VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, ?, ?)";
+            $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires) VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, 0, 'emerald', ?, ?)";
             $stmt = $pdo->prepare($sql_insert);
             $stmt->execute([$emri, $email, $hashed_password, $tokenHash, $expiresAt]);
 

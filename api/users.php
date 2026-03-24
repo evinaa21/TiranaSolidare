@@ -8,6 +8,8 @@
  * GET    ?action=get&id=<id>              – User detail (Admin)
  * GET    ?action=public_profile&id=<id>   – Public profile (Public)
  * PUT    ?action=update_profile           – Update own profile (Auth)
+ * POST   ?action=upload_profile_picture   – Upload profile picture (Auth)
+ * DELETE ?action=delete_profile_picture   – Delete profile picture (Auth)
  * PUT    ?action=block&id=<id>            – Block a user (Admin), optional JSON: { arsye_bllokimi }
  * PUT    ?action=unblock&id=<id>          – Unblock a user (Admin)
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
@@ -21,22 +23,139 @@ $action = $_GET['action'] ?? 'list';
 
 switch ($action) {
 
+    // ── UPLOAD PROFILE PICTURE (Auth) ────────────
+    case 'upload_profile_picture':
+        require_method('POST');
+        $user = require_auth();
+
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            json_error('Asnjë foto e vlefshme nuk u ngarkua.', 400);
+        }
+
+        if (!extension_loaded('gd') || !function_exists('imagewebp')) {
+            json_error('Serveri nuk mbështet përpunimin e fotove (GD/WebP).', 500);
+        }
+
+        $file = $_FILES['image'];
+        $maxSize = 6 * 1024 * 1024;
+        if ((int) ($file['size'] ?? 0) <= 0 || (int) $file['size'] > $maxSize) {
+            json_error('Foto duhet të jetë më e vogël se 6MB.', 400);
+        }
+
+        $allowedMimes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($file['tmp_name']);
+
+        if (!in_array($mime, $allowedMimes, true)) {
+            json_error('Formati nuk lejohet. Përdorni JPG, PNG, GIF ose WEBP.', 400);
+        }
+
+        $sourceImage = null;
+        switch ($mime) {
+            case 'image/jpeg':
+                $sourceImage = @imagecreatefromjpeg($file['tmp_name']);
+                break;
+            case 'image/png':
+                $sourceImage = @imagecreatefrompng($file['tmp_name']);
+                break;
+            case 'image/gif':
+                $sourceImage = @imagecreatefromgif($file['tmp_name']);
+                break;
+            case 'image/webp':
+                $sourceImage = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file['tmp_name']) : null;
+                break;
+        }
+
+        if (!$sourceImage) {
+            json_error('Nuk u lexua foto e ngarkuar.', 400);
+        }
+
+        $origWidth = imagesx($sourceImage);
+        $origHeight = imagesy($sourceImage);
+        if ($origWidth <= 0 || $origHeight <= 0) {
+            imagedestroy($sourceImage);
+            json_error('Përmasat e fotos janë të pavlefshme.', 400);
+        }
+
+        $maxDimension = 640;
+        $scale = min(1, $maxDimension / max($origWidth, $origHeight));
+        $newWidth = max(1, (int) round($origWidth * $scale));
+        $newHeight = max(1, (int) round($origHeight * $scale));
+
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+        if (!$resized) {
+            imagedestroy($sourceImage);
+            json_error('Nuk u krijua varianti i optimizuar i fotos.', 500);
+        }
+
+        imagealphablending($resized, false);
+        imagesavealpha($resized, true);
+        $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+        imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+
+        if (!imagecopyresampled($resized, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight)) {
+            imagedestroy($sourceImage);
+            imagedestroy($resized);
+            json_error('Gabim gjatë përpunimit të fotos.', 500);
+        }
+
+        imagedestroy($sourceImage);
+
+        $filename = generate_upload_filename('webp');
+        $uploadDir = __DIR__ . '/../uploads/images/profiles';
+        if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true)) {
+            imagedestroy($resized);
+            json_error('Nuk u krijua dosja e fotove të profilit.', 500);
+        }
+
+        $destination = $uploadDir . '/' . $filename;
+        if (!@imagewebp($resized, $destination, 78)) {
+            imagedestroy($resized);
+            json_error('Gabim gjatë ruajtjes së fotos WebP.', 500);
+        }
+        imagedestroy($resized);
+
+        $photoUrl = '/TiranaSolidare/uploads/images/profiles/' . $filename;
+        $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = ? WHERE id_perdoruesi = ?');
+        $updateStmt->execute([$photoUrl, $user['id']]);
+
+        json_success([
+            'url' => $photoUrl,
+            'filename' => $filename,
+            'size' => filesize($destination),
+            'mime' => 'image/webp',
+            'width' => $newWidth,
+            'height' => $newHeight,
+        ]);
+        break;
+
     // ── UPDATE OWN PROFILE (Auth) ───────────────
     case 'update_profile':
         require_method('PUT');
         $user   = require_auth();
         $body   = get_json_body();
-        $errors = [];
+        $currentStmt = $pdo->prepare('SELECT emri, bio, profile_picture, profile_public, profile_color FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $currentStmt->execute([$user['id']]);
+        $current = $currentStmt->fetch();
 
-        $emri = required_field($body, 'emri', $errors);
-
-        if (!empty($errors)) {
-            json_error('Të dhëna të pavlefshme.', 422, $errors);
+        if (!$current) {
+            json_error('Përdoruesi nuk u gjet.', 404);
         }
 
-        $bio = isset($body['bio']) ? trim((string) $body['bio']) : null;
-        $profilePicture = isset($body['profile_picture']) ? trim((string) $body['profile_picture']) : null;
-        $profilePublic = isset($body['profile_public']) ? ((int) $body['profile_public'] ? 1 : 0) : 1;
+        $emri = isset($body['emri']) ? trim((string) $body['emri']) : (string) $current['emri'];
+        $bio = array_key_exists('bio', $body) ? trim((string) $body['bio']) : $current['bio'];
+        $profilePicture = array_key_exists('profile_picture', $body) ? trim((string) $body['profile_picture']) : $current['profile_picture'];
+        $profilePublic = array_key_exists('profile_public', $body) ? ((int) $body['profile_public'] ? 1 : 0) : (int) $current['profile_public'];
+        $profileColor = array_key_exists('profile_color', $body) ? trim((string) $body['profile_color']) : (string) ($current['profile_color'] ?? 'emerald');
+
+        if ($emri === '') {
+            json_error('Emri është i detyrueshëm.', 422);
+        }
 
         if ($bio !== null && mb_strlen($bio) > 500) {
             json_error('Bio nuk mund të kalojë 500 karaktere.', 422);
@@ -45,16 +164,30 @@ switch ($action) {
             json_error('URL e fotos nuk mund të kalojë 500 karaktere.', 422);
         }
         if ($profilePicture !== null && $profilePicture !== '' && !filter_var($profilePicture, FILTER_VALIDATE_URL)) {
-            json_error('URL e fotos nuk është e vlefshme.', 422);
+            if (strpos($profilePicture, '/TiranaSolidare/uploads/images/profiles/') !== 0) {
+                json_error('Foto e profilit nuk është e vlefshme.', 422);
+            }
+        }
+
+        $palette = ts_profile_color_palette();
+        if (!isset($palette[$profileColor])) {
+            json_error('Ngjyra e profilit nuk është e vlefshme.', 422);
         }
 
         $stmt = $pdo->prepare(
-            'UPDATE Perdoruesi SET emri = ?, bio = ?, profile_picture = ?, profile_public = ? WHERE id_perdoruesi = ?'
+            'UPDATE Perdoruesi SET emri = ?, bio = ?, profile_picture = ?, profile_public = ?, profile_color = ? WHERE id_perdoruesi = ?'
         );
-        $stmt->execute([$emri, $bio, $profilePicture ?: null, $profilePublic, $user['id']]);
+        $stmt->execute([$emri, $bio, $profilePicture ?: null, $profilePublic, $profileColor, $user['id']]);
 
-        // Keep session name in sync for UI consistency
+        // Keep session values in sync for UI consistency
         $_SESSION['emri'] = $emri;
+        $_SESSION['profile_color'] = $profileColor;
+        $sessionProfilePicture = $profilePicture ?: '';
+        $_SESSION['profile_picture'] = $sessionProfilePicture;
+        $_SESSION['avatar'] = $sessionProfilePicture;
+        $_SESSION['photo'] = $sessionProfilePicture;
+        $_SESSION['foto'] = $sessionProfilePicture;
+        $_SESSION['profile_image'] = $sessionProfilePicture;
 
         json_success(['message' => 'Profili u përditësua me sukses.']);
         break;
@@ -160,6 +293,24 @@ switch ($action) {
         }
 
         json_success($user);
+        break;
+
+    // ── DELETE PROFILE PICTURE ──────────────────────
+    case 'delete_profile_picture':
+        require_method('DELETE');
+        $user = require_auth();
+
+        $stmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = NULL WHERE id_perdoruesi = ?');
+        $stmt->execute([$user['id']]);
+
+        // Keep avatar-related session values in sync with DB state.
+        $_SESSION['profile_picture'] = '';
+        $_SESSION['avatar'] = '';
+        $_SESSION['photo'] = '';
+        $_SESSION['foto'] = '';
+        $_SESSION['profile_image'] = '';
+
+        json_success(['message' => 'Fotoja e profilit u fshi me sukses.']);
         break;
 
     // ── BLOCK USER ─────────────────────────────────
@@ -361,7 +512,7 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, krijuar_me
+            "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, profile_color, krijuar_me
              FROM Perdoruesi
              WHERE id_perdoruesi = ? AND statusi_llogarise = 'Aktiv'"
         );
@@ -380,28 +531,18 @@ switch ($action) {
                 'emri' => $profile['emri'],
                 'roli' => $profile['roli'],
                 'profile_public' => 0,
+                'profile_color' => $profile['profile_color'] ?? 'emerald',
                 'private' => true,
             ]);
             break;
         }
 
-        // Public stats
-        $appCount = $pdo->prepare(
-            "SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'Pranuar'"
-        );
-        $appCount->execute([$id]);
-
-        $helpCount = $pdo->prepare('SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?');
-        $helpCount->execute([$id]);
-
-        $helpAppCount = $pdo->prepare(
-            "SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'Pranuar'"
-        );
-        $helpAppCount->execute([$id]);
+        // Public stats and badges
+        $badgeInfo = ts_get_user_profile_badges($pdo, $id);
 
         // Recent accepted events
         $recentEvents = $pdo->prepare(
-            "SELECT e.titulli, e.data, e.vendndodhja
+            "SELECT e.id_eventi, e.titulli, e.data, e.vendndodhja
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
              WHERE a.id_perdoruesi = ? AND a.statusi = 'Pranuar'
@@ -410,14 +551,25 @@ switch ($action) {
         );
         $recentEvents->execute([$id]);
 
-        $profile['evente_pranuar'] = (int) $appCount->fetchColumn();
-        $profile['total_kerkesa'] = (int) $helpCount->fetchColumn();
-        $profile['kerkesa_pranuar'] = (int) $helpAppCount->fetchColumn();
+        $recentRequests = $pdo->prepare(
+            "SELECT id_kerkese_ndihme, titulli, tipi, statusi, krijuar_me
+             FROM Kerkesa_per_Ndihme
+             WHERE id_perdoruesi = ?
+             ORDER BY krijuar_me DESC
+             LIMIT 10"
+        );
+        $recentRequests->execute([$id]);
+
+        $profile['evente_pranuar'] = $badgeInfo['metrics']['accepted_events'];
+        $profile['total_kerkesa'] = $badgeInfo['metrics']['total_requests'];
+        $profile['kerkesa_pranuar'] = $badgeInfo['metrics']['accepted_help_applications'];
+        $profile['badges'] = $badgeInfo['badges'];
         $profile['evente_te_fundit'] = $recentEvents->fetchAll();
+        $profile['kerkesa_te_fundit'] = $recentRequests->fetchAll();
 
         json_success($profile);
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile.', 400);
+        json_error('Veprim i panjohur. Përdorni: upload_profile_picture, update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile.', 400);
 }

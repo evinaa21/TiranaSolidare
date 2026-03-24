@@ -630,3 +630,159 @@ function generate_upload_filename(string $extension): string
     $timestamp = time();
     return "{$timestamp}_{$token}.{$extension}";
 }
+
+/**
+ * Build profile activity metrics used by badges and profile widgets.
+ */
+function ts_collect_user_badge_metrics(PDO $pdo, int $userId): array
+{
+    $registeredAtStmt = $pdo->prepare('SELECT krijuar_me FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+    $registeredAtStmt->execute([$userId]);
+    $registeredAt = $registeredAtStmt->fetchColumn();
+
+    $totalAppsStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ?');
+    $totalAppsStmt->execute([$userId]);
+    $totalApps = (int) $totalAppsStmt->fetchColumn();
+
+    $acceptedEventsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
+    $acceptedEventsStmt->execute([$userId]);
+    $acceptedEvents = (int) $acceptedEventsStmt->fetchColumn();
+
+    $totalRequestsStmt = $pdo->prepare('SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?');
+    $totalRequestsStmt->execute([$userId]);
+    $totalRequests = (int) $totalRequestsStmt->fetchColumn();
+
+    $acceptedHelpApps = 0;
+    try {
+        $acceptedHelpAppsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
+        $acceptedHelpAppsStmt->execute([$userId]);
+        $acceptedHelpApps = (int) $acceptedHelpAppsStmt->fetchColumn();
+    } catch (Throwable $e) {
+        $acceptedHelpApps = 0;
+    }
+
+    $memberDays = 0;
+    if ($registeredAt) {
+        $registered = new DateTimeImmutable((string) $registeredAt);
+        $now = new DateTimeImmutable('now');
+        $memberDays = max(0, (int) $registered->diff($now)->days);
+    }
+
+    return [
+        'total_applications' => $totalApps,
+        'accepted_events' => $acceptedEvents,
+        'total_requests' => $totalRequests,
+        'accepted_help_applications' => $acceptedHelpApps,
+        'member_days' => $memberDays,
+    ];
+}
+
+/**
+ * Return earned badges for a user profile, derived from platform activity.
+ */
+function ts_get_user_profile_badges(PDO $pdo, int $userId): array
+{
+    $metrics = ts_collect_user_badge_metrics($pdo, $userId);
+
+    $badgeCatalog = [
+        [
+            'key' => 'first_step',
+            'name' => 'Hapi i Parë',
+            'description' => 'Ke nisur kontributin tënd në komunitet.',
+            'icon' => 'seedling',
+            'condition' => ($metrics['total_applications'] + $metrics['total_requests'] + $metrics['accepted_help_applications']) >= 1,
+        ],
+        [
+            'key' => 'event_starter',
+            'name' => 'Startues Eventesh',
+            'description' => 'Ke të paktën 1 aplikim eventi të pranuar.',
+            'icon' => 'calendar-check',
+            'condition' => $metrics['accepted_events'] >= 1,
+        ],
+        [
+            'key' => 'community_helper',
+            'name' => 'Ndihmues i Komunitetit',
+            'description' => 'Ke të paktën 5 evente të pranuara.',
+            'icon' => 'hands-helping',
+            'condition' => $metrics['accepted_events'] >= 5,
+        ],
+        [
+            'key' => 'request_creator',
+            'name' => 'Zëri i Lagjes',
+            'description' => 'Ke krijuar të paktën 3 kërkesa për ndihmë.',
+            'icon' => 'megaphone',
+            'condition' => $metrics['total_requests'] >= 3,
+        ],
+        [
+            'key' => 'trusted_supporter',
+            'name' => 'Mbështetës i Besuar',
+            'description' => 'Ke të paktën 3 aplikime ndihme të pranuara.',
+            'icon' => 'heart-handshake',
+            'condition' => $metrics['accepted_help_applications'] >= 3,
+        ],
+        [
+            'key' => 'veteran_member',
+            'name' => 'Anëtar Veteran',
+            'description' => 'Je pjesë e platformës prej të paktën 180 ditësh.',
+            'icon' => 'shield',
+            'condition' => $metrics['member_days'] >= 180,
+        ],
+        [
+            'key' => 'all_rounder',
+            'name' => 'All-Rounder',
+            'description' => 'Aktiv në evente, kërkesa dhe ndihmë të drejtpërdrejtë.',
+            'icon' => 'sparkles',
+            'condition' => $metrics['accepted_events'] >= 3
+                && $metrics['total_requests'] >= 2
+                && $metrics['accepted_help_applications'] >= 2,
+        ],
+    ];
+
+    $earned = [];
+    foreach ($badgeCatalog as $badge) {
+        if ($badge['condition']) {
+            unset($badge['condition']);
+            $earned[] = $badge;
+        }
+    }
+
+    return [
+        'badges' => $earned,
+        'metrics' => $metrics,
+    ];
+}
+
+/**
+ * Predefined profile color palette (no free color picker).
+ */
+function ts_profile_color_palette(): array
+{
+    return [
+        'emerald' => ['label' => 'Emerald', 'from' => '#003229', 'mid' => '#00715D', 'to' => '#009e7e'],
+        'ocean' => ['label' => 'Ocean', 'from' => '#0b2a52', 'mid' => '#1d4ed8', 'to' => '#2563eb'],
+        'sunset' => ['label' => 'Sunset', 'from' => '#7c2d12', 'mid' => '#ea580c', 'to' => '#f97316'],
+        'rose' => ['label' => 'Rose', 'from' => '#881337', 'mid' => '#be185d', 'to' => '#e11d48'],
+        'violet' => ['label' => 'Violet', 'from' => '#3b0764', 'mid' => '#7e22ce', 'to' => '#9333ea'],
+        'slate' => ['label' => 'Slate', 'from' => '#1e293b', 'mid' => '#334155', 'to' => '#475569'],
+        'teal' => ['label' => 'Teal', 'from' => '#134e4a', 'mid' => '#0d9488', 'to' => '#14b8a6'],
+        'amber' => ['label' => 'Amber', 'from' => '#78350f', 'mid' => '#d97706', 'to' => '#f59e0b'],
+        'indigo' => ['label' => 'Indigo', 'from' => '#312e81', 'mid' => '#4f46e5', 'to' => '#6366f1'],
+        'pink' => ['label' => 'Pink', 'from' => '#831843', 'mid' => '#ec4899', 'to' => '#f472b6'],
+        'lime' => ['label' => 'Lime', 'from' => '#365314', 'mid' => '#84cc16', 'to' => '#a3e635'],
+        'cyan' => ['label' => 'Cyan', 'from' => '#082f49', 'mid' => '#0891b2', 'to' => '#06b6d4'],
+    ];
+}
+
+/**
+ * Resolve a profile color key to a valid palette entry.
+ */
+function ts_resolve_profile_color(?string $key): array
+{
+    $palette = ts_profile_color_palette();
+    $selected = $key && isset($palette[$key]) ? $key : 'emerald';
+    return [
+        'key' => $selected,
+        'theme' => $palette[$selected],
+        'palette' => $palette,
+    ];
+}

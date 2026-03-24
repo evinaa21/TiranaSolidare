@@ -3,6 +3,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!function_exists('ts_resolve_profile_color')) {
+  require_once dirname(__DIR__, 2) . '/includes/functions.php';
+}
+
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
 $isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin');
@@ -10,7 +14,7 @@ $isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin');
 $firstChar = function_exists('mb_substr') ? mb_substr($userName ?: 'P', 0, 1) : substr($userName ?: 'P', 0, 1);
 $userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : strtoupper($firstChar);
 
-$avatarSessionValue = $_SESSION['avatar'] ?? $_SESSION['photo'] ?? $_SESSION['foto'] ?? $_SESSION['profile_image'] ?? '';
+$avatarSessionValue = $_SESSION['profile_picture'] ?? $_SESSION['avatar'] ?? $_SESSION['photo'] ?? $_SESSION['foto'] ?? $_SESSION['profile_image'] ?? '';
 $avatarUrl = '';
 if (is_string($avatarSessionValue) && $avatarSessionValue !== '') {
   if (preg_match('/^https?:\/\//i', $avatarSessionValue) || strpos($avatarSessionValue, '/TiranaSolidare/') === 0 || strpos($avatarSessionValue, '/') === 0) {
@@ -21,6 +25,8 @@ if (is_string($avatarSessionValue) && $avatarSessionValue !== '') {
 }
 
 $avatarHue = abs(crc32((string) $userName)) % 360;
+$headerColorResolved = ts_resolve_profile_color($_SESSION['profile_color'] ?? 'emerald');
+$headerColorTheme = $headerColorResolved['theme'];
 ?>
 <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
 <meta name="theme-color" content="#00715D">
@@ -45,11 +51,11 @@ $avatarHue = abs(crc32((string) $userName)) % 360;
         <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary header-admin-btn">Paneli Admin</a>
       <?php else: ?>
         <div class="header-user-menu" id="header-user-menu">
-          <button type="button" class="header-user-avatar" aria-haspopup="true" aria-expanded="false" aria-controls="header-user-dropdown" onclick="toggleUserMenu(event)">
+          <button type="button" class="header-user-avatar" style="--avatar-accent: <?= htmlspecialchars($headerColorTheme['mid']) ?>;" aria-haspopup="true" aria-expanded="false" aria-controls="header-user-dropdown" onclick="toggleUserMenu(event)">
             <?php if ($avatarUrl !== ''): ?>
               <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="<?= htmlspecialchars($userName) ?>" onerror="this.style.display='none'; this.parentElement.classList.add('has-fallback'); this.parentElement.querySelector('.header-user-fallback').style.display='grid';">
             <?php endif; ?>
-            <span class="header-user-fallback" style="--avatar-hue: <?= (int) $avatarHue ?>;<?= $avatarUrl !== '' ? 'display:none;' : '' ?>"><?= htmlspecialchars($userInitial) ?></span>
+            <span class="header-user-fallback" style="--avatar-hue: <?= (int) $avatarHue ?>; --avatar-from: <?= htmlspecialchars($headerColorTheme['from']) ?>; --avatar-to: <?= htmlspecialchars($headerColorTheme['to']) ?>;<?= $avatarUrl !== '' ? 'display:none;' : '' ?>"><?= htmlspecialchars($userInitial) ?></span>
             <span id="notif-badge"></span>
           </button>
 
@@ -63,6 +69,7 @@ $avatarHue = abs(crc32((string) $userName)) % 360;
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=requests">Kërkesat e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=settings">Cilësimet</a>
             <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="header-user-signout">Dil</a>
           </div>
         </div>
