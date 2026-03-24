@@ -827,6 +827,44 @@ body.page-requests .rq-blob--filters {
   color: var(--rq-text-muted);
 }
 
+.rq-card__poster {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 113, 93, 0.35);
+  text-underline-offset: 2px;
+}
+
+.rq-card__poster:hover,
+.rq-card__poster:focus-visible {
+  color: var(--rq-primary);
+  text-decoration-color: var(--rq-primary);
+}
+
+.rq-poster-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+  text-underline-offset: 2px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.rq-poster-link:hover,
+.rq-poster-link:focus-visible {
+  color: #ffffff;
+  text-decoration-color: currentColor;
+}
+
+.rq-sidebar-info .rq-poster-link {
+  color: var(--rq-text);
+  text-decoration-color: rgba(0, 113, 93, 0.35);
+}
+
+.rq-sidebar-info .rq-poster-link:hover,
+.rq-sidebar-info .rq-poster-link:focus-visible {
+  color: var(--rq-primary);
+  text-decoration-color: var(--rq-primary);
+}
+
 .rq-card__meta svg {
   color: var(--rq-primary);
   flex-shrink: 0;

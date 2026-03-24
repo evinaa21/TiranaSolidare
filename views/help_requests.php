@@ -165,7 +165,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     </div>
     <h1><?= htmlspecialchars($request['titulli']) ?></h1>
     <div class="rq-detail-hero__meta">
-      <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <?= htmlspecialchars($request['krijuesi_emri'] ?? 'Anonim') ?></span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <a class="rq-poster-link" href="<?= htmlspecialchars(ts_public_profile_url((int) ($request['id_perdoruesi'] ?? 0), (string) ($request['krijuesi_emri'] ?? 'Anonim'))) ?>"><?= htmlspecialchars($request['krijuesi_emri'] ?? 'Anonim') ?></a></span>
       <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <?= koheParapake($request['krijuar_me']) ?></span>
     </div>
   </div>
@@ -210,7 +210,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <div class="rq-info-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
-            <div><span>Postuar nga</span><strong><?= htmlspecialchars($request['krijuesi_emri'] ?? 'N/A') ?></strong></div>
+            <div><span>Postuar nga</span><strong><a class="rq-poster-link" href="<?= htmlspecialchars(ts_public_profile_url((int) ($request['id_perdoruesi'] ?? 0), (string) ($request['krijuesi_emri'] ?? 'N/A'))) ?>"><?= htmlspecialchars($request['krijuesi_emri'] ?? 'N/A') ?></a></strong></div>
           </li>
           <li>
             <div class="rq-info-icon">
@@ -492,7 +492,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($req['pershkrimi'] ?? '', 0, 110)) ?>...</p>
             <div class="rq-card__footer">
               <div class="rq-card__meta">
-                <span>
+                <span class="rq-card__poster js-profile-link" role="link" tabindex="0" data-profile-url="<?= htmlspecialchars(ts_public_profile_url((int) ($req['id_perdoruesi'] ?? 0), (string) ($req['krijuesi_emri'] ?? 'Anonim'))) ?>" aria-label="Hap profilin publik të <?= htmlspecialchars($req['krijuesi_emri'] ?? 'Anonim') ?>">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   <?= htmlspecialchars($req['krijuesi_emri'] ?? 'Anonim') ?>
                 </span>
@@ -726,6 +726,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ─── Tab filtering (client-side, no page refresh) ───
+  // Clickable poster names inside full-card links.
+  document.querySelectorAll('.js-profile-link[data-profile-url]').forEach((el) => {
+    const openProfile = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const profileUrl = el.getAttribute('data-profile-url') || '';
+      if (profileUrl) {
+        window.location.href = profileUrl;
+      }
+    };
+
+    el.addEventListener('click', openProfile);
+    el.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        openProfile(event);
+      }
+    });
+  });
+
   const tabBtns = document.querySelectorAll('.rq-tabs-strip [data-filter]');
   const cards   = document.querySelectorAll('.rq-grid .rq-card[data-type]');
   const countEl = document.querySelector('.rq-results__count');

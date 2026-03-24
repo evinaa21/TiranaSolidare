@@ -786,3 +786,62 @@ function ts_resolve_profile_color(?string $key): array
         'palette' => $palette,
     ];
 }
+
+/**
+ * Build a URL-safe slug from a display name.
+ */
+function ts_slugify(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return 'user';
+    }
+
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if (is_string($converted) && $converted !== '') {
+            $value = $converted;
+        }
+    }
+
+    $value = strtolower($value);
+    $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+    $value = trim($value, '-');
+
+    return $value !== '' ? $value : 'user';
+}
+
+/**
+ * Parse public profile handle (e.g. emri-mbiemri-123) and return user ID.
+ */
+function ts_parse_public_profile_id(?string $handle): int
+{
+    $value = trim((string) $handle);
+    if ($value === '') {
+        return 0;
+    }
+
+    if (preg_match('/-(\d+)$/', $value, $matches)) {
+        return (int) $matches[1];
+    }
+
+    if (ctype_digit($value)) {
+        return (int) $value;
+    }
+
+    return 0;
+}
+
+/**
+ * Build a readable public profile URL with name slug and ID.
+ */
+function ts_public_profile_url(int $userId, ?string $displayName = null): string
+{
+    $id = max(0, $userId);
+    if ($id <= 0) {
+        return '/TiranaSolidare/views/public_profile.php';
+    }
+
+    $slug = ts_slugify((string) ($displayName ?? 'user'));
+    return '/TiranaSolidare/views/public_profile.php?u=' . rawurlencode($slug . '-' . $id);
+}

@@ -3,7 +3,12 @@ session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-$userId = (int) ($_GET['id'] ?? 0);
+$publicHandle = trim((string) ($_GET['u'] ?? ''));
+$userId = ts_parse_public_profile_id($publicHandle);
+
+if ($userId <= 0) {
+    $userId = (int) ($_GET['id'] ?? 0);
+}
 
 if ($userId <= 0) {
     header('Location: /TiranaSolidare/views/404.php');
@@ -24,6 +29,12 @@ $profile = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$profile) {
     header('Location: /TiranaSolidare/views/404.php');
+    exit();
+}
+
+$canonicalProfileUrl = ts_public_profile_url((int) $profile['id_perdoruesi'], (string) ($profile['emri'] ?? ''));
+if ($publicHandle === '' && isset($_GET['id'])) {
+    header('Location: ' . $canonicalProfileUrl, true, 302);
     exit();
 }
 
@@ -83,6 +94,7 @@ $profileColorTheme = $colorResolved['theme'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($profile['emri']) ?> — Tirana Solidare</title>
+    <link rel="canonical" href="<?= htmlspecialchars($canonicalProfileUrl) ?>">
     <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
     <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
     <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
@@ -190,22 +202,54 @@ $profileColorTheme = $colorResolved['theme'];
         }
         .pp-badge svg { width: 13px; height: 13px; }
         .pp-earned-badges {
-            margin-top: 14px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
         }
         .pp-earned-badge {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #f0fdf8 0%, #dcfce7 100%);
+            color: #064e3b;
+            border: 1px solid #86efac;
+            box-shadow: 0 6px 16px rgba(4, 120, 87, 0.14);
+        }
+        .pp-earned-badge__icon {
+            flex-shrink: 0;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #047857;
+            color: #fff;
             display: inline-flex;
             align-items: center;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #bbf7d0;
-            font-size: 0.76rem;
-            font-weight: 700;
-            letter-spacing: 0.2px;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(4, 120, 87, 0.28);
+        }
+        .pp-earned-badge__icon svg {
+            width: 20px;
+            height: 20px;
+        }
+        .pp-earned-badge__body {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .pp-earned-badge__name {
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #064e3b;
+        }
+        .pp-earned-badge__desc {
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: #166534;
         }
         .pp-meta {
             display: flex;
@@ -332,6 +376,9 @@ $profileColorTheme = $colorResolved['theme'];
             .pp-stat__value { font-size: 1.3rem; }
             .pp-section { padding: 20px; }
             .pp-table { font-size: 0.78rem; }
+            .pp-earned-badges { grid-template-columns: 1fr; }
+            .pp-earned-badge { padding: 12px; }
+            .pp-earned-badge__icon { width: 34px; height: 34px; }
         }
     </style>
 </head>
@@ -387,9 +434,15 @@ $profileColorTheme = $colorResolved['theme'];
             <?php if (!empty($earnedBadges)): ?>
                 <div class="pp-earned-badges">
                     <?php foreach ($earnedBadges as $badge): ?>
-                        <span class="pp-earned-badge" title="<?= htmlspecialchars($badge['description']) ?>">
-                            <?= htmlspecialchars($badge['name']) ?>
-                        </span>
+                        <div class="pp-earned-badge" title="<?= htmlspecialchars($badge['description']) ?>">
+                            <span class="pp-earned-badge__icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+                            </span>
+                            <span class="pp-earned-badge__body">
+                                <span class="pp-earned-badge__name"><?= htmlspecialchars($badge['name']) ?></span>
+                                <span class="pp-earned-badge__desc"><?= htmlspecialchars($badge['description']) ?></span>
+                            </span>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
