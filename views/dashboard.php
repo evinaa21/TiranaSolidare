@@ -170,7 +170,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           <textarea name="pershkrimi" rows="2" placeholder="Përshkrim i shkurtër..."></textarea>
         </div>
         <div class="db-form__group">
-          <label>Banner URL</label>
+          <label>Banner </label>
           <input type="text" name="banner" placeholder="https://images.unsplash.com/...">
         </div>
         <div class="db-form__group">

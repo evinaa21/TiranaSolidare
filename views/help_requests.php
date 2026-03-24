@@ -269,8 +269,15 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
               <span>Aplikuar: <?= date('d/m/Y H:i', strtotime($myRequestApplication['aplikuar_me'] ?? 'now')) ?></span>
             </div>
             <p class="rq-sidebar-hint">Këtë kërkesë e gjeni edhe te paneli juaj në seksionin “Aplikimet e mia”.</p>
-          <?php elseif ($isOwner || $isAdmin): ?>
-            <p class="rq-sidebar-hint">Më poshtë mund të shihni të gjithë aplikantët dhe t'i kontaktoni individualisht.</p>
+         <?php elseif ($isOwner || $isAdmin): ?>
+<?php if ($isOwner && ($request['statusi'] ?? '') === 'Open'): ?>
+    <button type="button" class="rq-btn-full rq-btn-close" id="rq-close-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:12px;background:rgba(107,114,128,0.1);color:#374151;border:1.5px solid #d1d5db;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        Mbyll kërkesën
+    </button>
+    <div class="rq-inline-status" id="rq-close-status" style="display:none"></div>
+<?php endif; ?>
+<p class="rq-sidebar-hint">Më poshtë mund të shihni të gjithë aplikantët dhe t'i kontaktoni individualisht.</p>
           <?php elseif ($isLoggedIn): ?>
             <p class="rq-sidebar-hint">Kjo kërkesë nuk është e disponueshme për aplikim.</p>
           <?php endif; ?>
@@ -800,6 +807,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+const closeBtn = document.getElementById('rq-close-btn');
+if (closeBtn) {
+    closeBtn.addEventListener('click', async function() {
+        if (!confirm('Jeni të sigurt që dëshironi ta mbyllni këtë kërkesë?')) return;
+        const requestId = parseInt(this.dataset.requestId || '0', 10);
+        this.disabled = true;
+        this.textContent = 'Duke mbyllur...';
+        try {
+            const res = await fetch(API + '/help_requests.php?action=close&id=' + requestId, {
+                method: 'PUT',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+            setInlineStatus(document.getElementById('rq-close-status'), 'success', 'Kërkesa u mbyll me sukses.');
+            setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+            setInlineStatus(document.getElementById('rq-close-status'), 'error', err.message);
+            this.disabled = false;
+            this.textContent = 'Mbyll kërkesën';
+        }
+    });
+}
+
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
 </body>
