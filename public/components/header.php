@@ -57,6 +57,10 @@ $headerColorTheme = $headerColorResolved['theme'];
             <?php endif; ?>
             <span class="header-user-fallback" style="--avatar-hue: <?= (int) $avatarHue ?>; --avatar-from: <?= htmlspecialchars($headerColorTheme['from']) ?>; --avatar-to: <?= htmlspecialchars($headerColorTheme['to']) ?>;<?= $avatarUrl !== '' ? 'display:none;' : '' ?>"><?= htmlspecialchars($userInitial) ?></span>
             <span id="notif-badge"></span>
+            <span class="header-user-mobile-label">Llogaria ime</span>
+            <span class="header-user-mobile-chevron" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
           </button>
 
           <div class="header-user-dropdown" id="header-user-dropdown">

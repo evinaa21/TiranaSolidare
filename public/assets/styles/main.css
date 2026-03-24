@@ -618,6 +618,11 @@ body.page-home .header.scrolled{
   transition: transform 0.2s ease, box-shadow 0.2s ease, -webkit-transform 0.2s ease, -webkit-box-shadow 0.2s ease;
 }
 
+.header-user-mobile-label,
+.header-user-mobile-chevron{
+  display: none;
+}
+
 .header-user-avatar:hover{
   -webkit-transform: translateY(-1px);
       -ms-transform: translateY(-1px);
@@ -855,13 +860,83 @@ body.page-home .header.scrolled{
   }
 
   .header-user-avatar{
-    margin-inline: auto;
+    width: 100%;
+    height: auto;
+    margin-inline: 0;
+    border-radius: 14px;
+    padding: 10px 12px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    -webkit-box-pack: start;
+        -ms-flex-pack: start;
+            justify-content: flex-start;
+    gap: 10px;
+    background: #f3faf7;
+    border: 1px solid #d5ece4;
+  }
+
+  .header-user-avatar:hover{
+    -webkit-transform: none;
+        -ms-transform: none;
+            transform: none;
+    -webkit-box-shadow: none;
+            box-shadow: none;
+  }
+
+  .header-user-avatar > img,
+  .header-user-fallback{
+    width: 40px;
+    height: 40px;
+    -ms-flex-negative: 0;
+        flex-shrink: 0;
+  }
+
+  #notif-badge{
+    top: 6px;
+    left: 38px;
+    right: auto;
+  }
+
+  .header-user-mobile-label{
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #003229;
+  }
+
+  .header-user-mobile-chevron{
+    display: -webkit-inline-box;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    margin-left: auto;
+    color: #0f766e;
+    -webkit-transition: -webkit-transform 0.2s ease;
+    transition: -webkit-transform 0.2s ease;
+    -o-transition: transform 0.2s ease;
+    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, -webkit-transform 0.2s ease;
+  }
+
+  .header-user-avatar[aria-expanded="true"] .header-user-mobile-chevron{
+    -webkit-transform: rotate(180deg);
+        -ms-transform: rotate(180deg);
+            transform: rotate(180deg);
   }
 
   .header-user-dropdown{
     position: static;
     width: 100%;
     margin-top: 12px;
+    border-radius: 12px;
+    border-color: #d5ece4;
+    background: #ffffff;
+    -webkit-box-shadow: none;
+            box-shadow: none;
+    padding: 8px;
   }
 
   .header-admin-btn{
