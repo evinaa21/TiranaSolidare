@@ -444,7 +444,7 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
 <section class="rq-cta rq-cta--events">
   <svg class="rq-blob rq-blob--cta" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.06)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
   <div class="rq-cta__inner">
-    <h2>Dëshiron të marrish pjesë?</h2>
+    <h2>Dëshiron të marrësh pjesë?</h2>
     <p>Regjistrohu për të aplikuar në evente dhe për të qenë pjesë e komunitetit solidar të Tiranës. Është falas dhe e thjeshtë.</p>
     <?php if ($isLoggedIn): ?>
       <a href="/TiranaSolidare/views/volunteer_panel.php" class="btn_primary">Shko te paneli</a>

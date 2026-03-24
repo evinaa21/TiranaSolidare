@@ -1600,3 +1600,7 @@
 .ud-stat-card--clickable:hover .ud-stat-card__hint {
     opacity: 1;
 }
+
+#event-applications-card {
+    margin-top: 32px;
+}

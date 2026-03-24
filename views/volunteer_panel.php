@@ -220,7 +220,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
       </div>
     </div>
 
-    <!-- Edit Name Card -->
+<!-- Edit Name Card -->
     <div class="vp-card">
       <div class="vp-card__header">
         <h3>Ndrysho emrin</h3>
@@ -234,6 +234,32 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
           <button type="submit" class="btn_primary">Ruaj emrin</button>
         </form>
         <div id="vp-name-status" class="vp-status" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Bio / Foto / Privatësia -->
+    <div class="vp-card" style="grid-column: 1 / -1">
+      <div class="vp-card__header">
+        <h3>Profili publik</h3>
+      </div>
+      <div class="vp-card__body">
+        <form id="vp-extra-form" class="vp-form">
+          <input type="hidden" id="vp-extra-emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>">
+          <div class="vp-field">
+            <label for="vp-bio">Bio</label>
+            <textarea id="vp-bio" name="bio" rows="3" maxlength="500" placeholder="Shkruaj diçka për veten..." class="vp-input"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
+          </div>
+          <div class="vp-field">
+            <label for="vp-picture">URL e fotos së profilit</label>
+            <input type="url" id="vp-picture" name="profile_picture" value="<?= htmlspecialchars($user['profile_picture'] ?? '') ?>" placeholder="https://example.com/photo.jpg" maxlength="500" class="vp-input">
+          </div>
+          <div class="vp-field" style="display:flex;align-items:center;gap:10px">
+            <input type="checkbox" id="vp-public" name="profile_public" style="width:18px;height:18px;accent-color:#00715D" <?= ($user['profile_public'] ?? 1) ? 'checked' : '' ?>>
+            <label for="vp-public" style="margin:0;cursor:pointer">Profili im është publik</label>
+          </div>
+          <button type="submit" class="btn_primary">Ruaj ndryshimet</button>
+        </form>
+        <div id="vp-extra-status" class="vp-status" style="display:none"></div>
       </div>
     </div>
 
@@ -262,39 +288,7 @@ $scorePercent = min(100, round(($score / $scoreMax) * 100));
       </div>
     </div>
 
-<!-- Bio / Foto / Privatësia -->
-  <div class="vp-card" style="grid-column: 1 / -1">
-  <div class="vp-card__header">
-    <h3>Profili publik</h3>
   </div>
-  <div class="vp-card__body">
-    <form id="vp-extra-form" class="vp-form">
-       <input type="hidden" id="vp-extra-emri" value="<?= htmlspecialchars($user['emri'] ?? '') ?>">
-      <div class="vp-field">
-        <label for="vp-bio">Bio</label>
-        <textarea id="vp-bio" name="bio" rows="3" maxlength="500"
-          placeholder="Shkruaj diçka për veten..."
-          class="vp-input"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
-      </div>
-      <div class="vp-field">
-        <label for="vp-picture">URL e fotos së profilit</label>
-        <input type="url" id="vp-picture" name="profile_picture"
-          value="<?= htmlspecialchars($user['profile_picture'] ?? '') ?>"
-          placeholder="https://example.com/photo.jpg"
-          maxlength="500" class="vp-input">
-      </div>
-      <div class="vp-field" style="display:flex;align-items:center;gap:10px">
-        <input type="checkbox" id="vp-public" name="profile_public"
-          style="width:18px;height:18px;accent-color:#00715D"
-          <?= ($user['profile_public'] ?? 1) ? 'checked' : '' ?>>
-        <label for="vp-public" style="margin:0;cursor:pointer">Profili im është publik</label>
-      </div>
-      <button type="submit" class="btn_primary">Ruaj ndryshimet</button>
-    </form>
-    <div id="vp-extra-status" class="vp-status" style="display:none"></div>
-   </div>
-  </div>
- </div>
 </div>
 
 <?php elseif ($tab === 'applications'): ?>

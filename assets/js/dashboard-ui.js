@@ -55,7 +55,15 @@ function toggleSidebar() {
 
 function toggleCreateEvent() {
     const w = document.getElementById('create-event-wrapper');
-    if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
+    const table = document.getElementById('admin-event-list');
+    const appCard = document.getElementById('event-applications-card');
+    
+    if (w) {
+        const isOpening = w.style.display === 'none';
+        w.style.display = isOpening ? 'block' : 'none';
+        if (table) table.style.display = isOpening ? 'none' : 'block';
+        if (appCard) appCard.style.display = 'none';
+    }
 }
 
 
@@ -274,47 +282,40 @@ window.loadAdminEvents = async function (page = 1) {
 // ═══════════════════════════════════════════════════════
 
 window.viewEventApps = async function (eventId) {
-    const container = document.getElementById('event-applications');
-    const card = document.getElementById('event-applications-card');
-    if (!container) return;
-    container.dataset.eventId = eventId;
-    if (card) card.style.display = 'block';
-
     const json = await apiCall(`applications.php?action=by_event&id=${eventId}`);
     if (!json.success) return;
 
     const { applications, summary } = json.data;
 
-    let html = `<div style="display:flex;gap:10px;padding:16px;flex-wrap:wrap;">
+    let body = `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <span class="db-badge db-badge--pending">Në pritje: ${summary.ne_pritje}</span>
         <span class="db-badge db-badge--active">Pranuar: ${summary.pranuar}</span>
         <span class="db-badge db-badge--blocked">Refuzuar: ${summary.refuzuar}</span>
     </div>`;
 
     if (applications.length === 0) {
-        html += '<div class="db-loading">Nuk ka aplikime për këtë event.</div>';
-        container.innerHTML = html;
-        return;
+        body += '<div class="db-loading">Nuk ka aplikime për këtë event.</div>';
+    } else {
+        body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Emri</th><th>Email</th><th>Statusi</th><th>Veprime</th></tr></thead><tbody>';
+        applications.forEach(app => {
+            const statusClass = app.statusi === 'Pranuar' ? 'active' : app.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            body += `<tr>
+                <td><strong>${escapeHtml(app.vullnetari_emri)}</strong></td>
+                <td>${escapeHtml(app.vullnetari_email)}</td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(app.statusi)}</span></td>
+                <td>
+                    <div class="db-table__actions">
+                        <button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Pranuar')">Prano</button>
+                        <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Refuzuar')">Refuzo</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
     }
 
-    html += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Emri</th><th>Email</th><th>Statusi</th><th>Veprime</th></tr></thead><tbody>';
-
-    applications.forEach(app => {
-        const statusClass = app.statusi === 'Pranuar' ? 'active' : app.statusi === 'Refuzuar' ? 'blocked' : 'pending';
-        html += `<tr>
-            <td><strong>${escapeHtml(app.vullnetari_emri)}</strong></td>
-            <td>${escapeHtml(app.vullnetari_email)}</td>
-            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(app.statusi)}</span></td>
-            <td>
-                <div class="db-table__actions">
-                    <button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Pranuar')">Prano</button>
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Refuzuar')">Refuzo</button>
-                </div>
-            </td>
-        </tr>`;
-    });
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
+    showUserActivityModal('Duke ngarkuar…');
+    updateUserActivityModal('Aplikimet për Eventin', body);
 };
 
 
@@ -514,7 +515,7 @@ window.openUserDetail = async function (userId) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
                     <h4>Statusi i Llogarisë</h4>
                 </div>
-                <p class="ud-card__desc">Menaxhoni statusin e llogarisë. Çaktivizimi (soft-delete) ruan të dhënat si në Facebook/Instagram.</p>
+                <p class="ud-card__desc">Menaxhoni statusin e llogarisë. </p>
                 <div class="ud-card__body ud-card__body--row">
                     ${isActive ? `
                         <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
