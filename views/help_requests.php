@@ -276,6 +276,19 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         Mbyll kërkesën
     </button>
     <div class="rq-inline-status" id="rq-close-status" style="display:none"></div>
+    <?php if ($isOwner): ?>
+    <button type="button" class="rq-btn-full" id="rq-delete-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:8px;background:rgba(239,68,68,0.08);color:#dc2626;border:1.5px solid rgba(239,68,68,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        Fshi kërkesën
+    </button>
+    <div class="rq-inline-status" id="rq-delete-status" style="display:none"></div>
+<?php endif; ?>
+<?php elseif ($isOwner && ($request['statusi'] ?? '') === 'Closed'): ?>
+    <button type="button" class="rq-btn-full" id="rq-reopen-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:12px;background:rgba(0,113,93,0.08);color:#00715D;border:1.5px solid #00715D;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Rihap kërkesën
+    </button>
+    <div class="rq-inline-status" id="rq-reopen-status" style="display:none"></div>
 <?php endif; ?>
 <p class="rq-sidebar-hint">Më poshtë mund të shihni të gjithë aplikantët dhe t'i kontaktoni individualisht.</p>
           <?php elseif ($isLoggedIn): ?>
@@ -829,6 +842,69 @@ if (closeBtn) {
             setInlineStatus(document.getElementById('rq-close-status'), 'error', err.message);
             this.disabled = false;
             this.textContent = 'Mbyll kërkesën';
+        }
+    });
+}
+
+const reopenBtn = document.getElementById('rq-reopen-btn');
+if (reopenBtn) {
+    reopenBtn.addEventListener('click', async function() {
+        if (!confirm('Jeni të sigurt që dëshironi ta rihapni këtë kërkesë?')) return;
+        const requestId = parseInt(this.dataset.requestId || '0', 10);
+        this.disabled = true;
+        this.textContent = 'Duke rihapur...';
+        try {
+            const res = await fetch(API + '/help_requests.php?action=reopen&id=' + requestId, {
+                method: 'PUT',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+            setInlineStatus(document.getElementById('rq-reopen-status'), 'success', 'Kërkesa u rihap me sukses.');
+            setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+            setInlineStatus(document.getElementById('rq-reopen-status'), 'error', err.message);
+            this.disabled = false;
+            this.textContent = 'Rihap kërkesën';
+        }
+    });
+}
+
+const deleteBtn = document.getElementById('rq-delete-btn');
+if (deleteBtn) {
+    deleteBtn.addEventListener('click', async function() {
+        const requestId = parseInt(this.dataset.requestId || '0', 10);
+        
+        <?php 
+        $hasAccepted = false;
+        foreach ($requestApplicants as $app) {
+            if ($app['statusi'] === 'Pranuar') { $hasAccepted = true; break; }
+        }
+        ?>
+        const hasAccepted = <?= $hasAccepted ? 'true' : 'false' ?>;
+        
+        if (hasAccepted) {
+            if (!confirm('Kjo kërkesë ka aplikime të pranuara. Jeni të sigurt që dëshironi ta fshini?')) return;
+        } else {
+            if (!confirm('Jeni të sigurt që dëshironi ta fshini këtë kërkesë?')) return;
+        }
+        
+        this.disabled = true;
+        this.textContent = 'Duke fshirë...';
+        try {
+            const res = await fetch(API + '/help_requests.php?action=delete&id=' + requestId, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+            window.location.href = '/TiranaSolidare/views/help_requests.php';
+        } catch (err) {
+            setInlineStatus(document.getElementById('rq-delete-status'), 'error', err.message);
+            this.disabled = false;
+            this.textContent = 'Fshi kërkesën';
         }
     });
 }
