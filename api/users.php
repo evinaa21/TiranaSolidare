@@ -203,8 +203,15 @@ switch ($action) {
         $statusi = $_GET['statusi'] ?? null;
         $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-        $where  = [];
-        $params = [];
+        $user = require_auth();
+
+$where  = [];
+$params = [];
+
+$where[]  = 'id_perdoruesi != ?';
+$params[] = $user['id'];
+
+        
 
         if ($roli) {
             $where[]  = 'roli = ?';

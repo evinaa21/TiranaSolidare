@@ -458,7 +458,7 @@ window.openUserDetail = async function (userId) {
 <div class="ud-stats">
     <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
         <div class="ud-stat-card__value">${u.total_aplikime}</div>
-        <div class="ud-stat-card__label">Aplikime Eventesh</div>
+        <div class="ud-stat-card__label">Aplikimet</div>
         <div class="ud-stat-card__hint">Shiko →</div>
     </div>
     <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
@@ -466,15 +466,10 @@ window.openUserDetail = async function (userId) {
         <div class="ud-stat-card__label">Kërkesa</div>
         <div class="ud-stat-card__hint">Shiko →</div>
     </div>
-    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequestApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
-        <div class="ud-stat-card__value">${u.total_aplikime_kerkesa || 0}</div>
-        <div class="ud-stat-card__label">Aplikime Kërkesash</div>
-        <div class="ud-stat-card__hint">Shiko →</div>
-    </div>
-    <div class="ud-stat-card">
-        <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
-        <div class="ud-stat-card__label">Regjistruar më</div>
-    </div>
+<div class="ud-stat-card">
+    <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
+    <div class="ud-stat-card__label">Regjistruar më</div>
+</div>
 </div>
 
 <!-- User Activity Section (injected by click) -->
@@ -550,21 +545,48 @@ window.openUserDetail = async function (userId) {
 window.loadUserApplications = async function(userId, userName) {
     showUserActivityModal('Duke ngarkuar aplikimet…');
 
-const json = await apiCall(`applications.php?action=by_user&id=${userId}`);
-if (!json.success) return;
-const apps = json.data.applications;
+    const [eventAppsJson, requestAppsJson] = await Promise.all([
+        apiCall(`applications.php?action=by_user&id=${userId}`),
+        apiCall(`help_requests.php?action=by_user&id=${userId}`)
+    ]);
+
+    const eventApps = eventAppsJson.success ? eventAppsJson.data.applications : [];
+    const requestApps = requestAppsJson.success ? requestAppsJson.data.applications : [];
 
     let body = '';
-    if (apps.length === 0) {
-        body = '<p style="color:#6b7a8d;padding:20px 0;text-align:center;">Nuk ka aplikime.</p>';
+
+    // Aplikimet e Eventeve
+    body += `<h4 style="margin:0 0 12px;font-family:'Bitter',serif;color:#003229;font-size:1rem;">Aplikimet e Eventeve (${eventApps.length})</h4>`;
+    if (eventApps.length === 0) {
+        body += '<p style="color:#6b7a8d;padding:8px 0 20px;">Nuk ka aplikime për evente.</p>';
     } else {
-        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
-        apps.forEach(a => {
+        body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
+        eventApps.forEach(a => {
             const statusClass = a.statusi === 'Pranuar' ? 'active' : a.statusi === 'Refuzuar' ? 'blocked' : 'pending';
             body += `<tr>
                 <td><strong>${escapeHtml(a.eventi_titulli)}</strong></td>
                 <td>${formatDate(a.eventi_data)}</td>
                 <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.statusi)}</span></td>
+                <td>${formatDate(a.aplikuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+
+    // Aplikimet e Kërkesave
+    body += `<h4 style="margin:24px 0 12px;font-family:'Bitter',serif;color:#003229;font-size:1rem;">Aplikimet e Kërkesave (${requestApps.length})</h4>`;
+    if (requestApps.length === 0) {
+        body += '<p style="color:#6b7a8d;padding:8px 0;">Nuk ka aplikime për kërkesa.</p>';
+    } else {
+        body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Kërkesa</th><th>Tipi</th><th>Pronari</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
+        requestApps.forEach(a => {
+            const statusClass = a.aplikimi_statusi === 'Pranuar' ? 'active' : a.aplikimi_statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            const tipClass = a.tipi === 'Kërkesë' ? 'request' : a.tipi === 'Ofertë' ? 'offer' : 'vol';
+            body += `<tr>
+                <td><strong>${escapeHtml(a.titulli)}</strong></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(a.tipi)}</span></td>
+                <td>${escapeHtml(a.pronari_emri)}</td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.aplikimi_statusi)}</span></td>
                 <td>${formatDate(a.aplikuar_me)}</td>
             </tr>`;
         });
