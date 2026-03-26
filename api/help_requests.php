@@ -617,29 +617,37 @@ switch ($action) {
         break;
 
     // ── DELETE REQUEST ─────────────────────────────
-    case 'delete':
-        require_method('DELETE');
-        require_admin();
-        $id = (int) ($_GET['id'] ?? 0);
+case 'delete':
+    require_method('DELETE');
+    $user = require_auth();
+    $id = (int) ($_GET['id'] ?? 0);
 
-        if ($id <= 0) {
-            json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+    if ($id <= 0) {
+        json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+    }
+
+    try {
+        $check = $pdo->prepare('SELECT id_perdoruesi FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+        $check->execute([$id]);
+        $existing = $check->fetch();
+
+        if (!$existing) {
+            json_error('Kërkesa nuk u gjet.', 404);
         }
 
-        try {
-            $stmt = $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
-            $stmt->execute([$id]);
-
-            if ($stmt->rowCount() === 0) {
-                json_error('Kërkesa nuk u gjet.', 404);
-            }
-
-            json_success(['message' => 'Kërkesa u fshi.']);
-        } catch (\Exception $e) {
-            error_log('help_requests delete: ' . $e->getMessage());
-            json_error('Gabim gjatë fshirjes të kërkesës.', 500);
+        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+            json_error('Nuk keni leje.', 403);
         }
-        break;
+
+        $stmt = $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+        $stmt->execute([$id]);
+
+        json_success(['message' => 'Kërkesa u fshi.']);
+    } catch (\Exception $e) {
+        error_log('help_requests delete: ' . $e->getMessage());
+        json_error('Gabim gjatë fshirjes të kërkesës.', 500);
+    }
+    break;
 
     // ── APPLICATIONS BY USER (Admin) ────────────────
     case 'by_user':

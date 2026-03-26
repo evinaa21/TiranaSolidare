@@ -293,7 +293,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <h4>Ndrysho fjalëkalimin</h4>
       </div>
-      <p class="ud-card__desc">Përdor një fjalëkalim të fortë me të paktën 8 karaktere.</p>
+      <p class="ud-card__desc">Vendos një fjalëkalim të fortë dhe unik.</p>
       <div class="ud-card__body">
         <input type="password" id="admin-current-pw" class="ud-input" placeholder="Fjalëkalimi aktual" autocomplete="new-password">
         <input type="password" id="admin-new-pw" class="ud-input" placeholder="Fjalëkalimi i ri">

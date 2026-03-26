@@ -764,8 +764,8 @@ window.loadHelpRequests = async function (page = 1) {
         <input id="admin-req-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadHelpRequests(1)">
         <select id="admin-req-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
-            <option value="Open"${filterStatus === 'Open' ? ' selected' : ''}>Open</option>
-            <option value="Closed"${filterStatus === 'Closed' ? ' selected' : ''}>Closed</option>
+            <option value="Open"${filterStatus === 'Open' ? ' selected' : ''}>Hapur</option>
+            <option value="Closed"${filterStatus === 'Closed' ? ' selected' : ''}>Mbyllur</option>
         </select>
         <select id="admin-req-filter-type" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterType ? ' selected' : ''}>Të gjitha tipet</option>
@@ -795,7 +795,7 @@ window.loadHelpRequests = async function (page = 1) {
         html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
-            <td><span class="db-badge db-badge--${statClass}">${r.statusi}</span></td>
+            <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'Open' ? 'Hapur' : 'Mbyllur'}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${formatDate(r.krijuar_me)}</td>
             <td>

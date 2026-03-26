@@ -161,7 +161,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         <?= $request['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
       </span>
-      <span class="rq-badge rq-badge--<?= strtolower($request['statusi']) ?>"><?= htmlspecialchars($request['statusi']) ?></span>
+     <span class="rq-badge rq-badge--<?= strtolower($request['statusi']) ?>"><?= $request['statusi'] === 'Open' ? 'Hapur' : 'Mbyllur' ?></span>
     </div>
     <h1><?= htmlspecialchars($request['titulli']) ?></h1>
     <div class="rq-detail-hero__meta">
@@ -439,8 +439,8 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     <div class="rq-filters__pills">
       <select name="statusi" onchange="this.form.submit()">
         <option value="">Të gjitha statuset</option>
-        <option value="Open" <?= $statusi === 'Open' ? 'selected' : '' ?>>Open</option>
-        <option value="Closed" <?= $statusi === 'Closed' ? 'selected' : '' ?>>Closed</option>
+        <option value="Open" <?= $statusi === 'Open' ? 'selected' : '' ?>>Hapur</option>
+        <option value="Closed" <?= $statusi === 'Closed' ? 'selected' : '' ?>>Mbyllur</option>
       </select>
       <button type="submit" class="rq-filters__btn">Kërko</button>
     </div>
@@ -504,7 +504,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <img src="<?= htmlspecialchars($cardImgSrc) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
             <div class="rq-card__overlay">
               <span class="rq-badge rq-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-              <span class="rq-badge rq-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
+              <span class="rq-badge rq-badge--<?= strtolower($req['statusi']) ?>"><?= $req['statusi'] === 'Open' ? 'Hapur' : 'Mbyllur' ?></span>
             </div>
           </div>
           <div class="rq-card__content">
