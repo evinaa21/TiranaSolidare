@@ -10,6 +10,8 @@
  * PUT    ?action=update&id=<id>    – Update a request
  * PUT    ?action=close&id=<id>     – Close a request (owner / Admin)
  * DELETE ?action=delete&id=<id>    – Delete a request (Admin)
+ * PUT    ?action=approve&id=<id>   – Approve a pending request (Admin)
+ * PUT    ?action=reject&id=<id>    – Reject a pending request (Admin)
  * ---------------------------------------------------
  */
 require_once __DIR__ . '/helpers.php';
@@ -338,15 +340,26 @@ switch ($action) {
         require_method('GET');
         $pagination = get_pagination();
 
+        // Determine caller identity for visibility filtering
+        $caller = get_optional_auth();
+        $callerIsAdmin = $caller && ($caller['roli'] ?? '') === 'Admin';
+        $callerId = $caller ? (int) $caller['id'] : 0;
+
         try {
             // Optional filters
             $tipi    = $_GET['tipi'] ?? null;     // Kërkesë | Ofertë
-            $statusi = $_GET['statusi'] ?? null;   // Open | Closed
+            $statusi = $_GET['statusi'] ?? null;   // Pending | Open | Closed
             $userId  = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
             $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
 
             $where  = [];
             $params = [];
+
+            // Non-admins cannot see Pending requests (except their own)
+            if (!$callerIsAdmin) {
+                $where[]  = "(kn.statusi != 'Pending' OR kn.id_perdoruesi = ?)";
+                $params[] = $callerId;
+            }
 
             if ($tipi) {
                 $where[]  = 'kn.tipi = ?';
@@ -377,7 +390,7 @@ switch ($action) {
                     JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
                     $whereSQL
                     ORDER BY 
-                    CASE WHEN kn.statusi = 'Open' THEN 0 ELSE 1 END ASC,
+                    CASE WHEN kn.statusi = 'Pending' THEN 0 WHEN kn.statusi = 'Open' THEN 1 ELSE 2 END ASC,
                     kn.krijuar_me DESC
                     LIMIT ? OFFSET ?";
 
@@ -424,6 +437,16 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
+            // Non-admins and non-owners cannot view Pending requests
+            if ($request['statusi'] === 'Pending') {
+                $viewer = get_optional_auth();
+                $viewerIsAdmin = $viewer && ($viewer['roli'] ?? '') === 'Admin';
+                $viewerIsOwner = $viewer && (int) $viewer['id'] === (int) $request['id_perdoruesi'];
+                if (!$viewerIsAdmin && !$viewerIsOwner) {
+                    json_error('Kërkesa nuk u gjet.', 404);
+                }
+            }
+
             json_success($request);
         } catch (\Exception $e) {
             error_log('help_requests get: ' . $e->getMessage());
@@ -459,16 +482,38 @@ switch ($action) {
             json_error($lenErr, 422);
         }
 
+        // Admins bypass approval; regular users go to Pending
+        $initialStatus = ($user['roli'] === 'Admin') ? 'Open' : 'Pending';
+
         try {
             $stmt = $pdo->prepare(
                 "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, imazhi, vendndodhja, latitude, longitude)
-                 VALUES (?, ?, ?, ?, 'Open', ?, ?, ?, ?)"
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $imazhi, $vendndodhja, $latitude, $longitude]);
+            $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $initialStatus, $imazhi, $vendndodhja, $latitude, $longitude]);
+
+            $newId = (int) $pdo->lastInsertId();
+
+            // Notify all admins about pending request
+            if ($initialStatus === 'Pending') {
+                $adminStmt = $pdo->query("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE roli = 'Admin'");
+                $admins = $adminStmt->fetchAll();
+                $notifMsg = "Kërkesë e re në pritje aprovimi: \"{$titulli}\" nga {$user['emri']}.";
+                $notifIns = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+                foreach ($admins as $admin) {
+                    $notifIns->execute([$admin['id_perdoruesi'], $notifMsg]);
+                    if (filter_var($admin['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                        send_notification_email($admin['email'], $admin['emri'] ?? 'Admin', 'Kërkesë e re në pritje aprovimi', $notifMsg);
+                    }
+                }
+            }
 
             json_success([
-                'id_kerkese_ndihme' => (int) $pdo->lastInsertId(),
-                'message'           => 'Kërkesa u krijua me sukses.',
+                'id_kerkese_ndihme' => $newId,
+                'statusi'           => $initialStatus,
+                'message'           => $initialStatus === 'Pending'
+                    ? 'Kërkesa u dërgua dhe po pret aprovimin e administratorit.'
+                    : 'Kërkesa u krijua me sukses.',
             ], 201);
         } catch (\Exception $e) {
             error_log('help_requests create: ' . $e->getMessage());
@@ -680,6 +725,113 @@ case 'delete':
         }
         break;
 
+    // ── APPROVE PENDING REQUEST (Admin) ────────────
+    case 'approve':
+        require_method('PUT');
+        require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+        }
+
+        try {
+            $check = $pdo->prepare('SELECT * FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+            $check->execute([$id]);
+            $existing = $check->fetch();
+
+            if (!$existing) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+
+            if ($existing['statusi'] !== 'Pending') {
+                json_error('Kjo kërkesë nuk është në pritje aprovimi.', 400);
+            }
+
+            $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'Open' WHERE id_kerkese_ndihme = ?")
+                ->execute([$id]);
+
+            // Notify the owner
+            $message = "Kërkesa juaj \"{$existing['titulli']}\" u aprovua dhe tani është e dukshme publikisht.";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([$existing['id_perdoruesi'], $message]);
+
+            $userContact = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $userContact->execute([$existing['id_perdoruesi']]);
+            $recipient = $userContact->fetch();
+            if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $recipient['email'],
+                    $recipient['emri'] ?? 'Përdorues',
+                    'Kërkesa juaj u aprovua — Tirana Solidare',
+                    $message
+                );
+            }
+
+            json_success(['message' => 'Kërkesa u aprovua me sukses.']);
+        } catch (\Exception $e) {
+            error_log('help_requests approve: ' . $e->getMessage());
+            json_error('Gabim gjatë aprovimit të kërkesës.', 500);
+        }
+        break;
+
+    // ── REJECT PENDING REQUEST (Admin) ─────────────
+    case 'reject':
+        require_method('PUT');
+        require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e kërkesës është e pavlefshme.', 400);
+        }
+
+        $body = get_json_body();
+        $arsyeja = trim((string) ($body['arsyeja'] ?? ''));
+
+        try {
+            $check = $pdo->prepare('SELECT * FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
+            $check->execute([$id]);
+            $existing = $check->fetch();
+
+            if (!$existing) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
+
+            if ($existing['statusi'] !== 'Pending') {
+                json_error('Kjo kërkesë nuk është në pritje aprovimi.', 400);
+            }
+
+            // Delete the rejected request
+            $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?')
+                ->execute([$id]);
+
+            // Notify the owner
+            $message = "Kërkesa juaj \"{$existing['titulli']}\" nuk u aprovua nga administratori.";
+            if ($arsyeja !== '') {
+                $message .= " Arsyeja: {$arsyeja}";
+            }
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
+            $notifStmt->execute([$existing['id_perdoruesi'], $message]);
+
+            $userContact = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $userContact->execute([$existing['id_perdoruesi']]);
+            $recipient = $userContact->fetch();
+            if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $recipient['email'],
+                    $recipient['emri'] ?? 'Përdorues',
+                    'Kërkesa juaj nuk u aprovua — Tirana Solidare',
+                    $message
+                );
+            }
+
+            json_success(['message' => 'Kërkesa u refuzua dhe u fshi.']);
+        } catch (\Exception $e) {
+            error_log('help_requests reject: ' . $e->getMessage());
+            json_error('Gabim gjatë refuzimit të kërkesës.', 500);
+        }
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete, apply, my_applications, applicants, contact_applicant, by_user.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, create, update, close, reopen, delete, apply, approve, reject, my_applications, applicants, contact_applicant, by_user.', 400);
 }

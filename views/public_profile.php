@@ -522,7 +522,11 @@ $profileColorTheme = $colorResolved['theme'];
                         <tr>
                             <td><a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $req['id_kerkese_ndihme'] ?>"><?= htmlspecialchars($req['titulli']) ?></a></td>
                             <td><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></td>
-                            <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span></td>
+                            <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?php
+                                if ($req['statusi'] === 'Pending') echo 'Në pritje';
+                                elseif ($req['statusi'] === 'Open') echo 'Hapur';
+                                else echo 'Mbyllur';
+                            ?></span></td>
                             <td><?= date('d/m/Y', strtotime($req['krijuar_me'])) ?></td>
                         </tr>
                     <?php endforeach; ?>

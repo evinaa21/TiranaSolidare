@@ -142,7 +142,7 @@ CREATE TABLE `kerkesa_per_ndihme` (
   `tipi` enum('Kërkesë','Ofertë') DEFAULT NULL,
   `titulli` varchar(150) DEFAULT NULL,
   `pershkrimi` text DEFAULT NULL,
-  `statusi` enum('Open','Closed') DEFAULT 'Open' COMMENT 'Open/Closed',
+  `statusi` enum('Pending','Open','Closed') DEFAULT 'Pending' COMMENT 'Pending/Open/Closed',
   `imazhi` varchar(500) DEFAULT NULL,
   `vendndodhja` varchar(255) DEFAULT NULL,  `latitude` decimal(10,7) DEFAULT NULL,
   `longitude` decimal(10,7) DEFAULT NULL,  `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp()

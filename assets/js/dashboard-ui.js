@@ -640,11 +640,12 @@ window.loadUserRequests = async function(userId, userName) {
         body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
         requests.forEach(r => {
             const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
-            const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+            const statClass = r.statusi === 'Pending' ? 'pending' : (r.statusi === 'Open' ? 'open' : 'closed');
+            const statLabel = r.statusi === 'Pending' ? 'Në pritje' : (r.statusi === 'Open' ? 'Hapur' : 'Mbyllur');
             body += `<tr>
                 <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
                 <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
-                <td><span class="db-badge db-badge--${statClass}">${escapeHtml(r.statusi)}</span></td>
+                <td><span class="db-badge db-badge--${statClass}">${statLabel}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
             </tr>`;
         });
@@ -764,6 +765,7 @@ window.loadHelpRequests = async function (page = 1) {
         <input id="admin-req-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadHelpRequests(1)">
         <select id="admin-req-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
+            <option value="Pending"${filterStatus === 'Pending' ? ' selected' : ''}>Në pritje</option>
             <option value="Open"${filterStatus === 'Open' ? ' selected' : ''}>Hapur</option>
             <option value="Closed"${filterStatus === 'Closed' ? ' selected' : ''}>Mbyllur</option>
         </select>
@@ -790,20 +792,24 @@ window.loadHelpRequests = async function (page = 1) {
 
     requests.forEach(r => {
         const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
-        const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+        const statClass = r.statusi === 'Pending' ? 'pending' : (r.statusi === 'Open' ? 'open' : 'closed');
+        const statLabel = r.statusi === 'Pending' ? 'Në pritje' : (r.statusi === 'Open' ? 'Hapur' : 'Mbyllur');
 
-        html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
+        html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''} ${r.statusi === 'Pending' ? 'style="background:rgba(245,158,11,0.04)"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
-            <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'Open' ? 'Hapur' : 'Mbyllur'}</span></td>
+            <td><span class="db-badge db-badge--${statClass}">${statLabel}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${formatDate(r.krijuar_me)}</td>
             <td>
                 <div class="db-table__actions">
     <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
-${r.statusi === 'Open' ?
+${r.statusi === 'Pending' ?
+    `<button class="db-btn db-btn--success db-btn--sm" onclick="approveRequest(${r.id_kerkese_ndihme})">Aprovo</button>
+     <button class="db-btn db-btn--danger db-btn--sm" onclick="rejectRequest(${r.id_kerkese_ndihme})">Refuzo</button>` :
+    (r.statusi === 'Open' ?
     `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` :
-    `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
+    `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`)}
     <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
 </div>
             </td>
@@ -829,6 +835,24 @@ window.closeRequest = async function (id) {
 window.deleteRequest = async function (id) {
     if (!confirm('Fshi këtë kërkesë?')) return;
     const json = await apiCall(`help_requests.php?action=delete&id=${id}`, 'DELETE');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    loadHelpRequests();
+};
+
+// Approve pending request
+window.approveRequest = async function (id) {
+    if (!confirm('Aprovoni këtë kërkesë? Do të bëhet publike.')) return;
+    const json = await apiCall(`help_requests.php?action=approve&id=${id}`, 'PUT');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    loadHelpRequests();
+};
+
+// Reject pending request
+window.rejectRequest = async function (id) {
+    if (!confirm('Jeni të sigurt që dëshironi ta refuzoni këtë kërkesë?')) return;
+    const arsyeja = prompt('Arsyeja e refuzimit (opsionale):');
+    if (arsyeja === null) return;
+    const json = await apiCall(`help_requests.php?action=reject&id=${id}`, 'PUT', { arsyeja });
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadHelpRequests();
 };

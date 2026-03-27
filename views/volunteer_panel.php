@@ -79,6 +79,7 @@ $acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Pranua
 $pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Në pritje'));
 $totalRequests = count($myRequests);
 $openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Open'));
+$pendingRequests = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Pending'));
 $score        = ($acceptedApps * 5) + ($totalApps * 1) + ($totalRequests * 2);
 $scoreMax     = 150;
 $scorePercent = min(100, round(($score / $scoreMax) * 100));
@@ -573,7 +574,12 @@ $badgeIcons = [
                 <img src="<?= !empty($req['imazhi']) ? htmlspecialchars($req['imazhi']) : '/TiranaSolidare/public/assets/images/default-request.svg' ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
                 <div class="vp-request-card__overlay">
                   <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-                  <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
+                  <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?php
+                    if ($req['statusi'] === 'Pending') echo 'Në pritje aprovimi';
+                    elseif ($req['statusi'] === 'Open') echo 'Hapur';
+                    elseif ($req['statusi'] === 'Closed') echo 'Mbyllur';
+                    else echo htmlspecialchars($req['statusi']);
+                  ?></span>
                 </div>
               </div>
 
@@ -862,7 +868,7 @@ if (reqForm) {
       reqForm.reset();
       const coordDisplay = document.getElementById('req-coord-display');
       if (coordDisplay) coordDisplay.style.display = 'none';
-      vpStatus('vp-req-status', 'success', 'Kërkesa u krijuar me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
+      vpStatus('vp-req-status', 'success', 'Kërkesa u dërgua me sukses! Ajo do të shfaqet publikisht pasi të aprovohet nga administratori.');
     } catch (err) { vpStatus('vp-req-status', 'error', err.message); }
   });
 }

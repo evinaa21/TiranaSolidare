@@ -17,13 +17,14 @@ $stmtEvents = $pdo->query(
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch all open help requests with coordinates
+// Fetch all open help requests with coordinates (exclude Pending)
 $stmtRequests = $pdo->query(
     "SELECT kn.id_kerkese_ndihme, kn.titulli, kn.vendndodhja, kn.latitude, kn.longitude,
             kn.tipi, kn.statusi, p.emri AS krijuesi_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL
+       AND kn.statusi != 'Pending'
      ORDER BY kn.krijuar_me DESC"
 );
 $requests = $stmtRequests->fetchAll(PDO::FETCH_ASSOC);

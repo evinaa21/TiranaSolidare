@@ -20,6 +20,15 @@ if (isset($_GET['id'])) {
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+  if (isset($request) && $request) {
+    // Block non-admin / non-owner from viewing Pending requests
+    if (($request['statusi'] ?? '') === 'Pending') {
+        if (!$isAdmin && !($isLoggedIn && (int) $request['id_perdoruesi'] === (int) $currentUserId)) {
+            $request = null; // treat as not found
+        }
+    }
+  }
+
   $isOwner = false;
   $canApplyToRequest = false;
   $myRequestApplication = null;
@@ -96,6 +105,11 @@ if ($statusi !== '') {
     $where[] = 'k.statusi = ?';
     $params[] = $statusi;
 }
+// Hide Pending requests from non-admins (except their own)
+if (!$isAdmin) {
+    $where[] = "(k.statusi != 'Pending' OR k.id_perdoruesi = ?)";
+    $params[] = $currentUserId ?? 0;
+}
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $countStmt = $pdo->prepare("SELECT COUNT(*) FROM Kerkesa_per_Ndihme k $whereSQL");
@@ -108,7 +122,7 @@ $sql = "SELECT k.*, p.emri AS krijuesi_emri
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
         $whereSQL
         ORDER BY 
-        CASE WHEN k.statusi = 'Open' THEN 0 ELSE 1 END ASC,
+        CASE WHEN k.statusi = 'Pending' THEN 0 WHEN k.statusi = 'Open' THEN 1 ELSE 2 END ASC,
         k.krijuar_me DESC
         LIMIT ? OFFSET ?";
 $params[] = $limit;
@@ -117,8 +131,8 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Trust stats
-$statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme")->fetchColumn();
+// Trust stats (exclude Pending from public counts)
+$statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi != 'Pending'")->fetchColumn();
 $statOpen         = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Open'")->fetchColumn();
 $statClosed       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
 $statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
@@ -161,7 +175,11 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         <?= $request['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
       </span>
-     <span class="rq-badge rq-badge--<?= strtolower($request['statusi']) ?>"><?= $request['statusi'] === 'Open' ? 'Hapur' : 'Mbyllur' ?></span>
+     <span class="rq-badge rq-badge--<?= strtolower($request['statusi']) ?>"><?php
+        if ($request['statusi'] === 'Pending') echo 'Në pritje aprovimi';
+        elseif ($request['statusi'] === 'Open') echo 'Hapur';
+        else echo 'Mbyllur';
+      ?></span>
     </div>
     <h1><?= htmlspecialchars($request['titulli']) ?></h1>
     <div class="rq-detail-hero__meta">
@@ -222,7 +240,11 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <div class="rq-info-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-            <div><span>Statusi</span><strong><?= htmlspecialchars($request['statusi']) ?></strong></div>
+            <div><span>Statusi</span><strong><?php
+                if ($request['statusi'] === 'Pending') echo 'Në pritje';
+                elseif ($request['statusi'] === 'Open') echo 'Hapur';
+                else echo 'Mbyllur';
+              ?></strong></div>
           </li>
           <?php if ($isOwner || $isAdmin): ?>
           <li>
@@ -270,7 +292,24 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             </div>
             <p class="rq-sidebar-hint">Këtë kërkesë e gjeni edhe te paneli juaj në seksionin “Aplikimet e mia”.</p>
          <?php elseif ($isOwner || $isAdmin): ?>
-<?php if ($isOwner && ($request['statusi'] ?? '') === 'Open'): ?>
+<?php if (($request['statusi'] ?? '') === 'Pending'): ?>
+    <div class="rq-pending-banner" style="background:rgba(245,158,11,0.1);border:1.5px solid rgba(245,158,11,0.3);border-radius:12px;padding:16px;margin-bottom:12px;text-align:center;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <strong style="color:#b45309;">Në pritje aprovimi</strong>
+        <p style="color:#92400e;font-size:0.85rem;margin:6px 0 0;">Kjo kërkesë do të shfaqet publikisht për të tjerët vetëm pasi të aprovohet nga administratori.</p>
+    </div>
+    <?php if ($isAdmin): ?>
+    <button type="button" class="rq-btn-full" id="rq-approve-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:8px;background:rgba(16,185,129,0.1);color:#059669;border:1.5px solid rgba(16,185,129,0.4);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Aprovo kërkesën
+    </button>
+    <button type="button" class="rq-btn-full" id="rq-reject-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:8px;background:rgba(239,68,68,0.08);color:#dc2626;border:1.5px solid rgba(239,68,68,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        Refuzo kërkesën
+    </button>
+    <div class="rq-inline-status" id="rq-approve-status" style="display:none"></div>
+    <?php endif; ?>
+<?php elseif ($isOwner && ($request['statusi'] ?? '') === 'Open'): ?>
     <button type="button" class="rq-btn-full rq-btn-close" id="rq-close-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" style="margin-top:12px;background:rgba(107,114,128,0.1);color:#374151;border:1.5px solid #d1d5db;">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         Mbyll kërkesën
@@ -290,13 +329,15 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     </button>
     <div class="rq-inline-status" id="rq-reopen-status" style="display:none"></div>
 <?php endif; ?>
+<?php if (($request['statusi'] ?? '') !== 'Pending'): ?>
 <p class="rq-sidebar-hint">Më poshtë mund të shihni të gjithë aplikantët dhe t'i kontaktoni individualisht.</p>
+<?php endif; ?>
           <?php elseif ($isLoggedIn): ?>
             <p class="rq-sidebar-hint">Kjo kërkesë nuk është e disponueshme për aplikim.</p>
           <?php endif; ?>
         </div>
 
-        <?php if ($isOwner || $isAdmin): ?>
+        <?php if (($isOwner || $isAdmin) && ($request['statusi'] ?? '') !== 'Pending'): ?>
           <div class="rq-applicants-wrap">
             <h4>Aplikantët (<?= (int) $requestApplicantsTotal ?>)</h4>
             <?php if (empty($requestApplicants)): ?>
@@ -504,7 +545,11 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <img src="<?= htmlspecialchars($cardImgSrc) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
             <div class="rq-card__overlay">
               <span class="rq-badge rq-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-              <span class="rq-badge rq-badge--<?= strtolower($req['statusi']) ?>"><?= $req['statusi'] === 'Open' ? 'Hapur' : 'Mbyllur' ?></span>
+              <span class="rq-badge rq-badge--<?= strtolower($req['statusi']) ?>"><?php
+                if ($req['statusi'] === 'Pending') echo 'Në pritje';
+                elseif ($req['statusi'] === 'Open') echo 'Hapur';
+                else echo 'Mbyllur';
+              ?></span>
             </div>
           </div>
           <div class="rq-card__content">
@@ -905,6 +950,60 @@ if (deleteBtn) {
             setInlineStatus(document.getElementById('rq-delete-status'), 'error', err.message);
             this.disabled = false;
             this.textContent = 'Fshi kërkesën';
+        }
+    });
+}
+
+// ── Approve / Reject (Admin) ──
+const approveBtn = document.getElementById('rq-approve-btn');
+if (approveBtn) {
+    approveBtn.addEventListener('click', async function() {
+        if (!confirm('Aprovoni këtë kërkesë? Do të bëhet e dukshme publikisht.')) return;
+        const requestId = parseInt(this.dataset.requestId || '0', 10);
+        this.disabled = true;
+        this.textContent = 'Duke aprovuar...';
+        try {
+            const res = await fetch(API + '/help_requests.php?action=approve&id=' + requestId, {
+                method: 'PUT',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+            setInlineStatus(document.getElementById('rq-approve-status'), 'success', 'Kërkesa u aprovua me sukses.');
+            setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+            setInlineStatus(document.getElementById('rq-approve-status'), 'error', err.message);
+            this.disabled = false;
+            this.textContent = 'Aprovo kërkesën';
+        }
+    });
+}
+
+const rejectBtn = document.getElementById('rq-reject-btn');
+if (rejectBtn) {
+    rejectBtn.addEventListener('click', async function() {
+        if (!confirm('Jeni të sigurt që dëshironi ta refuzoni këtë kërkesë?')) return;
+        const arsyeja = prompt('Arsyeja e refuzimit (opsionale):');
+        if (arsyeja === null) return;
+        const requestId = parseInt(this.dataset.requestId || '0', 10);
+        this.disabled = true;
+        this.textContent = 'Duke refuzuar...';
+        try {
+            const res = await fetch(API + '/help_requests.php?action=reject&id=' + requestId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin',
+                body: JSON.stringify({ arsyeja })
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+            setInlineStatus(document.getElementById('rq-approve-status'), 'success', 'Kërkesa u refuzua.');
+            setTimeout(() => window.location.href = '/TiranaSolidare/views/help_requests.php', 900);
+        } catch (err) {
+            setInlineStatus(document.getElementById('rq-approve-status'), 'error', err.message);
+            this.disabled = false;
+            this.textContent = 'Refuzo kërkesën';
         }
     });
 }

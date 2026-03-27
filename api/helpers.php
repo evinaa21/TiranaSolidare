@@ -124,6 +124,22 @@ function require_admin(): array
     return $user;
 }
 
+/**
+ * Optionally get the logged-in user (no 401 if not logged in).
+ * Returns user array or null.
+ */
+function get_optional_auth(): ?array
+{
+    if (!isset($_SESSION['user_id'])) {
+        return null;
+    }
+    return [
+        'id'   => (int) $_SESSION['user_id'],
+        'emri' => $_SESSION['emri'] ?? '',
+        'roli' => $_SESSION['roli'] ?? 'Vullnetar',
+    ];
+}
+
 // ── Input Helpers ──────────────────────────────────
 
 /**

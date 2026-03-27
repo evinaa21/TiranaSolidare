@@ -693,6 +693,11 @@
   color: #155724;
 }
 
+.vp-badge--pending {
+  background: #fef3cd;
+  color: #856404;
+}
+
 .vp-badge--closed {
   background: #e2e3e5;
   color: #383d41;
