@@ -3,6 +3,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/status_labels.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 
@@ -47,9 +48,9 @@ foreach ($requests as $req) {
         'lng'     => (float) $req['longitude'],
         'title'   => $req['titulli'],
         'address' => $req['vendndodhja'] ?? '',
-        'type'    => $req['tipi'] === 'Ofertë' ? 'offer' : 'request',
+        'type'    => $req['tipi'] === 'offer' ? 'offer' : 'request',
         'url'     => '/TiranaSolidare/views/help_requests.php?id=' . $req['id_kerkese_ndihme'],
-        'extra'   => $req['tipi'] . ' • ' . $req['statusi'],
+        'extra'   => status_label($req['tipi']) . ' • ' . status_label($req['statusi']),
     ];
 }
 ?>
@@ -94,12 +95,12 @@ foreach ($requests as $req) {
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'Kërkesë')) ?></strong><span>Kërkesa</span></div>
+        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></strong><span>Kërkesa</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'Ofertë')) ?></strong><span>Kontribute</span></div>
+        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></strong><span>Kontribute</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
@@ -124,12 +125,12 @@ foreach ($requests as $req) {
   <button class="map-filter-btn" data-filter="request" onclick="filterMarkers('request', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
     Kërkesa
-    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'Kërkesë')) ?></span>
+    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></span>
   </button>
   <button class="map-filter-btn" data-filter="offer" onclick="filterMarkers('offer', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
     Kontribute
-    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'Ofertë')) ?></span>
+    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></span>
   </button>
 </div>
 

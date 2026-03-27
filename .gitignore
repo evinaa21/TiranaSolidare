@@ -6,5 +6,9 @@ vendor/
 *.log
 .venv/
 seed_data.sql
-uploads/
-public/assets/uploads
+
+# Ignore uploaded files but keep the directories
+uploads/images/profiles/*
+!uploads/images/profiles/.gitkeep
+public/assets/uploads/*
+!public/assets/uploads/.gitkeep

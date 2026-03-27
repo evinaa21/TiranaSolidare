@@ -79,15 +79,15 @@ function renderApplicationList(data) {
     </tr></thead><tbody>`;
 
     data.applications.forEach(app => {
-        const statusClass = app.statusi === 'Pranuar' ? 'success'
-            : app.statusi === 'Refuzuar' ? 'danger' : 'warning';
+        const statusClass = app.statusi === 'approved' ? 'success'
+            : app.statusi === 'rejected' ? 'danger' : 'warning';
 
         html += `<tr>
             <td>${escapeHtml(app.eventi_titulli)}</td>
             <td>${formatDate(app.eventi_data)}</td>
             <td><span class="badge bg-${statusClass}">${escapeHtml(app.statusi)}</span></td>
             <td>${formatDate(app.aplikuar_me)}</td>
-            <td>${app.statusi === 'Në pritje'
+            <td>${app.statusi === 'pending'
                 ? `<button class="btn btn-sm btn-outline-danger" onclick="withdrawApplication(${app.id_aplikimi})">Tërhiq</button>`
                 : '—'}</td>
         </tr>`;

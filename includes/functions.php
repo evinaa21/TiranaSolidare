@@ -8,10 +8,34 @@
 
 // ── Secure session cookie settings (applied globally) ──
 if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.use_strict_mode', '1');
-    // ini_set('session.cookie_secure', '1'); // Uncomment in production with HTTPS
+    if ($isHttps) {
+        ini_set('session.cookie_secure', '1');
+    }
+}
+
+/**
+ * Enforce session inactivity timeout (1 hour).
+ * Call after session_start() on every protected page/endpoint.
+ */
+function enforce_session_timeout(int $maxIdleSeconds = 3600): void
+{
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $maxIdleSeconds)) {
+        session_unset();
+        session_destroy();
+        // Restart a clean session for the redirect
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['flash']['error'] = 'Sesioni juaj ka skaduar nga mosaktiviteti. Ju lutem kyçuni përsëri.';
+        header('Location: /TiranaSolidare/views/login.php?error=session_expired');
+        exit();
+    }
+    $_SESSION['last_activity'] = time();
 }
 
 /**
@@ -20,17 +44,19 @@ if (session_status() === PHP_SESSION_NONE) {
 function check_login(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
-        // Secure session cookie settings
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['SERVER_PORT'] ?? '') == '443');
         session_set_cookie_params([
             'lifetime' => 0,
             'path'     => '/TiranaSolidare/',
             'domain'   => '',
-            'secure'   => false, // Set to true in production with HTTPS
+            'secure'   => $isHttps,
             'httponly'  => true,
             'samesite' => 'Lax',
         ]);
         session_start();
     }
+    enforce_session_timeout();
     if (!isset($_SESSION['user_id'])) {
         header('Location: /TiranaSolidare/views/login.php');
         exit();
@@ -42,7 +68,7 @@ function check_login(): void
  */
 function is_admin(): bool
 {
-    return isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin';
+    return isset($_SESSION['roli']) && $_SESSION['roli'] === 'admin';
 }
 
 /**
@@ -164,35 +190,66 @@ function validate_csrf_token(?string $token = null): bool
 }
 
 // ═══════════════════════════════════════════════════════
-//  Rate Limiting (session-based)
+//  Rate Limiting (IP-based, stored in database)
 // ═══════════════════════════════════════════════════════
 
 /**
- * Check if the action is within rate limits.
+ * Check if the action is within rate limits using IP + database.
  * Returns true if allowed, false if rate-limited.
  */
-function check_rate_limit(string $key, int $maxAttempts = 5, int $windowSeconds = 900): bool
+function check_rate_limit(string $action, int $maxAttempts = 5, int $windowSeconds = 900): bool
 {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-    $rateKey = "rate_limit_{$key}";
-    $now = time();
+    global $pdo;
 
-    if (!isset($_SESSION[$rateKey]) || !is_array($_SESSION[$rateKey])) {
-        $_SESSION[$rateKey] = [];
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    // Take only the first IP if X-Forwarded-For contains a chain
+    if (str_contains($ip, ',')) {
+        $ip = trim(explode(',', $ip, 2)[0]);
     }
 
-    // Remove expired attempts
-    $_SESSION[$rateKey] = array_values(array_filter(
-        $_SESSION[$rateKey],
-        fn($t) => $t > ($now - $windowSeconds)
-    ));
+    // Count recent attempts within the time window
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM rate_limit_log WHERE ip = ? AND action = ? AND attempted_at > NOW() - INTERVAL ? SECOND'
+    );
+    $stmt->execute([$ip, $action, $windowSeconds]);
+    $count = (int) $stmt->fetchColumn();
 
-    if (count($_SESSION[$rateKey]) >= $maxAttempts) {
+    if ($count >= $maxAttempts) {
         return false;
     }
 
-    $_SESSION[$rateKey][] = $now;
+    // Log this attempt
+    $stmt = $pdo->prepare('INSERT INTO rate_limit_log (ip, action) VALUES (?, ?)');
+    $stmt->execute([$ip, $action]);
+
+    // Probabilistic cleanup: ~1% of requests delete old rows to avoid table bloat
+    if (random_int(1, 100) === 1) {
+        $pdo->exec('DELETE FROM rate_limit_log WHERE attempted_at < NOW() - INTERVAL 1 HOUR');
+    }
+
     return true;
+}
+
+// ═══════════════════════════════════════════════════════
+//  Admin Audit Log
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Log an admin action for auditing purposes.
+ */
+function log_admin_action(int $adminId, string $action, ?string $targetType = null, ?int $targetId = null, array $details = []): void
+{
+    global $pdo;
+    $stmt = $pdo->prepare(
+        'INSERT INTO admin_log (admin_id, veprim, target_type, target_id, detaje) VALUES (?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        $adminId,
+        $action,
+        $targetType,
+        $targetId,
+        !empty($details) ? json_encode($details, JSON_UNESCAPED_UNICODE) : null,
+    ]);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -246,342 +303,279 @@ function validate_password_strength(string $password): ?string
 }
 
 /**
- * Build base URL from current HTTP request context.
+ * Build base URL from trusted configuration.
+ * Never trust HTTP_HOST — it is attacker-controlled.
  */
 function app_base_url(): string
 {
+    $configured = getenv('APP_URL');
+    if ($configured !== false && $configured !== '') {
+        return rtrim($configured, '/');
+    }
+    // Fallback for local development only
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['SERVER_PORT'] ?? '') == '443');
     $scheme = $https ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $scheme . '://' . $host;
+    return $scheme . '://localhost';
 }
 
 /**
- * Send account verification email via PHPMailer.
+ * Queue an email for delivery. Inserts into the email_queue table.
+ * Actual sending is handled by process_email_queue().
+ */
+function queue_email(string $toEmail, string $toName, string $subject, string $bodyHtml, string $bodyText = '', int $maxAttempts = 3): bool
+{
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO email_queue (to_email, to_name, subject, body_html, body_text, max_attempts, next_retry_at)
+             VALUES (?, ?, ?, ?, ?, ?, NOW())"
+        );
+        return $stmt->execute([$toEmail, $toName, $subject, $bodyHtml, $bodyText, $maxAttempts]);
+    } catch (Throwable $e) {
+        error_log('queue_email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Process pending emails from the queue with retry and exponential backoff.
+ * Call from a cron job or after request (register_shutdown_function).
+ */
+function process_email_queue(int $batchSize = 10): int
+{
+    global $pdo;
+
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) { error_log('process_email_queue: autoload not found'); return 0; }
+    require_once $autoload;
+
+    $mailConfigPath = __DIR__ . '/../config/mail.php';
+    if (!file_exists($mailConfigPath)) { error_log('process_email_queue: mail config not found'); return 0; }
+    $cfg = require $mailConfigPath;
+    if (!is_array($cfg)) { error_log('process_email_queue: invalid config'); return 0; }
+
+    $stmt = $pdo->prepare(
+        "SELECT * FROM email_queue
+         WHERE status = 'pending' AND next_retry_at <= NOW()
+         ORDER BY krijuar_me ASC
+         LIMIT ?"
+    );
+    $stmt->execute([$batchSize]);
+    $emails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $sent = 0;
+    foreach ($emails as $row) {
+        try {
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host       = (string) ($cfg['host'] ?? '');
+            $mail->SMTPAuth   = true;
+            $mail->Username   = (string) ($cfg['username'] ?? '');
+            $mail->Password   = (string) ($cfg['password'] ?? '');
+            $mail->Port       = (int) ($cfg['port'] ?? 587);
+            $mail->CharSet    = 'UTF-8';
+            $secure = (string) ($cfg['encryption'] ?? 'tls');
+            $mail->SMTPSecure = $secure === 'ssl'
+                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->setFrom(
+                (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
+                (string) ($cfg['from_name']  ?? 'Tirana Solidare')
+            );
+            $mail->addAddress($row['to_email'], $row['to_name']);
+            $mail->isHTML(true);
+            $mail->Subject = $row['subject'];
+            $mail->Body    = $row['body_html'];
+            if (!empty($row['body_text'])) $mail->AltBody = $row['body_text'];
+
+            $mail->send();
+
+            $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW(), attempts=attempts+1 WHERE id=?")
+                ->execute([$row['id']]);
+            $sent++;
+        } catch (Throwable $e) {
+            $newAttempts = (int) $row['attempts'] + 1;
+            $maxAttempts = (int) $row['max_attempts'];
+            $newStatus = $newAttempts >= $maxAttempts ? 'failed' : 'pending';
+            $backoffSeconds = min(3600, (int) pow(2, $newAttempts) * 30); // 60s, 120s, 240s … max 1h
+            $pdo->prepare(
+                "UPDATE email_queue SET status=?, attempts=?, last_error=?, next_retry_at=DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id=?"
+            )->execute([$newStatus, $newAttempts, $e->getMessage(), $backoffSeconds, $row['id']]);
+            error_log("Email queue #{$row['id']} attempt {$newAttempts} failed: " . $e->getMessage());
+        }
+    }
+    return $sent;
+}
+
+/**
+ * Send account verification email via PHPMailer (queued).
  */
 function send_verification_email(string $toEmail, string $toName, string $verificationUrl): bool
 {
-    $autoload = __DIR__ . '/../vendor/autoload.php';
-    if (!file_exists($autoload)) {
-        error_log('PHPMailer autoload not found at vendor/autoload.php');
-        return false;
-    }
+    $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+    $safeUrl = htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8');
+    $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
 
-    require_once $autoload;
+    $subject = 'Konfirmo email-in tënd - Tirana Solidare';
+    $bodyHtml = "
+        <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+          <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+            <tr>
+              <td align=\"center\" style=\"padding:24px 12px;\">
+                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                  <tr>
+                    <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                      <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                      <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Bëhu pjesë e ndihmës së komunitetit</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:24px 30px 20px;\">
+                      <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                      <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Konfirmo email-in tënd</h2>
+                      <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Faleminderit që u regjistruat në platformën tonë. Klikoni butonin më poshtë për të verifikuar adresën tuaj dhe për të aktivizuar llogarinë.</p>
+                      <p style=\"margin:20px 0; text-align:center;\">
+                        <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Konfirmo email-in</a>
+                      </p>
+                      <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse butoni nuk punon, kopjo dhe ngjit linkun në shfletues:</p>
+                      <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
+                      <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Ky link skadon pas 24 orësh. Nëse nuk keni kërkuar këtë email, injoroni këtë mesazh.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                      <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>";
+    $bodyText = "Përshëndetje {$toName},\n\nKonfirmo email-in tënd duke hapur këtë link:\n{$verificationUrl}\n\nKy link skadon pas 24 orësh.";
 
-    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        error_log('PHPMailer class not found after loading autoload.');
-        return false;
-    }
-
-    $mailConfigPath = __DIR__ . '/../config/mail.php';
-    if (!file_exists($mailConfigPath)) {
-        error_log('Mail config not found at config/mail.php');
-        return false;
-    }
-
-    $cfg = require $mailConfigPath;
-    if (!is_array($cfg)) {
-        error_log('Mail config is invalid (expected array).');
-        return false;
-    }
-
-    try {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = (string) ($cfg['host'] ?? '');
-        $mail->SMTPAuth   = true;
-        $mail->Username   = (string) ($cfg['username'] ?? '');
-        $mail->Password   = (string) ($cfg['password'] ?? '');
-        $mail->Port       = (int) ($cfg['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-
-        $secure = (string) ($cfg['encryption'] ?? 'tls');
-        if ($secure === 'ssl') {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        } else {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        }
-
-        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
-        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
-
-        $mail->setFrom($fromEmail, $fromName);
-        $mail->addAddress($toEmail, $toName);
-        $mail->isHTML(true);
-        $mail->Subject = 'Konfirmo email-in tënd - Tirana Solidare';
-
-        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
-        $safeUrl = htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8');
-        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
-
-        $mail->Body = "
-            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
-              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
-                <tr>
-                  <td align=\"center\" style=\"padding:24px 12px;\">
-                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
-                      <tr>
-                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
-                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
-                          <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Bëhu pjesë e ndihmës së komunitetit</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:24px 30px 20px;\">
-                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
-                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Konfirmo email-in tënd</h2>
-                          <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Faleminderit që u regjistruat në platformën tonë. Klikoni butonin më poshtë për të verifikuar adresën tuaj dhe për të aktivizuar llogarinë.</p>
-                          <p style=\"margin:20px 0; text-align:center;\">
-                            <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Konfirmo email-in</a>
-                          </p>
-                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse butoni nuk punon, kopjo dhe ngjit linkun në shfletues:</p>
-                          <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
-                          <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Ky link skadon pas 24 orësh. Nëse nuk keni kërkuar këtë email, injoroni këtë mesazh.</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
-                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </div>
-        ";
-
-        $mail->AltBody = "Përshëndetje {$toName},\n\nKonfirmo email-in tënd duke hapur këtë link:\n{$verificationUrl}\n\nKy link skadon pas 24 orësh.";
-
-        $mail->send();
-        return true;
-    } catch (Throwable $e) {
-        error_log('Verification email failed: ' . $e->getMessage());
-        return false;
-    }
+    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
- * Send password reset email via PHPMailer using the site design.
+ * Send password reset email (queued).
  */
 function send_password_reset_email(string $toEmail, string $toName, string $resetUrl): bool
 {
-    $autoload = __DIR__ . '/../vendor/autoload.php';
-    if (!file_exists($autoload)) {
-        error_log('PHPMailer autoload not found at vendor/autoload.php');
-        return false;
-    }
+    $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+    $safeUrl = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+    $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
 
-    require_once $autoload;
+    $subject = 'Rivendos fjalëkalimin - Tirana Solidare';
+    $bodyHtml = "
+        <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+          <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+            <tr>
+              <td align=\"center\" style=\"padding:24px 12px;\">
+                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                  <tr>
+                    <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                      <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                      <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Rivendos fjalëkalimin tënd</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:24px 30px 20px;\">
+                      <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                      <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkesë për rivendosjen e fjalëkalimit</h2>
+                      <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Ne morëm kërkesë për të rivendosur fjalëkalimin tuaj. Klikoni butonin më poshtë për të zgjedhur fjalëkalim të ri. Ky link skadon pas 1 ore.</p>
+                      <p style=\"margin:20px 0; text-align:center;\">
+                        <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Rivendos fjalëkalimin</a>
+                      </p>
+                      <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse nuk keni kërkuar këtë, mos e merrni parasysh këtë email.</p>
+                      <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
+                      <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Nëse keni bërë më shumë se një kërkesë, përdorni linkun e fundit të dërguar. Ky link skadon pas 1 ore.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                      <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>";
+    $bodyText = "Përshëndetje {$toName},\n\nPër të rivendosur fjalëkalimin, hapni: {$resetUrl}\n\nKy link skadon pas 1 ore.";
 
-    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        error_log('PHPMailer class not found after loading autoload.');
-        return false;
-    }
-
-    $mailConfigPath = __DIR__ . '/../config/mail.php';
-    if (!file_exists($mailConfigPath)) {
-        error_log('Mail config not found at config/mail.php');
-        return false;
-    }
-
-    $cfg = require $mailConfigPath;
-    if (!is_array($cfg)) {
-        error_log('Mail config is invalid (expected array).');
-        return false;
-    }
-
-    try {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = (string) ($cfg['host'] ?? '');
-        $mail->SMTPAuth   = true;
-        $mail->Username   = (string) ($cfg['username'] ?? '');
-        $mail->Password   = (string) ($cfg['password'] ?? '');
-        $mail->Port       = (int) ($cfg['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-
-        $secure = (string) ($cfg['encryption'] ?? 'tls');
-        if ($secure === 'ssl') {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        } else {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        }
-
-        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
-        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
-
-        $mail->setFrom($fromEmail, $fromName);
-        $mail->addAddress($toEmail, $toName);
-        $mail->isHTML(true);
-        $mail->Subject = 'Rivendos fjalëkalimin - Tirana Solidare';
-
-        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
-        $safeUrl = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
-        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
-
-        $mail->Body = "
-            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
-              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
-                <tr>
-                  <td align=\"center\" style=\"padding:24px 12px;\">
-                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
-                      <tr>
-                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
-                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
-                          <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Rivendos fjalëkalimin tënd</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:24px 30px 20px;\">
-                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
-                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkesë për rivendosjen e fjalëkalimit</h2>
-                          <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">Ne morëm kërkesë për të rivendosur fjalëkalimin tuaj. Klikoni butonin më poshtë për të zgjedhur fjalëkalim të ri. Ky link skadon pas 1 ore.</p>
-                          <p style=\"margin:20px 0; text-align:center;\">
-                            <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Rivendos fjalëkalimin</a>
-                          </p>
-                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px;\">Nëse nuk keni kërkuar këtë, mos e merrni parasysh këtë email.</p>
-                          <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
-                          <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Nëse keni bërë më shumë se një kërkesë, përdorni linkun e fundit të dërguar. Ky link skadon pas 1 ore.</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
-                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </div>
-        ";
-
-        $mail->AltBody = "Përshëndetje {$toName},\n\nPër të rivendosur fjalëkalimin, hapni: {$resetUrl}\n\nKy link skadon pas 1 ore.";
-
-        $mail->send();
-        return true;
-    } catch (Throwable $e) {
-        error_log('Password reset email failed: ' . $e->getMessage());
-        return false;
-    }
+    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
- * Send a generic user notification email in the same site style.
+ * Send a generic user notification email (queued).
  */
 function send_notification_email(string $toEmail, string $toName, string $subject, string $message): bool
 {
-    $autoload = __DIR__ . '/../vendor/autoload.php';
-    if (!file_exists($autoload)) {
-        error_log('PHPMailer autoload not found at vendor/autoload.php');
-        return false;
-    }
-    require_once $autoload;
-    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        error_log('PHPMailer class not found after loading autoload.');
-        return false;
-    }
-    $mailConfigPath = __DIR__ . '/../config/mail.php';
-    if (!file_exists($mailConfigPath)) {
-        error_log('Mail config not found at config/mail.php');
-        return false;
-    }
-    $cfg = require $mailConfigPath;
-    if (!is_array($cfg)) {
-        error_log('Mail config is invalid (expected array).');
-        return false;
-    }
+    // Check if user has opted out of email notifications
+    global $pdo;
     try {
-        $host = trim((string) ($cfg['host'] ?? ''));
-        $username = trim((string) ($cfg['username'] ?? ''));
-        $password = trim((string) ($cfg['password'] ?? ''));
-        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
-        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
-
-        if ($host === '' || $host === 'smtp.example.com' || $username === '' || $password === '') {
-            // Fallback to PHP mail if SMTP is not configured.
-            $headers = "From: {$fromName} <{$fromEmail}>\r\n" .
-                       "MIME-Version: 1.0\r\n" .
-                       "Content-Type: text/html; charset=UTF-8\r\n";
-            $mailBody = "<html><body><h2>" . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . "</h2><p>" . nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8')) . "</p></body></html>";
-            if (mail($toEmail, $subject, $mailBody, $headers)) {
-                return true;
-            }
-            error_log('Notification email failed: PHP mail fallback failed.');
-            return false;
+        $prefStmt = $pdo->prepare('SELECT email_notifications FROM Perdoruesi WHERE email = ? LIMIT 1');
+        $prefStmt->execute([$toEmail]);
+        $pref = $prefStmt->fetch(PDO::FETCH_ASSOC);
+        if ($pref && (int) $pref['email_notifications'] === 0) {
+            return true; // Silently skip — user opted out
         }
-
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = $host;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $username;
-        $mail->Password   = $password;
-        $mail->Port       = (int) ($cfg['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-        $secure = (string) ($cfg['encryption'] ?? 'tls');
-        if ($secure === 'ssl') {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        } else {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        }
-        $fromEmail = (string) ($cfg['from_email'] ?? 'no-reply@localhost');
-        $fromName  = (string) ($cfg['from_name'] ?? 'Tirana Solidare');
-        $mail->setFrom($fromEmail, $fromName);
-        $mail->addAddress($toEmail, $toName);
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
-        $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
-        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
-        $mail->Body = "
-            <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
-              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
-                <tr>
-                  <td align=\"center\" style=\"padding:24px 12px;\">
-                    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
-                      <tr>
-                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
-                          <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:24px 30px 20px;\">
-                          <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
-                          <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">{$subject}</h2>
-                          <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeMessage}</p>
-                          <p style=\"margin:0; color:#6b6b6b; font-size:12px;\">Ky mesazh është nga Tirana Solidare.</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
-                          <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </div>
-        ";
-        $mail->AltBody = "Përshëndetje {$toName},\n\n{$message}\n\nTirana Solidare";
-        $mail->send();
-        return true;
     } catch (Throwable $e) {
-        error_log('Notification email failed: ' . $e->getMessage());
-        return false;
+        // If preference check fails, proceed with sending
     }
+
+    $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
+    $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
+    $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+
+    $bodyHtml = "
+        <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+          <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+            <tr>
+              <td align=\"center\" style=\"padding:24px 12px;\">
+                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                  <tr>
+                    <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                      <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:24px 30px 20px;\">
+                      <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
+                      <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">{$safeSubject}</h2>
+                      <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeMessage}</p>
+                      <p style=\"margin:0; color:#6b6b6b; font-size:12px;\">Ky mesazh është nga Tirana Solidare.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:12px 30px 16px; border-top:1px solid #e9f3ef;\">
+                      <p style=\"margin:0; color:#999; font-size:11px; text-align:center; line-height:1.5;\">Nuk dëshironi të merrni këto email? <a href=\"{$safeSite}/views/volunteer_panel.php?tab=settings\" style=\"color:#00715D; text-decoration:underline;\">Çaktivizoni njoftimet me email</a> në cilësimet e llogarisë suaj.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                      <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>";
+    $bodyText = "Përshëndetje {$toName},\n\n{$message}\n\nPër të çaktivizuar njoftimet me email, vizitoni cilësimet e llogarisë.\n\nTirana Solidare";
+
+    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
@@ -632,6 +626,153 @@ function generate_upload_filename(string $extension): string
 }
 
 /**
+ * Unified image upload handler.
+ *
+ * Validates the uploaded file, optionally resizes via GD, converts to WebP,
+ * and saves to the given directory.  Returns an associative array on success
+ * or a string error message on failure.
+ *
+ * @param array  $file         $_FILES['...'] entry
+ * @param string $destDir      Absolute path to the target directory
+ * @param string $publicPrefix URL prefix for the saved file (e.g. '/TiranaSolidare/uploads/images/')
+ * @param int    $maxBytes     Maximum allowed file size in bytes (default 5 MB)
+ * @param int    $maxDimension Resize longest side to this many pixels (0 = no resize)
+ * @param int    $webpQuality  WebP quality 0-100 (default 80)
+ * @return array{url:string,filename:string,size:int,mime:string,width:int,height:int}|string
+ */
+function handle_image_upload(
+    array  $file,
+    string $destDir,
+    string $publicPrefix,
+    int    $maxBytes     = 5 * 1024 * 1024,
+    int    $maxDimension = 700,
+    int    $webpQuality  = 80
+): array|string {
+    // 1. Upload error check
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $errorMessages = [
+            UPLOAD_ERR_INI_SIZE   => 'Skedari është shumë i madh (limit serveri).',
+            UPLOAD_ERR_FORM_SIZE  => 'Skedari kalon limitin e formës.',
+            UPLOAD_ERR_PARTIAL    => 'Skedari u ngarkua vetëm pjesërisht.',
+            UPLOAD_ERR_NO_FILE    => 'Asnjë skedar nuk u zgjodh.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Mungon dosja e përkohshme.',
+            UPLOAD_ERR_CANT_WRITE => 'Gabim gjatë shkrimit në disk.',
+        ];
+        return $errorMessages[$file['error']] ?? 'Gabim i panjohur gjatë ngarkimit.';
+    }
+
+    // 2. Size check
+    if ((int) ($file['size'] ?? 0) <= 0 || (int) $file['size'] > $maxBytes) {
+        return 'Skedari është shumë i madh. Maksimumi është ' . round($maxBytes / 1048576) . 'MB.';
+    }
+
+    // 3. MIME validation via finfo (server-side, ignores client header)
+    $allowedMimes = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/gif'  => 'gif',
+        'image/webp' => 'webp',
+    ];
+    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($file['tmp_name']);
+    if (!isset($allowedMimes[$mime])) {
+        return 'Formati i skedarit nuk lejohet. Përdorni: JPG, PNG, GIF ose WEBP.';
+    }
+
+    $hasGD = extension_loaded('gd') && function_exists('imagewebp');
+
+    // 4. If GD + WebP available, resize & convert
+    if ($hasGD) {
+        $source = match ($mime) {
+            'image/jpeg' => @imagecreatefromjpeg($file['tmp_name']),
+            'image/png'  => @imagecreatefrompng($file['tmp_name']),
+            'image/gif'  => @imagecreatefromgif($file['tmp_name']),
+            'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file['tmp_name']) : false,
+            default      => false,
+        };
+        if (!$source) {
+            return 'Gabim gjatë leximit të imazhit. Kontrollo formatin e skedarit.';
+        }
+
+        $origW = imagesx($source);
+        $origH = imagesy($source);
+        if ($origW <= 0 || $origH <= 0) {
+            imagedestroy($source);
+            return 'Përmasat e imazhit janë të pavlefshme.';
+        }
+
+        if ($maxDimension > 0) {
+            $scale = min(1, $maxDimension / max($origW, $origH));
+        } else {
+            $scale = 1;
+        }
+        $newW = max(1, (int) round($origW * $scale));
+        $newH = max(1, (int) round($origH * $scale));
+
+        $resized = @imagecreatetruecolor($newW, $newH);
+        if (!$resized) {
+            imagedestroy($source);
+            return 'Nuk mund të krijohet imazhi i ri.';
+        }
+
+        // Preserve transparency
+        imagealphablending($resized, false);
+        imagesavealpha($resized, true);
+        $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+        imagefilledrectangle($resized, 0, 0, $newW, $newH, $transparent);
+
+        if (!imagecopyresampled($resized, $source, 0, 0, 0, 0, $newW, $newH, $origW, $origH)) {
+            imagedestroy($source);
+            imagedestroy($resized);
+            return 'Gabim gjatë përpunimit të imazhit.';
+        }
+        imagedestroy($source);
+
+        $filename = generate_upload_filename('webp');
+        if (!is_dir($destDir) && !@mkdir($destDir, 0755, true)) {
+            imagedestroy($resized);
+            return 'Nuk mund të krijohet dosja e ngarkimit.';
+        }
+
+        $dest = $destDir . '/' . $filename;
+        if (!@imagewebp($resized, $dest, $webpQuality)) {
+            imagedestroy($resized);
+            return 'Gabim gjatë ruajtjes të imazhit WebP.';
+        }
+        imagedestroy($resized);
+
+        return [
+            'url'      => rtrim($publicPrefix, '/') . '/' . $filename,
+            'filename' => $filename,
+            'size'     => filesize($dest),
+            'mime'     => 'image/webp',
+            'width'    => $newW,
+            'height'   => $newH,
+        ];
+    }
+
+    // 5. Fallback: store original file without processing
+    $ext = $allowedMimes[$mime];
+    $filename = generate_upload_filename($ext);
+    if (!is_dir($destDir) && !@mkdir($destDir, 0755, true)) {
+        return 'Nuk mund të krijohet dosja e ngarkimit.';
+    }
+    $dest = $destDir . '/' . $filename;
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        return 'Gabim gjatë ruajtjes të skedarit.';
+    }
+
+    return [
+        'url'      => rtrim($publicPrefix, '/') . '/' . $filename,
+        'filename' => $filename,
+        'size'     => filesize($dest),
+        'mime'     => $mime,
+        'width'    => 0,
+        'height'   => 0,
+    ];
+}
+
+/**
  * Build profile activity metrics used by badges and profile widgets.
  */
 function ts_collect_user_badge_metrics(PDO $pdo, int $userId): array
@@ -644,7 +785,7 @@ function ts_collect_user_badge_metrics(PDO $pdo, int $userId): array
     $totalAppsStmt->execute([$userId]);
     $totalApps = (int) $totalAppsStmt->fetchColumn();
 
-    $acceptedEventsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
+    $acceptedEventsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ? AND statusi = 'approved'");
     $acceptedEventsStmt->execute([$userId]);
     $acceptedEvents = (int) $acceptedEventsStmt->fetchColumn();
 
@@ -654,7 +795,7 @@ function ts_collect_user_badge_metrics(PDO $pdo, int $userId): array
 
     $acceptedHelpApps = 0;
     try {
-        $acceptedHelpAppsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'Pranuar'");
+        $acceptedHelpAppsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'approved'");
         $acceptedHelpAppsStmt->execute([$userId]);
         $acceptedHelpApps = (int) $acceptedHelpAppsStmt->fetchColumn();
     } catch (Throwable $e) {

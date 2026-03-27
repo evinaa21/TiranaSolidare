@@ -208,6 +208,7 @@ CREATE TABLE `perdoruesi` (
   `profile_picture` varchar(500) DEFAULT NULL,
   `profile_public` tinyint(1) NOT NULL DEFAULT 0,
   `profile_color` varchar(20) NOT NULL DEFAULT 'emerald',
+  `email_notifications` tinyint(1) NOT NULL DEFAULT 1,
   `fjalekalimi` varchar(255) NOT NULL,
   `roli` enum('Admin','Vullnetar') DEFAULT 'Vullnetar',
   `statusi_llogarise` enum('Aktiv','Bllokuar','Çaktivizuar') DEFAULT 'Aktiv',
@@ -424,6 +425,189 @@ ALTER TABLE `raporti`
   ADD CONSTRAINT `raporti_ibfk_1` FOREIGN KEY (`id_perdoruesi`) REFERENCES `perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE;
 COMMIT;
 
+-- --------------------------------------------------------
+--
+-- Table structure for table `rate_limit_log`
+--
+CREATE TABLE IF NOT EXISTS `rate_limit_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ip` varchar(45) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `attempted_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  INDEX `idx_ip_action` (`ip`, `action`, `attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- --------------------------------------------------------
+-- Migration: Event capacity, lifecycle, waitlist, presence, notifications, audit log
+-- --------------------------------------------------------
+
+-- FIX 1: Event capacity
+ALTER TABLE `eventi` ADD COLUMN `kapaciteti` INT NULL AFTER `pershkrimi`;
+
+-- FIX 2: Event lifecycle statuses
+ALTER TABLE `eventi` ADD COLUMN `statusi` ENUM('active','completed','cancelled') DEFAULT 'active' AFTER `banner`;
+ALTER TABLE `eventi` ADD COLUMN `is_archived` TINYINT(1) DEFAULT 0 AFTER `statusi`;
+UPDATE `eventi` SET `statusi` = 'active' WHERE `statusi` IS NULL OR `statusi` = '';
+
+-- FIX 1: Waitlist flag on applications
+ALTER TABLE `aplikimi` ADD COLUMN `ne_liste_pritje` TINYINT(1) DEFAULT 0 AFTER `statusi`;
+
+-- FIX 3: Presence tracking (extended statusi enum)
+ALTER TABLE `aplikimi` MODIFY COLUMN `statusi` ENUM('Në pritje','Pranuar','Refuzuar','Prezent','Munguar') DEFAULT 'Në pritje';
+
+-- FIX 5: Notification type/link columns
+ALTER TABLE `njoftimi` ADD COLUMN `tipi` VARCHAR(30) NULL,
+                       ADD COLUMN `target_type` VARCHAR(30) NULL,
+                       ADD COLUMN `target_id` INT NULL,
+                       ADD COLUMN `linku` VARCHAR(500) NULL;
+
+-- FIX 4: Admin audit log table
+CREATE TABLE IF NOT EXISTS `admin_log` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `admin_id` INT NOT NULL,
+  `veprim` VARCHAR(50) NOT NULL,
+  `target_type` VARCHAR(30) NULL,
+  `target_id` INT NULL,
+  `detaje` TEXT NULL,
+  `krijuar_me` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_admin_action` (`admin_id`, `veprim`),
+  INDEX `idx_target` (`target_type`, `target_id`),
+  FOREIGN KEY (`admin_id`) REFERENCES `perdoruesi` (`id_perdoruesi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Migration: Standardize all status/role/type values to English
+-- --------------------------------------------------------
+
+-- Aplikimi: statusi enum Albanian → English
+ALTER TABLE `aplikimi` MODIFY COLUMN `statusi`
+  ENUM('pending','approved','rejected','present','absent') DEFAULT 'pending';
+UPDATE `aplikimi` SET `statusi` = CASE `statusi`
+  WHEN 'Në pritje' THEN 'pending'
+  WHEN 'Pranuar'   THEN 'approved'
+  WHEN 'Refuzuar'  THEN 'rejected'
+  WHEN 'Prezent'   THEN 'present'
+  WHEN 'Munguar'   THEN 'absent'
+  ELSE `statusi`
+END WHERE `statusi` IN ('Në pritje','Pranuar','Refuzuar','Prezent','Munguar');
+
+-- Aplikimi_Kerkese: statusi enum Albanian → English
+ALTER TABLE `aplikimi_kerkese` MODIFY COLUMN `statusi`
+  ENUM('pending','approved','rejected') DEFAULT 'pending';
+UPDATE `aplikimi_kerkese` SET `statusi` = CASE `statusi`
+  WHEN 'Në pritje' THEN 'pending'
+  WHEN 'Pranuar'   THEN 'approved'
+  WHEN 'Refuzuar'  THEN 'rejected'
+  ELSE `statusi`
+END WHERE `statusi` IN ('Në pritje','Pranuar','Refuzuar');
+
+-- Perdoruesi: roli enum Albanian → English
+ALTER TABLE `perdoruesi` MODIFY COLUMN `roli`
+  ENUM('admin','volunteer') DEFAULT 'volunteer';
+UPDATE `perdoruesi` SET `roli` = CASE `roli`
+  WHEN 'Admin'     THEN 'admin'
+  WHEN 'Vullnetar' THEN 'volunteer'
+  ELSE `roli`
+END WHERE `roli` IN ('Admin','Vullnetar');
+
+-- Perdoruesi: statusi_llogarise enum Albanian → English
+ALTER TABLE `perdoruesi` MODIFY COLUMN `statusi_llogarise`
+  ENUM('active','blocked','deactivated') DEFAULT 'active';
+UPDATE `perdoruesi` SET `statusi_llogarise` = CASE `statusi_llogarise`
+  WHEN 'Aktiv'       THEN 'active'
+  WHEN 'Bllokuar'    THEN 'blocked'
+  WHEN 'Çaktivizuar' THEN 'deactivated'
+  ELSE `statusi_llogarise`
+END WHERE `statusi_llogarise` IN ('Aktiv','Bllokuar','Çaktivizuar');
+
+-- Kerkesa_per_Ndihme: tipi enum Albanian → English
+ALTER TABLE `kerkesa_per_ndihme` MODIFY COLUMN `tipi`
+  ENUM('request','offer') DEFAULT NULL;
+UPDATE `kerkesa_per_ndihme` SET `tipi` = CASE `tipi`
+  WHEN 'Kërkesë' THEN 'request'
+  WHEN 'Ofertë'  THEN 'offer'
+  ELSE `tipi`
+END WHERE `tipi` IN ('Kërkesë','Ofertë');
+
+-- --------------------------------------------------------
+-- Migration: Add updated_at timestamp to main tables
+-- --------------------------------------------------------
+
+ALTER TABLE `eventi`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `aplikimi`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `aplikimi_kerkese`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `perdoruesi`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `kerkesa_per_ndihme`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `njoftimi`
+  ADD COLUMN `ndryshuar_me` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
+
+-- --------------------------------------------------------
+-- Migration: Email queue with retry
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `email_queue` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `to_email` VARCHAR(255) NOT NULL,
+  `to_name` VARCHAR(255) NOT NULL DEFAULT '',
+  `subject` VARCHAR(500) NOT NULL,
+  `body_html` MEDIUMTEXT NOT NULL,
+  `body_text` TEXT DEFAULT NULL,
+  `status` ENUM('pending','sent','failed') DEFAULT 'pending',
+  `attempts` TINYINT UNSIGNED DEFAULT 0,
+  `max_attempts` TINYINT UNSIGNED DEFAULT 3,
+  `last_error` TEXT DEFAULT NULL,
+  `next_retry_at` TIMESTAMP NULL DEFAULT NULL,
+  `krijuar_me` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `idx_status_retry` (`status`, `next_retry_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Migration: Standardize kerkesa_per_ndihme.statusi to lowercase English
+-- (missed in original FIX 1 migration)
+-- --------------------------------------------------------
+
+ALTER TABLE `kerkesa_per_ndihme` MODIFY COLUMN `statusi`
+  ENUM('open','closed') DEFAULT 'open';
+UPDATE `kerkesa_per_ndihme` SET `statusi` = CASE `statusi`
+  WHEN 'Open'   THEN 'open'
+  WHEN 'Closed' THEN 'closed'
+  ELSE `statusi`
+END WHERE `statusi` IN ('Open','Closed');
+
+-- --------------------------------------------------------
+-- Migration: In-App Messaging (Mesazhi)
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `Mesazhi` (
+  `id_mesazhi` INT NOT NULL AUTO_INCREMENT,
+  `derguesi_id` INT NOT NULL,
+  `marruesi_id` INT NOT NULL,
+  `mesazhi` TEXT NOT NULL,
+  `is_read` TINYINT(1) DEFAULT 0,
+  `krijuar_me` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_mesazhi`),
+  INDEX `idx_derguesi` (`derguesi_id`),
+  INDEX `idx_marruesi` (`marruesi_id`),
+  INDEX `idx_thread` (`derguesi_id`, `marruesi_id`, `krijuar_me`),
+  INDEX `idx_unread` (`marruesi_id`, `is_read`),
+  FOREIGN KEY (`derguesi_id`) REFERENCES `Perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE,
+  FOREIGN KEY (`marruesi_id`) REFERENCES `Perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Mesazhet ndërmjet përdoruesve';

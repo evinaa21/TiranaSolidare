@@ -10,15 +10,30 @@
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/TiranaSolidare/',
         'domain'   => '',
-        'secure'   => false, // Set to true in production with HTTPS
+        'secure'   => $isHttps,
         'httponly'  => true,
         'samesite' => 'Lax',
     ]);
     session_start();
+}
+
+// Enforce session timeout on API requests
+if (isset($_SESSION['user_id'])) {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 3600)) {
+        session_unset();
+        session_destroy();
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Sesioni ka skaduar. Ju lutem kyçuni përsëri.'], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+    $_SESSION['last_activity'] = time();
 }
 
 // Include DB connection
@@ -40,6 +55,10 @@ $allowedOrigins = [
     'http://127.0.0.1:80',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:8080',
+    'https://localhost',
+    'https://localhost:443',
+    'https://127.0.0.1',
+    'https://127.0.0.1:443',
 ];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins, true)) {
@@ -60,6 +79,8 @@ if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'], true)) {
     if (!validate_csrf_token()) {
         json_error('Sesioni ka skaduar. Rifreskoni faqen.', 403);
     }
+    // Regenerate CSRF token after successful validation to prevent replay
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 // ── JSON Response Helpers ──────────────────────────
@@ -70,10 +91,15 @@ if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'], true)) {
 function json_success($data = [], int $code = 200): void
 {
     http_response_code($code);
-    echo json_encode([
+    $response = [
         'success' => true,
         'data'    => $data,
-    ], JSON_UNESCAPED_UNICODE);
+    ];
+    // Include refreshed CSRF token so the client can use it for subsequent requests
+    if (isset($_SESSION['csrf_token'])) {
+        $response['csrf_token'] = $_SESSION['csrf_token'];
+    }
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit();
 }
 
@@ -90,6 +116,9 @@ function json_error(string $message, int $code = 400, array $errors = []): void
     if (!empty($errors)) {
         $response['errors'] = $errors;
     }
+    if (isset($_SESSION['csrf_token'])) {
+        $response['csrf_token'] = $_SESSION['csrf_token'];
+    }
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit();
 }
@@ -98,17 +127,50 @@ function json_error(string $message, int $code = 400, array $errors = []): void
 
 /**
  * Require the user to be logged in (session-based).
- * Returns the user's session data or terminates with 401.
+ * Re-verifies role and account status from DB every 60 seconds
+ * to catch blocks, deactivations, and role changes promptly.
  */
 function require_auth(): array
 {
     if (!isset($_SESSION['user_id'])) {
         json_error('Ju nuk jeni të kyçur. / Unauthorized.', 401);
     }
+
+    // Re-verify from DB periodically (every 60s) or on first call
+    $now = time();
+    if (!isset($_SESSION['_auth_verified_at']) || ($now - $_SESSION['_auth_verified_at']) > 60) {
+        global $pdo;
+        $stmt = $pdo->prepare('SELECT roli, statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $stmt->execute([(int) $_SESSION['user_id']]);
+        $dbUser = $stmt->fetch();
+
+        if (!$dbUser) {
+            session_unset();
+            session_destroy();
+            json_error('Llogaria nuk ekziston më.', 401);
+        }
+
+        if ($dbUser['statusi_llogarise'] === 'blocked') {
+            session_unset();
+            session_destroy();
+            json_error('Llogaria juaj është bllokuar.', 403);
+        }
+
+        if ($dbUser['statusi_llogarise'] === 'deactivated') {
+            session_unset();
+            session_destroy();
+            json_error('Llogaria juaj është çaktivizuar.', 403);
+        }
+
+        // Sync role from DB into session (handles demotions)
+        $_SESSION['roli'] = $dbUser['roli'];
+        $_SESSION['_auth_verified_at'] = $now;
+    }
+
     return [
         'id'   => (int) $_SESSION['user_id'],
         'emri' => $_SESSION['emri'] ?? '',
-        'roli' => $_SESSION['roli'] ?? 'Vullnetar',
+        'roli' => $_SESSION['roli'] ?? 'volunteer',
     ];
 }
 
@@ -118,7 +180,7 @@ function require_auth(): array
 function require_admin(): array
 {
     $user = require_auth();
-    if ($user['roli'] !== 'Admin') {
+    if ($user['roli'] !== 'admin') {
         json_error('Kjo veprim kërkon privilegje administratori. / Forbidden.', 403);
     }
     return $user;

@@ -2,8 +2,15 @@
 session_start();
 require_once __DIR__ . '/../../includes/functions.php';
 
-// Validate CSRF token (from GET param or header)
-$token = $_GET['token'] ?? $_POST['_csrf_token'] ?? '';
+// Only allow POST for logout (prevent CSRF via Referer leak)
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Location: /TiranaSolidare/views/login.php');
+    exit();
+}
+
+// Validate CSRF token from POST body
+$token = $_POST['_csrf_token'] ?? '';
 if (!validate_csrf_token($token)) {
     http_response_code(403);
     echo 'Sesioni ka skaduar. Rifreskoni faqen.';

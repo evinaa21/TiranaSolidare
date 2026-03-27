@@ -741,6 +741,15 @@ body.page-home .header.scrolled{
   margin-top: 4px;
   border-top: 1px solid #00715d14;
   color: #b13c1e !important;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
 }
 
 .header-admin-btn{

@@ -23,7 +23,7 @@ switch ($action) {
         require_method('POST');
         $user = require_auth();
 
-        if ($user['roli'] === 'Admin') {
+        if ($user['roli'] === 'admin') {
             json_error('Administratorët nuk mund të aplikojnë për kërkesa ndihme.', 403);
         }
 
@@ -48,7 +48,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ($request['statusi'] !== 'Open') {
+            if ($request['statusi'] !== 'open') {
                 json_error('Mund të aplikoni vetëm për kërkesa të hapura.', 422);
             }
 
@@ -67,14 +67,15 @@ switch ($action) {
 
             $insert = $pdo->prepare(
                 "INSERT INTO Aplikimi_Kerkese (id_kerkese_ndihme, id_perdoruesi, statusi)
-                 VALUES (?, ?, 'Në pritje')"
+                 VALUES (?, ?, 'pending')"
             );
             $insert->execute([$requestId, $user['id']]);
             $applicationId = (int) $pdo->lastInsertId();
 
             $ownerMessage = "{$user['emri']} aplikoi për kërkesën tuaj \"{$request['titulli']}\".";
-            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-            $notifStmt->execute([$request['id_perdoruesi'], $ownerMessage]);
+            $reqLink = "/TiranaSolidare/views/help_requests.php?id={$requestId}";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+            $notifStmt->execute([$request['id_perdoruesi'], $ownerMessage, 'aplikim_kerkese', 'help_request', $requestId, $reqLink]);
 
             if (filter_var($request['krijuesi_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
                 send_notification_email(
@@ -154,7 +155,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ((int) $requestRow['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+            if ((int) $requestRow['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
@@ -223,7 +224,7 @@ switch ($action) {
             if (!$request) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
-            if ((int) $request['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+            if ((int) $request['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
@@ -252,7 +253,7 @@ switch ($action) {
 
             $sent = send_notification_email(
                 $applicant['email'],
-                $applicant['emri'] ?? 'Vullnetar',
+                $applicant['emri'] ?? 'Volunteer',
                 $subject,
                 $fullMessage
             );
@@ -262,8 +263,9 @@ switch ($action) {
             }
 
             $notifMessage = "Postuesi i kërkesës \"{$request['titulli']}\" ju kontaktoi me email.";
-            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-            $notifStmt->execute([$applicantId, $notifMessage]);
+            $reqLink = "/TiranaSolidare/views/help_requests.php?id={$requestId}";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+            $notifStmt->execute([$applicantId, $notifMessage, 'aplikim_kerkese', 'help_request', $requestId, $reqLink]);
 
             json_success(['message' => 'Email-i u dërgua me sukses.']);
         } catch (\Exception $e) {
@@ -284,8 +286,8 @@ switch ($action) {
         if ($applicationId <= 0) {
             json_error('ID-ja e aplikimit është e pavlefshme.', 422);
         }
-        if (!in_array($newStatus, ['Pranuar', 'Refuzuar'], true)) {
-            json_error("Statusi duhet të jetë 'Pranuar' ose 'Refuzuar'.", 422);
+        if (!in_array($newStatus, ['approved', 'rejected'], true)) {
+            json_error("Statusi duhet të jetë 'approved' ose 'rejected'.", 422);
         }
 
         try {
@@ -305,22 +307,23 @@ switch ($action) {
                 json_error('Aplikimi nuk u gjet.', 404);
             }
 
-            if ((int) $app['pronari_id'] !== (int) $user['id'] && $user['roli'] !== 'Admin') {
+            if ((int) $app['pronari_id'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
             $update = $pdo->prepare('UPDATE Aplikimi_Kerkese SET statusi = ? WHERE id_aplikimi_kerkese = ?');
             $update->execute([$newStatus, $applicationId]);
 
-            $statusLabel = $newStatus === 'Pranuar' ? 'pranua' : 'refuzua';
+            $statusLabel = $newStatus === 'approved' ? 'pranua' : 'refuzua';
             $notifMessage = "Aplikimi juaj për \"{$app['titulli']}\" u {$statusLabel}.";
-            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-            $notifStmt->execute([$app['id_perdoruesi'], $notifMessage]);
+            $reqLink = "/TiranaSolidare/views/help_requests.php?id={$app['id_kerkese_ndihme']}";
+            $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+            $notifStmt->execute([$app['id_perdoruesi'], $notifMessage, 'aplikim_kerkese', 'help_request', $app['id_kerkese_ndihme'], $reqLink]);
 
             if (filter_var($app['aplikuesi_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
                 send_notification_email(
                     $app['aplikuesi_email'],
-                    $app['aplikuesi_emri'] ?? 'Vullnetar',
+                    $app['aplikuesi_emri'] ?? 'Volunteer',
                     "Aplikimi juaj u {$statusLabel}",
                     $notifMessage
                 );
@@ -377,7 +380,7 @@ switch ($action) {
                     JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
                     $whereSQL
                     ORDER BY 
-                    CASE WHEN kn.statusi = 'Open' THEN 0 ELSE 1 END ASC,
+                    CASE WHEN kn.statusi = 'open' THEN 0 ELSE 1 END ASC,
                     kn.krijuar_me DESC
                     LIMIT ? OFFSET ?";
 
@@ -412,7 +415,7 @@ switch ($action) {
 
         try {
             $stmt = $pdo->prepare(
-                "SELECT kn.*, p.emri AS krijuesi_emri, p.email AS krijuesi_email
+                "SELECT kn.*, p.emri AS krijuesi_emri
                  FROM Kerkesa_per_Ndihme kn
                  JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
                  WHERE kn.id_kerkese_ndihme = ?"
@@ -446,8 +449,8 @@ switch ($action) {
         $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
         $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
 
-        if (!in_array($tipi, ['Kërkesë', 'Ofertë'], true)) {
-            $errors[] = "Tipi duhet të jetë 'Kërkesë' ose 'Ofertë'.";
+        if (!in_array($tipi, ['request', 'offer'], true)) {
+            $errors[] = "Tipi duhet të jetë 'request' ose 'offer'.";
         }
 
         if (!empty($errors)) {
@@ -458,11 +461,19 @@ switch ($action) {
         if ($lenErr = validate_length($titulli, 3, 200, 'titulli')) {
             json_error($lenErr, 422);
         }
+        if ($pershkrimi !== '' && ($lenErr = validate_length($pershkrimi, 0, 5000, 'pershkrimi'))) {
+            json_error($lenErr, 422);
+        }
+
+        // Validate image URL if provided
+        if ($imazhi && !validate_image_url($imazhi)) {
+            json_error('URL-ja e imazhit nuk është e vlefshme.', 422);
+        }
 
         try {
             $stmt = $pdo->prepare(
                 "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, imazhi, vendndodhja, latitude, longitude)
-                 VALUES (?, ?, ?, ?, 'Open', ?, ?, ?, ?)"
+                 VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)"
             );
             $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $imazhi, $vendndodhja, $latitude, $longitude]);
 
@@ -496,8 +507,33 @@ switch ($action) {
             json_error('Kërkesa nuk u gjet.', 404);
         }
 
-        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
             json_error('Nuk keni leje për të ndryshuar këtë kërkesë.', 403);
+        }
+
+        // Block updates on closed requests
+        if ($existing['statusi'] === 'closed') {
+            json_error('Kërkesat e mbyllura nuk mund të ndryshohen.', 422);
+        }
+
+        // Validate tipi if provided
+        if (array_key_exists('tipi', $body) && !in_array($body['tipi'], ['request', 'offer'], true)) {
+            json_error("Tipi duhet të jetë 'request' ose 'offer'.", 422);
+        }
+
+        // Validate pershkrimi length if provided
+        if (array_key_exists('pershkrimi', $body) && $body['pershkrimi'] !== '' && ($lenErr = validate_length($body['pershkrimi'], 0, 5000, 'pershkrimi'))) {
+            json_error($lenErr, 422);
+        }
+
+        // Validate titulli length if provided
+        if (array_key_exists('titulli', $body) && ($lenErr = validate_length($body['titulli'], 3, 200, 'titulli'))) {
+            json_error($lenErr, 422);
+        }
+
+        // Validate image URL if provided
+        if (array_key_exists('imazhi', $body) && $body['imazhi'] && !validate_image_url($body['imazhi'])) {
+            json_error('URL-ja e imazhit nuk është e vlefshme.', 422);
         }
 
         $allowed = ['titulli', 'pershkrimi', 'tipi', 'vendndodhja', 'latitude', 'longitude', 'imazhi'];
@@ -546,18 +582,19 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
                 json_error('Nuk keni leje.', 403);
             }
 
-            $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'Closed' WHERE id_kerkese_ndihme = ?")
+            $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'closed' WHERE id_kerkese_ndihme = ?")
                 ->execute([$id]);
 
             // Notify the owner if closed by admin (A-02)
             if ($existing['id_perdoruesi'] != $user['id']) {
                 $message = "Kërkesa juaj \"{$existing['titulli']}\" u mbyll nga një administrator.";
-                $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-                $notifStmt->execute([$existing['id_perdoruesi'], $message]);
+                $reqLink = "/TiranaSolidare/views/help_requests.php?id={$id}";
+                $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+                $notifStmt->execute([$existing['id_perdoruesi'], $message, 'admin_veprim', 'help_request', $id, $reqLink]);
 
                 $userContact = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
                 $userContact->execute([$existing['id_perdoruesi']]);
@@ -565,7 +602,7 @@ switch ($action) {
                 if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
                     send_notification_email(
                         $recipient['email'],
-                        $recipient['emri'] ?? 'Vullnetar',
+                        $recipient['emri'] ?? 'Volunteer',
                         'Njoftim i ri nga Tirana Solidare',
                         $message
                     );
@@ -598,15 +635,15 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
                 json_error('Nuk keni leje.', 403);
             }
 
-            if ($existing['statusi'] !== 'Closed') {
+            if ($existing['statusi'] !== 'closed') {
                 json_error('Kërkesa është tashmë e hapur.', 400);
             }
 
-            $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'Open' WHERE id_kerkese_ndihme = ?")
+            $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'open' WHERE id_kerkese_ndihme = ?")
                 ->execute([$id]);
 
             json_success(['message' => 'Kërkesa u rihap.']);
@@ -635,7 +672,7 @@ case 'delete':
             json_error('Kërkesa nuk u gjet.', 404);
         }
 
-        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'Admin') {
+        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
             json_error('Nuk keni leje.', 403);
         }
 

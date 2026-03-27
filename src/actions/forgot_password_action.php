@@ -1,7 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /TiranaSolidare/views/login.php');
@@ -29,7 +29,7 @@ try {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && $user['statusi_llogarise'] !== 'Bllokuar') {
+    if ($user && $user['statusi_llogarise'] !== 'blocked') {
         $plainToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+1 hour'))->format('Y-m-d H:i:s');
@@ -38,7 +38,7 @@ try {
         $update = $pdo->prepare('UPDATE Perdoruesi SET password_reset_token_hash = ?, password_reset_token_expires = ? WHERE id_perdoruesi = ?');
         $update->execute([$tokenHash, $expiresAt, (int) $user['id_perdoruesi']]);
 
-        send_password_reset_email($email, $user['emri'] ?? 'Vullnetar', $resetUrl);
+        send_password_reset_email($email, $user['emri'] ?? 'Volunteer', $resetUrl);
     }
 
     header('Location: /TiranaSolidare/views/forgot_password.php?success=email_sent');

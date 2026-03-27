@@ -8,6 +8,16 @@
  * ---------------------------------------------------
  */
 
+// ── English→Albanian label map (mirrors PHP status_labels.php) ──
+const STATUS_LABELS = {
+    pending: 'Në pritje', approved: 'Pranuar', rejected: 'Refuzuar',
+    present: 'Prezent', absent: 'Munguar',
+    active: 'Aktiv', blocked: 'Bllokuar', deactivated: 'Çaktivizuar',
+    admin: 'Admin', volunteer: 'Vullnetar',
+    request: 'Kërkesë', offer: 'Ofertë'
+};
+function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
+
 // ── Panel switching ─────────────────────────────────
 
 function switchPanel(panelId, btn) {
@@ -285,12 +295,15 @@ window.viewEventApps = async function (eventId) {
     const json = await apiCall(`applications.php?action=by_event&id=${eventId}`);
     if (!json.success) return;
 
-    const { applications, summary } = json.data;
+    const { applications, summary, event_data } = json.data;
+    const isPast = new Date(event_data) < new Date();
 
     let body = `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <span class="db-badge db-badge--pending">Në pritje: ${summary.ne_pritje}</span>
         <span class="db-badge db-badge--active">Pranuar: ${summary.pranuar}</span>
         <span class="db-badge db-badge--blocked">Refuzuar: ${summary.refuzuar}</span>
+        ${isPast ? `<span class="db-badge" style="background:#d1fae5;color:#065f46;">Prezent: ${summary.prezent || 0}</span>
+        <span class="db-badge" style="background:#fee2e2;color:#991b1b;">Munguar: ${summary.munguar || 0}</span>` : ''}
     </div>`;
 
     if (applications.length === 0) {
@@ -298,17 +311,38 @@ window.viewEventApps = async function (eventId) {
     } else {
         body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Emri</th><th>Email</th><th>Statusi</th><th>Veprime</th></tr></thead><tbody>';
         applications.forEach(app => {
-            const statusClass = app.statusi === 'Pranuar' ? 'active' : app.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            const statusClass = app.statusi === 'approved' ? 'active'
+                : app.statusi === 'rejected' ? 'blocked'
+                : app.statusi === 'present' ? 'active'
+                : app.statusi === 'absent' ? 'blocked'
+                : 'pending';
+            const presenceBadgeStyle = app.statusi === 'present'
+                ? 'background:#d1fae5;color:#065f46;'
+                : app.statusi === 'absent'
+                ? 'background:#fee2e2;color:#991b1b;'
+                : '';
+            const badgeExtra = presenceBadgeStyle ? ` style="${presenceBadgeStyle}"` : '';
+
+            let actions = '';
+            if (app.statusi === 'pending') {
+                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved')">Prano</button>
+                    <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected')">Refuzo</button>`;
+            } else if (app.statusi === 'approved' && isPast) {
+                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'present', ${eventId})">Prezent</button>
+                    <button class="db-btn db-btn--danger db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'absent', ${eventId})">Munguar</button>`;
+            } else if (app.statusi === 'approved') {
+                actions = `<button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected')">Refuzo</button>`;
+            } else if (app.statusi === 'present' || app.statusi === 'absent') {
+                actions = '<span style="color:#94a3b8;font-size:0.8rem;">Prezenca e shënuar</span>';
+            } else {
+                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved')">Prano</button>`;
+            }
+
             body += `<tr>
                 <td><strong>${escapeHtml(app.vullnetari_emri)}</strong></td>
                 <td>${escapeHtml(app.vullnetari_email)}</td>
-                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(app.statusi)}</span></td>
-                <td>
-                    <div class="db-table__actions">
-                        <button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Pranuar')">Prano</button>
-                        <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'Refuzuar')">Refuzo</button>
-                    </div>
-                </td>
+                <td><span class="db-badge db-badge--${statusClass}"${badgeExtra}>${escapeHtml(statusLabel(app.statusi))}</span></td>
+                <td><div class="db-table__actions">${actions}</div></td>
             </tr>`;
         });
         body += '</tbody></table></div>';
@@ -316,6 +350,16 @@ window.viewEventApps = async function (eventId) {
 
     showUserActivityModal('Duke ngarkuar…');
     updateUserActivityModal('Aplikimet për Eventin', body);
+};
+
+window.markPresence = async function (appId, status, eventId) {
+    const json = await apiCall(`applications.php?action=mark_presence&id=${appId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ statusi: status })
+    });
+    if (json.success) {
+        viewEventApps(eventId);
+    }
 };
 
 
@@ -346,14 +390,14 @@ window.loadUsers = async function (page = 1) {
         <input id="admin-usr-filter-search" type="text" placeholder="Kërko emër ose email…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadUsers(1)">
         <select id="admin-usr-filter-role" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
             <option value=""${!filterRole ? ' selected' : ''}>Të gjitha rolet</option>
-            <option value="Admin"${filterRole === 'Admin' ? ' selected' : ''}>Admin</option>
-            <option value="Vullnetar"${filterRole === 'Vullnetar' ? ' selected' : ''}>Vullnetar</option>
+            <option value="admin"${filterRole === 'admin' ? ' selected' : ''}>Admin</option>
+            <option value="volunteer"${filterRole === 'volunteer' ? ' selected' : ''}>Vullnetar</option>
         </select>
         <select id="admin-usr-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
-            <option value="Aktiv"${filterStatus === 'Aktiv' ? ' selected' : ''}>Aktiv</option>
-            <option value="Bllokuar"${filterStatus === 'Bllokuar' ? ' selected' : ''}>Bllokuar</option>
-            <option value="Çaktivizuar"${filterStatus === 'Çaktivizuar' ? ' selected' : ''}>Çaktivizuar</option>
+            <option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktiv</option>
+            <option value="blocked"${filterStatus === 'blocked' ? ' selected' : ''}>Bllokuar</option>
+            <option value="deactivated"${filterStatus === 'deactivated' ? ' selected' : ''}>Çaktivizuar</option>
         </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadUsers(1)">Filtro</button>
         <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-usr-filter-search').value='';document.getElementById('admin-usr-filter-role').value='';document.getElementById('admin-usr-filter-status').value='';loadUsers(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
@@ -364,17 +408,17 @@ window.loadUsers = async function (page = 1) {
         + '</tr></thead><tbody>';
 
     users.forEach(u => {
-        const isBlocked = u.statusi_llogarise === 'Bllokuar';
-        const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
-        const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
+        const isBlocked = u.statusi_llogarise === 'blocked';
+        const isDeactivated = u.statusi_llogarise === 'deactivated';
+        const roleClass = u.roli === 'admin' ? 'admin' : 'vol';
         const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
 
         html += `<tr class="${isBlocked ? 'db-row--blocked' : ''} ${isDeactivated ? 'db-row--deactivated' : ''}">
             <td><strong>#${u.id_perdoruesi}</strong></td>
             <td>${escapeHtml(u.emri)}</td>
             <td>${escapeHtml(u.email)}</td>
-            <td><span class="db-badge db-badge--${roleClass}">${u.roli}</span></td>
-            <td><span class="db-badge db-badge--${statusClass}">${u.statusi_llogarise}</span></td>
+            <td><span class="db-badge db-badge--${roleClass}">${statusLabel(u.roli)}</span></td>
+            <td><span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span></td>
             <td>
                 <div class="db-table__actions">
                     <button class="db-btn db-btn--info db-btn--sm" onclick="openUserDetail(${u.id_perdoruesi})">
@@ -433,10 +477,10 @@ window.openUserDetail = async function (userId) {
     }
 
     const u = json.data;
-    const isBlocked = u.statusi_llogarise === 'Bllokuar';
-    const isDeactivated = u.statusi_llogarise === 'Çaktivizuar';
-    const isActive = u.statusi_llogarise === 'Aktiv';
-    const roleClass = u.roli === 'Admin' ? 'admin' : 'vol';
+    const isBlocked = u.statusi_llogarise === 'blocked';
+    const isDeactivated = u.statusi_llogarise === 'deactivated';
+    const isActive = u.statusi_llogarise === 'active';
+    const roleClass = u.roli === 'admin' ? 'admin' : 'vol';
     const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
     const initial = (u.emri || 'P').charAt(0).toUpperCase();
 
@@ -448,8 +492,8 @@ window.openUserDetail = async function (userId) {
                 <h2 class="ud-header__name">${escapeHtml(u.emri)}</h2>
                 <p class="ud-header__email">${escapeHtml(u.email)}</p>
                 <div class="ud-header__badges">
-                    <span class="db-badge db-badge--${roleClass}">${u.roli}</span>
-                    <span class="db-badge db-badge--${statusClass}">${u.statusi_llogarise}</span>
+                    <span class="db-badge db-badge--${roleClass}">${statusLabel(u.roli)}</span>
+                    <span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span>
                 </div>
             </div>
         </div>
@@ -493,8 +537,8 @@ window.openUserDetail = async function (userId) {
                 <p class="ud-card__desc">Roli aktual: <strong>${u.roli}</strong></p>
                 <div class="ud-card__body">
                     <select id="ud-role-select" class="ud-select">
-                        <option value="Admin" ${u.roli === 'Admin' ? 'selected' : ''}>Admin</option>
-                        <option value="Vullnetar" ${u.roli === 'Vullnetar' ? 'selected' : ''}>Vullnetar</option>
+                        <option value="admin" ${u.roli === 'admin' ? 'selected' : ''}>Admin</option>
+                        <option value="volunteer" ${u.roli === 'volunteer' ? 'selected' : ''}>Vullnetar</option>
                     </select>
                     <button class="db-btn db-btn--primary" onclick="changeUserRoleFromDetail(${u.id_perdoruesi})">
                         Ruaj Rolin
@@ -562,11 +606,11 @@ window.loadUserApplications = async function(userId, userName) {
     } else {
         body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Eventi</th><th>Data e Eventit</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
         eventApps.forEach(a => {
-            const statusClass = a.statusi === 'Pranuar' ? 'active' : a.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+            const statusClass = a.statusi === 'approved' ? 'active' : a.statusi === 'rejected' ? 'blocked' : 'pending';
             body += `<tr>
                 <td><strong>${escapeHtml(a.eventi_titulli)}</strong></td>
                 <td>${formatDate(a.eventi_data)}</td>
-                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.statusi)}</span></td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(a.statusi))}</span></td>
                 <td>${formatDate(a.aplikuar_me)}</td>
             </tr>`;
         });
@@ -580,13 +624,13 @@ window.loadUserApplications = async function(userId, userName) {
     } else {
         body += '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Kërkesa</th><th>Tipi</th><th>Pronari</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
         requestApps.forEach(a => {
-            const statusClass = a.aplikimi_statusi === 'Pranuar' ? 'active' : a.aplikimi_statusi === 'Refuzuar' ? 'blocked' : 'pending';
-            const tipClass = a.tipi === 'Kërkesë' ? 'request' : a.tipi === 'Ofertë' ? 'offer' : 'vol';
+            const statusClass = a.aplikimi_statusi === 'approved' ? 'active' : a.aplikimi_statusi === 'rejected' ? 'blocked' : 'pending';
+            const tipClass = a.tipi === 'request' ? 'request' : a.tipi === 'offer' ? 'offer' : 'vol';
             body += `<tr>
                 <td><strong>${escapeHtml(a.titulli)}</strong></td>
-                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(a.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(a.tipi))}</span></td>
                 <td>${escapeHtml(a.pronari_emri)}</td>
-                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.aplikimi_statusi)}</span></td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(a.aplikimi_statusi))}</span></td>
                 <td>${formatDate(a.aplikuar_me)}</td>
             </tr>`;
         });
@@ -609,13 +653,13 @@ window.loadUserRequestApplications = async function(userId, userName) {
     } else {
         body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Kërkesa</th><th>Tipi</th><th>Pronari</th><th>Statusi</th><th>Aplikuar më</th></tr></thead><tbody>';
         apps.forEach(a => {
-            const statusClass = a.aplikimi_statusi === 'Pranuar' ? 'active' : a.aplikimi_statusi === 'Refuzuar' ? 'blocked' : 'pending';
-            const tipClass = a.tipi === 'Kërkesë' ? 'request' : a.tipi === 'Ofertë' ? 'offer' : 'vol';
+            const statusClass = a.aplikimi_statusi === 'approved' ? 'active' : a.aplikimi_statusi === 'rejected' ? 'blocked' : 'pending';
+            const tipClass = a.tipi === 'request' ? 'request' : a.tipi === 'offer' ? 'offer' : 'vol';
             body += `<tr>
                 <td><strong>${escapeHtml(a.titulli)}</strong></td>
-                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(a.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(a.tipi))}</span></td>
                 <td>${escapeHtml(a.pronari_emri)}</td>
-                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(a.aplikimi_statusi)}</span></td>
+                <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(a.aplikimi_statusi))}</span></td>
                 <td>${formatDate(a.aplikuar_me)}</td>
             </tr>`;
         });
@@ -639,11 +683,11 @@ window.loadUserRequests = async function(userId, userName) {
     } else {
         body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
         requests.forEach(r => {
-            const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
+            const tipClass = r.tipi === 'request' ? 'request' : 'offer';
             const statClass = r.statusi === 'Open' ? 'open' : 'closed';
             body += `<tr>
                 <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
-                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+                <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
                 <td><span class="db-badge db-badge--${statClass}">${escapeHtml(r.statusi)}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
             </tr>`;
@@ -691,7 +735,7 @@ window.changeUserRoleFromDetail = async function (userId) {
     const newRole = sel.value;
 
     // Double confirmation for role changes
-    const msg = newRole === 'Admin'
+    const msg = newRole === 'admin'
         ? 'Jeni të sigurt? Ky vullnetar do të fitojë akses admin të plotë.'
         : 'Jeni të sigurt? Ky admin do të humbasë privilegjet administrative.';
 
@@ -769,8 +813,8 @@ window.loadHelpRequests = async function (page = 1) {
         </select>
         <select id="admin-req-filter-type" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterType ? ' selected' : ''}>Të gjitha tipet</option>
-            <option value="Kërkesë"${filterType === 'Kërkesë' ? ' selected' : ''}>Kërkesë</option>
-            <option value="Ofertë"${filterType === 'Ofertë' ? ' selected' : ''}>Ofertë</option>
+            <option value="request"${filterType === 'request' ? ' selected' : ''}>Kërkesë</option>
+            <option value="offer"${filterType === 'offer' ? ' selected' : ''}>Ofertë</option>
         </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadHelpRequests(1)">Filtro</button>
         <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
@@ -789,12 +833,12 @@ window.loadHelpRequests = async function (page = 1) {
         + '</tr></thead><tbody>';
 
     requests.forEach(r => {
-        const tipClass = r.tipi === 'Kërkesë' ? 'request' : 'offer';
+        const tipClass = r.tipi === 'request' ? 'request' : 'offer';
         const statClass = r.statusi === 'Open' ? 'open' : 'closed';
 
         html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
-            <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(r.tipi)}</span></td>
+            <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
             <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'Open' ? 'Hapur' : 'Mbyllur'}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${formatDate(r.krijuar_me)}</td>
@@ -858,12 +902,15 @@ window.loadNotifications = async function () {
     let html = '<div class="db-notif-list">';
     notifs.forEach(n => {
         const unread = !n.is_read;
+        const hasLink = n.linku && n.linku.trim() !== '';
+        const linkOpen = hasLink ? `<a href="${escapeHtml(n.linku)}" class="db-notif__link" style="text-decoration:none;color:inherit;">` : '';
+        const linkClose = hasLink ? '</a>' : '';
         html += `<div class="db-notif ${unread ? 'db-notif--unread' : 'db-notif--read'}">
             <div class="db-notif__dot"></div>
-            <div class="db-notif__body">
+            ${linkOpen}<div class="db-notif__body">
                 <p class="db-notif__msg">${escapeHtml(n.mesazhi)}</p>
                 <span class="db-notif__time">${formatDate(n.krijuar_me)}</span>
-            </div>
+            </div>${linkClose}
             <div class="db-notif__actions">
                 ${unread ? `<button class="db-btn db-btn--success db-btn--sm" onclick="markRead(${n.id_njoftimi})" title="Shëno si të lexuar">✓</button>` : ''}
                 <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteNotif(${n.id_njoftimi})" title="Fshi">✕</button>
@@ -935,15 +982,15 @@ window.renderApplicationList = function (data) {
         + '</tr></thead><tbody>';
 
     data.applications.forEach(app => {
-        const statusClass = app.statusi === 'Pranuar' ? 'active'
-            : app.statusi === 'Refuzuar' ? 'blocked' : 'pending';
+        const statusClass = app.statusi === 'approved' ? 'active'
+            : app.statusi === 'rejected' ? 'blocked' : 'pending';
 
         html += `<tr>
             <td><strong>${escapeHtml(app.eventi_titulli)}</strong></td>
             <td>${formatDate(app.eventi_data)}</td>
-            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(app.statusi)}</span></td>
+            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(app.statusi))}</span></td>
             <td>${formatDate(app.aplikuar_me)}</td>
-            <td>${app.statusi === 'Në pritje'
+            <td>${app.statusi === 'pending'
                 ? `<button class="db-btn db-btn--danger db-btn--sm" onclick="withdrawApplication(${app.id_aplikimi})">Tërhiq</button>`
                 : '<span style="color:#b0b8c4">—</span>'}</td>
         </tr>`;
@@ -1049,4 +1096,436 @@ document.addEventListener('DOMContentLoaded', () => {
             switchPanel(panelId, navBtn);
         }
      }
+
+    // Load messaging conversations
+    loadConversations();
+    loadUnreadBadge();
+    // Load reports
+    loadReportsPanel();
 });
+
+
+// ═══════════════════════════════════════════════════════
+//  ADMIN REPORTS & CHARTS
+// ═══════════════════════════════════════════════════════
+
+let _reportsChartsLoaded = false;
+
+async function loadReportsPanel() {
+    if (_reportsChartsLoaded) return;
+    const container = document.getElementById('reports-charts');
+    if (!container) return;
+
+    try {
+        const json = await apiCall('stats.php?action=monthly');
+        if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim gjatë ngarkimit.</div>'; return; }
+
+        const { monthly_apps, monthly_requests, monthly_events, apps_by_category } = json.data;
+
+        // Get the last 6 months as Albanian month labels
+        const monthNames = ['Jan', 'Shk', 'Mar', 'Pri', 'Maj', 'Qer', 'Kor', 'Gus', 'Sht', 'Tet', 'Nën', 'Dhj'];
+        const allMonths = new Set();
+        [monthly_apps, monthly_requests, monthly_events].forEach(arr =>
+            arr.forEach(r => allMonths.add(r.muaji))
+        );
+        const sortedMonths = [...allMonths].sort().slice(-6);
+        const labels = sortedMonths.map(m => {
+            const [y, mo] = m.split('-');
+            return monthNames[parseInt(mo) - 1] + ' ' + y.substring(2);
+        });
+
+        function getValues(arr) {
+            return sortedMonths.map(m => {
+                const found = arr.find(r => r.muaji === m);
+                return found ? parseInt(found.total) : 0;
+            });
+        }
+
+        container.innerHTML = `
+            <div class="report-card">
+                <h4>Aplikime mujore</h4>
+                <canvas id="chart-monthly-apps"></canvas>
+            </div>
+            <div class="report-card">
+                <h4>Evente mujore</h4>
+                <canvas id="chart-monthly-events"></canvas>
+            </div>
+            <div class="report-card">
+                <h4>Kërkesa mujore</h4>
+                <canvas id="chart-monthly-requests"></canvas>
+            </div>
+            <div class="report-card">
+                <h4>Aplikime sipas kategorisë</h4>
+                <canvas id="chart-category"></canvas>
+            </div>
+        `;
+
+        const chartOpts = {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { grid: { display: false } }
+            }
+        };
+
+        new Chart(document.getElementById('chart-monthly-apps'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: 'Aplikime', data: getValues(monthly_apps), backgroundColor: 'rgba(0,113,93,0.7)', borderRadius: 6 }]
+            },
+            options: chartOpts
+        });
+
+        new Chart(document.getElementById('chart-monthly-events'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{ label: 'Evente', data: getValues(monthly_events), borderColor: '#E17254', backgroundColor: 'rgba(225,114,84,0.1)', fill: true, tension: 0.4 }]
+            },
+            options: chartOpts
+        });
+
+        new Chart(document.getElementById('chart-monthly-requests'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: 'Kërkesa', data: getValues(monthly_requests), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 }]
+            },
+            options: chartOpts
+        });
+
+        // Category doughnut
+        const catLabels = apps_by_category.map(c => c.emri || 'Pa kategori');
+        const catValues = apps_by_category.map(c => parseInt(c.total));
+        const catColors = ['#00715D', '#E17254', '#3b82f6', '#f59e0b', '#8b5cf6'];
+
+        new Chart(document.getElementById('chart-category'), {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{ data: catValues, backgroundColor: catColors.slice(0, catLabels.length) }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 12 } } } }
+            }
+        });
+
+        _reportsChartsLoaded = true;
+
+        // Also load the saved reports list
+        loadReportsList();
+    } catch (e) {
+        container.innerHTML = '<div class="db-loading">Gabim rrjeti.</div>';
+    }
+}
+
+async function loadReportsList() {
+    const container = document.getElementById('reports-list');
+    if (!container) return;
+
+    try {
+        const json = await apiCall('stats.php?action=reports');
+        if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim.</div>'; return; }
+
+        const reports = json.data.reports;
+        if (!reports.length) {
+            container.innerHTML = '<div style="color:#94a3b8;font-size:0.9rem;">Nuk ka raporte ende. Klikoni "Gjenero raport" për të krijuar një.</div>';
+            return;
+        }
+
+        let html = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>ID</th><th>Tipi</th><th>Gjeneruar nga</th><th>Data</th><th>Veprime</th></tr></thead><tbody>';
+        reports.forEach(r => {
+            html += `<tr>
+                <td><strong>#${r.id_raporti}</strong></td>
+                <td>${escapeHtml(r.tipi_raportit)}</td>
+                <td>${escapeHtml(r.gjeneruesi_emri || '')}</td>
+                <td>${formatDate(r.gjeneruar_me)}</td>
+                <td><button class="db-btn db-btn--info db-btn--sm" onclick="viewReport(${r.id_raporti}, this)">Shiko</button></td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    } catch (e) {}
+}
+
+window.viewReport = function(id, btn) {
+    const row = btn.closest('tr');
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('report-detail-row')) {
+        next.remove();
+        return;
+    }
+    // Find the report content from the already loaded data
+    apiCall('stats.php?action=reports').then(json => {
+        if (!json.success) return;
+        const r = json.data.reports.find(r => r.id_raporti == id);
+        if (!r) return;
+        const detail = document.createElement('tr');
+        detail.className = 'report-detail-row';
+        detail.innerHTML = `<td colspan="5" style="background:#f8fafc;padding:16px;white-space:pre-wrap;font-size:0.85rem;border-left:3px solid var(--db-primary);">${escapeHtml(r.permbajtja)}</td>`;
+        row.after(detail);
+    });
+};
+
+async function generateReport() {
+    const type = prompt('Zgjidhni tipin e raportit:\n1. Përmbledhje Mujore\n2. Vullnetarë Aktivë\n3. Tjetër (shkruani tipin)');
+    if (!type) return;
+
+    let tipi;
+    if (type === '1') tipi = 'Përmbledhje Mujore';
+    else if (type === '2') tipi = 'Vullnetarë Aktivë';
+    else tipi = type;
+
+    try {
+        const json = await apiCall('stats.php?action=generate', {
+            method: 'POST',
+            body: JSON.stringify({ tipi_raportit: tipi })
+        });
+        if (json.success) {
+            showToast('Raporti u gjenerua me sukses!', 'success');
+            loadReportsList();
+        } else {
+            showToast(json.message || 'Gabim.', 'error');
+        }
+    } catch (e) {
+        showToast('Gabim rrjeti.', 'error');
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  MESSAGING SYSTEM
+// ═══════════════════════════════════════════════════════
+
+let _msgCurrentThread = null;
+let _msgPollingTimer = null;
+
+async function loadConversations() {
+    const container = document.getElementById('msg-content');
+    if (!container) return;
+
+    try {
+        const json = await apiCall('messages.php?action=conversations');
+        if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim.</div>'; return; }
+
+        const convos = json.data;
+        if (!convos.length) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:3rem 1rem;color:#94a3b8;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem;opacity:0.4;"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                    <p style="font-size:1rem;font-weight:500;">Nuk keni biseda ende</p>
+                    <p style="font-size:0.85rem;">Filloni një bisedë duke klikuar "Mesazh i ri".</p>
+                </div>`;
+            return;
+        }
+
+        let html = '<div class="msg-conversation-list">';
+        convos.forEach(c => {
+            const unread = c.unread_count > 0 ? `<span class="db-nav-badge" style="display:inline-flex;margin-left:auto;">${c.unread_count}</span>` : '';
+            const initial = (c.emri || 'P').charAt(0).toUpperCase();
+            const preview = c.last_message ? escapeHtml(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
+            const timeAgo = formatDate(c.last_message_time);
+            html += `<div class="msg-convo-item${c.unread_count > 0 ? ' msg-convo-item--unread' : ''}" onclick="openThread(${c.user_id}, '${escapeHtml(c.emri).replace(/'/g, "\\'")}')">
+                <div class="ud-avatar ud-avatar--active" style="width:40px;height:40px;font-size:1rem;flex-shrink:0;">${escapeHtml(initial)}</div>
+                <div class="msg-convo-info">
+                    <div class="msg-convo-name">${escapeHtml(c.emri)} ${unread}</div>
+                    <div class="msg-convo-preview">${preview}</div>
+                </div>
+                <div class="msg-convo-time">${timeAgo}</div>
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div class="db-loading">Gabim rrjeti.</div>';
+    }
+}
+
+async function openThread(userId, userName) {
+    _msgCurrentThread = userId;
+    const container = document.getElementById('msg-content');
+    const title = document.getElementById('msg-panel-title');
+    const actions = document.getElementById('msg-header-actions');
+
+    title.innerHTML = `<button class="db-btn db-btn--ghost" onclick="closeThread()" style="margin-right:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button> ${escapeHtml(userName)}`;
+    actions.style.display = 'none';
+
+    container.innerHTML = '<div class="db-loading">Duke ngarkuar…</div>';
+
+    try {
+        const json = await apiCall(`messages.php?action=thread&user_id=${userId}&limit=50`);
+        if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim.</div>'; return; }
+
+        const messages = json.data.messages.reverse(); // oldest first
+        let html = `<div class="msg-thread" id="msg-thread-list">`;
+
+        if (!messages.length) {
+            html += '<div style="text-align:center;color:#94a3b8;padding:2rem;">Nuk ka mesazhe ende. Shkruaj mesazhin e parë!</div>';
+        }
+
+        messages.forEach(m => {
+            const isMine = m.is_mine;
+            html += `<div class="msg-bubble ${isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs'}">
+                <div class="msg-bubble__text">${escapeHtml(m.mesazhi)}</div>
+                <div class="msg-bubble__time">${formatDate(m.krijuar_me)}</div>
+            </div>`;
+        });
+
+        html += `</div>
+        <div class="msg-compose">
+            <textarea id="msg-input" class="msg-compose__input" placeholder="Shkruaj mesazhin…" rows="2" maxlength="2000" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage(${userId});}"></textarea>
+            <button class="db-btn db-btn--primary msg-compose__send" onclick="sendMessage(${userId})">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            </button>
+        </div>`;
+
+        container.innerHTML = html;
+        scrollThreadToBottom();
+        startThreadPolling(userId);
+        loadUnreadBadge();
+    } catch (e) {
+        container.innerHTML = '<div class="db-loading">Gabim rrjeti.</div>';
+    }
+}
+
+function closeThread() {
+    _msgCurrentThread = null;
+    stopThreadPolling();
+    const title = document.getElementById('msg-panel-title');
+    const actions = document.getElementById('msg-header-actions');
+    if (title) title.textContent = 'Mesazhet';
+    if (actions) actions.style.display = '';
+    loadConversations();
+}
+
+async function sendMessage(toUserId) {
+    const input = document.getElementById('msg-input');
+    const text = (input?.value || '').trim();
+    if (!text) return;
+
+    input.value = '';
+    input.focus();
+
+    try {
+        const json = await apiCall('messages.php?action=send', {
+            method: 'POST',
+            body: JSON.stringify({ marruesi_id: toUserId, mesazhi: text })
+        });
+        if (json.success) {
+            refreshThread(toUserId);
+        } else {
+            showToast(json.message || 'Gabim gjatë dërgimit.', 'error');
+        }
+    } catch (e) {
+        showToast('Gabim rrjeti.', 'error');
+    }
+}
+
+async function refreshThread(userId) {
+    const list = document.getElementById('msg-thread-list');
+    if (!list) return;
+
+    try {
+        const json = await apiCall(`messages.php?action=thread&user_id=${userId}&limit=50`);
+        if (!json.success) return;
+
+        const messages = json.data.messages.reverse();
+        let html = '';
+        if (!messages.length) {
+            html = '<div style="text-align:center;color:#94a3b8;padding:2rem;">Nuk ka mesazhe ende.</div>';
+        }
+        messages.forEach(m => {
+            const isMine = m.is_mine;
+            html += `<div class="msg-bubble ${isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs'}">
+                <div class="msg-bubble__text">${escapeHtml(m.mesazhi)}</div>
+                <div class="msg-bubble__time">${formatDate(m.krijuar_me)}</div>
+            </div>`;
+        });
+        list.innerHTML = html;
+        scrollThreadToBottom();
+        loadUnreadBadge();
+    } catch (e) {}
+}
+
+function scrollThreadToBottom() {
+    const list = document.getElementById('msg-thread-list');
+    if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+}
+
+function startThreadPolling(userId) {
+    stopThreadPolling();
+    _msgPollingTimer = setInterval(() => {
+        if (_msgCurrentThread === userId) refreshThread(userId);
+    }, 5000);
+}
+
+function stopThreadPolling() {
+    if (_msgPollingTimer) { clearInterval(_msgPollingTimer); _msgPollingTimer = null; }
+}
+
+async function showNewConversation() {
+    const container = document.getElementById('msg-content');
+    const title = document.getElementById('msg-panel-title');
+    const actions = document.getElementById('msg-header-actions');
+
+    title.innerHTML = `<button class="db-btn db-btn--ghost" onclick="closeThread()" style="margin-right:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button> Mesazh i ri`;
+    actions.style.display = 'none';
+
+    container.innerHTML = `
+        <div style="padding:1rem;">
+            <input type="text" id="msg-user-search" class="ud-input" placeholder="Kërko përdorues sipas emrit…"
+                   oninput="searchUsersForMsg(this.value)" style="margin-bottom:1rem;">
+            <div id="msg-user-results"></div>
+        </div>`;
+}
+
+let _msgSearchTimeout = null;
+async function searchUsersForMsg(query) {
+    clearTimeout(_msgSearchTimeout);
+    const results = document.getElementById('msg-user-results');
+    if (!results) return;
+
+    if (query.trim().length < 2) { results.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;">Shkruaj të paktën 2 shkronja…</div>'; return; }
+
+    _msgSearchTimeout = setTimeout(async () => {
+        try {
+            const json = await apiCall(`messages.php?action=search_users&q=${encodeURIComponent(query.trim())}`);
+            if (!json.success) { results.innerHTML = '<div style="color:#dc3545;">Gabim.</div>'; return; }
+
+            if (!json.data.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
+
+            let html = '';
+            json.data.forEach(u => {
+                const initial = (u.emri || 'P').charAt(0).toUpperCase();
+                html += `<div class="msg-convo-item" onclick="openThread(${u.id_perdoruesi}, '${escapeHtml(u.emri).replace(/'/g, "\\'")}')">
+                    <div class="ud-avatar ud-avatar--active" style="width:36px;height:36px;font-size:0.9rem;flex-shrink:0;">${escapeHtml(initial)}</div>
+                    <div class="msg-convo-info">
+                        <div class="msg-convo-name">${escapeHtml(u.emri)}</div>
+                    </div>
+                </div>`;
+            });
+            results.innerHTML = html;
+        } catch (e) { results.innerHTML = '<div style="color:#dc3545;">Gabim rrjeti.</div>'; }
+    }, 300);
+}
+
+async function loadUnreadBadge() {
+    try {
+        const json = await apiCall('messages.php?action=conversations');
+        if (!json.success) return;
+        const total = json.data.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+        const badge = document.getElementById('msg-badge');
+        if (badge) {
+            if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
+            else { badge.style.display = 'none'; }
+        }
+    } catch (e) {}
+}

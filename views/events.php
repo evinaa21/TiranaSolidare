@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
-$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'Admin');
+$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'admin');
 $currentUserId = $_SESSION['user_id'] ?? null;
 
 // ── Single event detail ──
@@ -12,11 +12,12 @@ if (isset($_GET['id'])) {
     $id = (int) $_GET['id'];
     $stmt = $pdo->prepare(
         "SELECT e.*, k.emri AS kategoria_emri, p.emri AS krijuesi_emri,
-                (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime
+                (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
+                (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
          FROM Eventi e
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
          LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
-         WHERE e.id_eventi = ?"
+         WHERE e.id_eventi = ? AND e.is_archived = 0"
     );
     $stmt->execute([$id]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -48,7 +49,7 @@ $category = (int) ($_GET['category'] ?? 0);
 // Fetch categories for filter dropdown
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
-$where  = [];
+$where  = ['e.is_archived = 0'];
 $params = [];
 if ($search !== '') {
     $where[]  = '(e.titulli LIKE ? OR e.pershkrimi LIKE ? OR e.vendndodhja LIKE ?)';
@@ -81,8 +82,8 @@ $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Trust stats
-$statTotalEvents = (int) $pdo->query("SELECT COUNT(*) FROM Eventi")->fetchColumn();
-$statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE data >= NOW()")->fetchColumn();
+$statTotalEvents = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
+$statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0 AND data >= NOW()")->fetchColumn();
 $statPast        = $statTotalEvents - $statUpcoming;
 $statVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
 $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
@@ -121,6 +122,7 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?= csrf_meta() ?>
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321c">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -212,6 +214,14 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
             </div>
             <div><span>Vendndodhja</span><strong><?= htmlspecialchars($event['vendndodhja'] ?? 'Tiranë') ?></strong></div>
           </li>
+          <?php if (!empty($event['kapaciteti'])): ?>
+          <li>
+            <div class="rq-info-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div><span>Kapaciteti</span><strong><?= (int)$event['pranuar_count'] ?>/<?= (int)$event['kapaciteti'] ?> vende të zëna</strong></div>
+          </li>
+          <?php endif; ?>
         </ul>
 
         <div class="rq-sidebar-cta">

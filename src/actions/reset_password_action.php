@@ -1,7 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /TiranaSolidare/views/login.php');
@@ -52,6 +52,15 @@ try {
     $newHash = password_hash($password, PASSWORD_DEFAULT);
     $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ?, password_reset_token_hash = NULL, password_reset_token_expires = NULL WHERE id_perdoruesi = ?');
     $update->execute([$newHash, (int) $user['id_perdoruesi']]);
+
+    // Invalidate all existing sessions for this user
+    session_unset();
+    session_destroy();
+
+    // Start a fresh session for the redirect flash message
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     header('Location: /TiranaSolidare/views/login.php?success=password_updated');
     exit();

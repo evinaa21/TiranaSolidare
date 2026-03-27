@@ -29,7 +29,15 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     if (body) opts.body = JSON.stringify(body);
 
     const res = await fetch(`${API}/${endpoint}`, opts);
-    return res.json();
+    const json = await res.json();
+
+    // Auto-refresh CSRF token from server response
+    if (json.csrf_token) {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) meta.content = json.csrf_token;
+    }
+
+    return json;
 }
 
 // ══════════════════════════════════════════════════════
@@ -236,8 +244,8 @@ async function viewEventApps(eventId) {
             <td>${escapeHtml(app.vullnetari_email)}</td>
             <td>${escapeHtml(app.statusi)}</td>
             <td>
-                <button class="btn btn-sm btn-success" onclick="updateAppStatus(${app.id_aplikimi}, 'Pranuar')">Prano</button>
-                <button class="btn btn-sm btn-danger" onclick="updateAppStatus(${app.id_aplikimi}, 'Refuzuar')">Refuzo</button>
+                <button class="btn btn-sm btn-success" onclick="updateAppStatus(${app.id_aplikimi}, 'approved')">Prano</button>
+                <button class="btn btn-sm btn-danger" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected')">Refuzo</button>
             </td>
         </tr>`;
     });
@@ -272,7 +280,7 @@ async function loadUsers(page = 1) {
     html += '<table class="table"><thead><tr><th>ID</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th></tr></thead><tbody>';
 
     users.forEach(u => {
-        const blocked = u.statusi_llogarise === 'Bllokuar';
+        const blocked = u.statusi_llogarise === 'blocked';
         html += `<tr class="${blocked ? 'table-danger' : ''}">
             <td>${u.id_perdoruesi}</td>
             <td>${escapeHtml(u.emri)}</td>
@@ -496,7 +504,7 @@ async function loadHelpRequests(page = 1, filters = {}) {
             <div class="d-flex justify-content-between">
                 <h6>${escapeHtml(r.titulli)}</h6>
                 <div>
-                    <span class="badge bg-${r.tipi === 'Kërkesë' ? 'primary' : 'success'}">${r.tipi === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span>
+                    <span class="badge bg-${r.tipi === 'request' ? 'primary' : 'success'}">${r.tipi === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span>
                     <span class="badge bg-${isOpen ? 'warning' : 'secondary'}">${r.statusi}</span>
                 </div>
             </div>

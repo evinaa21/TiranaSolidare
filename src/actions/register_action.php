@@ -1,8 +1,8 @@
 <?php
 // actions/register_action.php
-session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $redirect = trim($_POST['redirect'] ?? '');
@@ -11,6 +11,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // CSRF validation
     if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
         header("Location: /TiranaSolidare/views/register.php?error=csrf_expired" . $redirectParam);
+        exit();
+    }
+
+    // Privacy consent check
+    if (empty($_POST['privacy_consent'])) {
+        header("Location: /TiranaSolidare/views/register.php?error=no_consent" . $redirectParam);
         exit();
     }
 
@@ -71,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         try {
             $pdo->beginTransaction();
 
-            $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires) VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, 0, 'emerald', ?, ?)";
+            $sql_insert = "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires) VALUES (?, ?, ?, 'volunteer', 'active', 0, 0, 'emerald', ?, ?)";
             $stmt = $pdo->prepare($sql_insert);
             $stmt->execute([$emri, $email, $hashed_password, $tokenHash, $expiresAt]);
 

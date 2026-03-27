@@ -2,13 +2,15 @@
 /**
  * api/events.php
  * ---------------------------------------------------
- * Events REST API – full CRUD
+ * Events REST API – full CRUD + lifecycle
  *
  * GET    ?action=list              – List / filter events (public)
  * GET    ?action=get&id=<id>       – Single event detail (public)
  * POST   ?action=create            – Create event  (Admin)
  * PUT    ?action=update&id=<id>    – Update event  (Admin)
- * DELETE ?action=delete&id=<id>    – Delete event  (Admin)
+ * DELETE ?action=delete&id=<id>    – Delete/archive event (Admin)
+ * PUT    ?action=complete&id=<id>  – Mark event completed (Admin)
+ * PUT    ?action=cancel&id=<id>    – Cancel event + notify (Admin)
  * ---------------------------------------------------
  */
 require_once __DIR__ . '/helpers.php';
@@ -28,7 +30,7 @@ switch ($action) {
         $dateFrom   = $_GET['date_from'] ?? null;
         $dateTo     = $_GET['date_to'] ?? null;
 
-        $where  = [];
+        $where  = ['e.is_archived = 0'];
         $params = [];
 
         if ($categoryId) {
@@ -104,11 +106,12 @@ switch ($action) {
 
         $stmt = $pdo->prepare(
             "SELECT e.*, k.emri AS kategoria_emri, p.emri AS krijuesi_emri,
-                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime
+                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
+                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
              FROM Eventi e
              LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
              LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
-             WHERE e.id_eventi = ?"
+             WHERE e.id_eventi = ? AND e.is_archived = 0"
         );
         $stmt->execute([$id]);
         $event = $stmt->fetch();
@@ -135,6 +138,7 @@ switch ($action) {
         $banner       = $body['banner'] ?? null;
         $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
         $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
+        $kapaciteti   = isset($body['kapaciteti']) && $body['kapaciteti'] !== '' ? (int) $body['kapaciteti'] : null;
 
         if (!empty($errors)) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
@@ -159,15 +163,17 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, data, vendndodhja, latitude, longitude, banner)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, kapaciteti, data, vendndodhja, latitude, longitude, banner)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $admin['id'], $id_kategoria, $titulli,
-            $pershkrimi, $data_eventi, $vendndodhja, $latitude, $longitude, $banner,
+            $pershkrimi, $kapaciteti, $data_eventi, $vendndodhja, $latitude, $longitude, $banner,
         ]);
 
         $newId = (int) $pdo->lastInsertId();
+
+        log_admin_action($admin['id'], 'create_event', 'event', $newId, ['titulli' => $titulli]);
 
         json_success(['id_eventi' => $newId, 'message' => 'Eventi u krijua me sukses.'], 201);
         break;
@@ -183,12 +189,17 @@ switch ($action) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        // Check existence
-        $check = $pdo->prepare('SELECT id_eventi, data FROM Eventi WHERE id_eventi = ?');
+        // Check existence (exclude archived)
+        $check = $pdo->prepare('SELECT id_eventi, data, is_archived FROM Eventi WHERE id_eventi = ?');
         $check->execute([$id]);
         $event = $check->fetch();
         if (!$event) {
             json_error('Eventi nuk u gjet.', 404);
+        }
+
+        // Block editing archived events
+        if (!empty($event['is_archived'])) {
+            json_error('Eventet e arkivuara nuk mund të ndryshohen.', 422);
         }
 
         // Block editing past events
@@ -197,7 +208,7 @@ switch ($action) {
         }
 
         // Build dynamic SET clause
-        $allowed = ['titulli', 'pershkrimi', 'data', 'vendndodhja', 'latitude', 'longitude', 'id_kategoria', 'banner'];
+        $allowed = ['titulli', 'pershkrimi', 'data', 'vendndodhja', 'latitude', 'longitude', 'id_kategoria', 'banner', 'kapaciteti'];
         $sets   = [];
         $params = [];
 
@@ -226,38 +237,140 @@ switch ($action) {
         $stmt = $pdo->prepare("UPDATE Eventi SET " . implode(', ', $sets) . " WHERE id_eventi = ?");
         $stmt->execute($params);
 
+        log_admin_action($_SESSION['user_id'], 'update_event', 'event', $id);
+
         json_success(['message' => 'Eventi u përditësua me sukses.']);
         break;
 
-    // ── DELETE EVENT ───────────────────────────────
+    // ── DELETE / ARCHIVE EVENT ─────────────────────
     case 'delete':
         require_method('DELETE');
-        require_admin();
+        $admin = require_admin();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        // Delete related notifications for this event's applications (L-03)
-        $pdo->prepare(
-            'DELETE n FROM Njoftimi n
-             INNER JOIN Aplikimi a ON n.id_perdoruesi = a.id_perdoruesi
-             WHERE a.id_eventi = ? AND n.mesazhi LIKE ?'
-        )->execute([$id, '%' . $id . '%']);
+        // Check if event has applications
+        $appCount = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ?');
+        $appCount->execute([$id]);
+        $hasApps = (int) $appCount->fetchColumn() > 0;
 
-        // Delete related applications first (cascade)
-        $pdo->prepare('DELETE FROM Aplikimi WHERE id_eventi = ?')->execute([$id]);
-        $stmt = $pdo->prepare('DELETE FROM Eventi WHERE id_eventi = ?');
-        $stmt->execute([$id]);
+        if ($hasApps) {
+            // Soft-delete: archive the event
+            $stmt = $pdo->prepare('UPDATE Eventi SET is_archived = 1, statusi = ? WHERE id_eventi = ?');
+            $stmt->execute(['cancelled', $id]);
 
-        if ($stmt->rowCount() === 0) {
-            json_error('Eventi nuk u gjet.', 404);
+            if ($stmt->rowCount() === 0) {
+                json_error('Eventi nuk u gjet.', 404);
+            }
+
+            // Notify all applicants that the event was cancelled
+            $eventStmt = $pdo->prepare('SELECT titulli FROM Eventi WHERE id_eventi = ?');
+            $eventStmt->execute([$id]);
+            $eventTitle = $eventStmt->fetchColumn();
+
+            $applicants = $pdo->prepare(
+                "SELECT DISTINCT id_perdoruesi FROM Aplikimi WHERE id_eventi = ? AND statusi IN ('approved', 'pending')"
+            );
+            $applicants->execute([$id]);
+            $notifStmt = $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $msg = "Eventi \"{$eventTitle}\" u anulua.";
+            $eventLink = "/TiranaSolidare/views/events.php";
+            foreach ($applicants as $app) {
+                $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $eventLink]);
+            }
+
+            log_admin_action($admin['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
+            json_success(['message' => 'Eventi u arkivua (soft-delete) me sukses.']);
+        } else {
+            // Hard-delete: no applications
+            $stmt = $pdo->prepare('DELETE FROM Eventi WHERE id_eventi = ?');
+            $stmt->execute([$id]);
+
+            if ($stmt->rowCount() === 0) {
+                json_error('Eventi nuk u gjet.', 404);
+            }
+
+            log_admin_action($admin['id'], 'delete_event', 'event', $id);
+            json_success(['message' => 'Eventi u fshi me sukses.']);
+        }
+        break;
+
+    // ── COMPLETE EVENT ─────────────────────────────
+    case 'complete':
+        require_method('PUT');
+        $admin = require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        json_success(['message' => 'Eventi u fshi me sukses.']);
+        $check = $pdo->prepare('SELECT id_eventi, titulli, data, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
+        $check->execute([$id]);
+        $event = $check->fetch();
+
+        if (!$event) {
+            json_error('Eventi nuk u gjet.', 404);
+        }
+        if ($event['statusi'] !== 'active') {
+            json_error('Vetëm eventet aktive mund të shënohen si të përfunduara.', 422);
+        }
+        if (strtotime($event['data']) > time()) {
+            json_error('Eventi nuk ka përfunduar ende — data është në të ardhmen.', 422);
+        }
+
+        $pdo->prepare("UPDATE Eventi SET statusi = 'completed' WHERE id_eventi = ?")->execute([$id]);
+
+        log_admin_action($admin['id'], 'complete_event', 'event', $id, ['titulli' => $event['titulli']]);
+        json_success(['message' => 'Eventi u shënua si i përfunduar.']);
+        break;
+
+    // ── CANCEL EVENT ──────────────────────────────
+    case 'cancel':
+        require_method('PUT');
+        $admin = require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e eventit është e pavlefshme.', 400);
+        }
+
+        $check = $pdo->prepare('SELECT id_eventi, titulli, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
+        $check->execute([$id]);
+        $event = $check->fetch();
+
+        if (!$event) {
+            json_error('Eventi nuk u gjet.', 404);
+        }
+        if ($event['statusi'] === 'cancelled') {
+            json_error('Eventi është tashmë i anuluar.', 422);
+        }
+
+        $pdo->prepare("UPDATE Eventi SET statusi = 'cancelled' WHERE id_eventi = ?")->execute([$id]);
+
+        // Notify all applicants
+        $applicants = $pdo->prepare(
+            "SELECT DISTINCT id_perdoruesi FROM Aplikimi WHERE id_eventi = ? AND statusi IN ('approved', 'pending')"
+        );
+        $applicants->execute([$id]);
+        $notifStmt = $pdo->prepare(
+            'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $msg = "Eventi \"{$event['titulli']}\" u anulua.";
+        $link = "/TiranaSolidare/views/events.php?id={$id}";
+        foreach ($applicants as $app) {
+            $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $link]);
+        }
+
+        log_admin_action($admin['id'], 'cancel_event', 'event', $id, ['titulli' => $event['titulli']]);
+        json_success(['message' => 'Eventi u anulua me sukses.']);
         break;
 
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, delete.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, get, create, update, delete, complete, cancel.', 400);
 }

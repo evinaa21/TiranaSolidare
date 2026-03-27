@@ -17,6 +17,7 @@ $errorMessages = [
   'verification_email_failed' => 'Nuk u dërgua email-i i verifikimit. Kontrolloni konfigurimin e email-it dhe provoni përsëri.',
   'rate_limited'       => 'Shumë tentativa regjistrimi. Provoni përsëri më vonë.',
   'csrf_expired'       => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
+  'no_consent'         => 'Duhet të pranoni Politikën e Privatësisë për të vazhduar.',
   'sql_error'          => 'Ndodhi një gabim gjatë regjistrimit. Provoni përsëri.',
 ];
 
@@ -85,6 +86,12 @@ $successMessages = [
         <div class="auth-field">
           <label for="confirm_password">Konfirmo fjalëkalimin</label>
           <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
+        </div>
+        <div class="auth-field" style="margin-top:0.5rem">
+          <label class="auth-checkbox-label">
+            <input type="checkbox" name="privacy_consent" value="1" required>
+            <span>Pranoj <a href="/TiranaSolidare/views/privacy.php" target="_blank" rel="noopener">Politikën e Privatësisë</a> dhe jap pëlqimin për përpunimin e të dhënave të mia personale.</span>
+          </label>
         </div>
         <button type="submit" class="btn_primary auth-submit">Regjistrohu</button>
         <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Hyni këtu</a></p>

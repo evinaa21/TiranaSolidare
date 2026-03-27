@@ -64,7 +64,7 @@ if (!$privateProfile) {
          FROM Aplikimi a
          JOIN Eventi e ON e.id_eventi = a.id_eventi
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-         WHERE a.id_perdoruesi = ? AND a.statusi = 'Pranuar'
+         WHERE a.id_perdoruesi = ? AND a.statusi = 'approved'
          ORDER BY e.data DESC
          LIMIT 10"
     );
@@ -521,7 +521,7 @@ $profileColorTheme = $colorResolved['theme'];
                     <?php foreach ($recentRequests as $req): ?>
                         <tr>
                             <td><a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $req['id_kerkese_ndihme'] ?>"><?= htmlspecialchars($req['titulli']) ?></a></td>
-                            <td><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></td>
+                            <td><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></td>
                             <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span></td>
                             <td><?= date('d/m/Y', strtotime($req['krijuar_me'])) ?></td>
                         </tr>

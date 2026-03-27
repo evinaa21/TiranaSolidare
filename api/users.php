@@ -28,110 +28,27 @@ switch ($action) {
         require_method('POST');
         $user = require_auth();
 
-        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+        if (!isset($_FILES['image'])) {
             json_error('Asnjë foto e vlefshme nuk u ngarkua.', 400);
         }
 
-        if (!extension_loaded('gd') || !function_exists('imagewebp')) {
-            json_error('Serveri nuk mbështet përpunimin e fotove (GD/WebP).', 500);
+        $result = handle_image_upload(
+            $_FILES['image'],
+            __DIR__ . '/../uploads/images/profiles',
+            '/TiranaSolidare/uploads/images/profiles',
+            6 * 1024 * 1024,
+            640,
+            78
+        );
+
+        if (is_string($result)) {
+            json_error($result, 400);
         }
 
-        $file = $_FILES['image'];
-        $maxSize = 6 * 1024 * 1024;
-        if ((int) ($file['size'] ?? 0) <= 0 || (int) $file['size'] > $maxSize) {
-            json_error('Foto duhet të jetë më e vogël se 6MB.', 400);
-        }
-
-        $allowedMimes = [
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-        ];
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($file['tmp_name']);
-
-        if (!in_array($mime, $allowedMimes, true)) {
-            json_error('Formati nuk lejohet. Përdorni JPG, PNG, GIF ose WEBP.', 400);
-        }
-
-        $sourceImage = null;
-        switch ($mime) {
-            case 'image/jpeg':
-                $sourceImage = @imagecreatefromjpeg($file['tmp_name']);
-                break;
-            case 'image/png':
-                $sourceImage = @imagecreatefrompng($file['tmp_name']);
-                break;
-            case 'image/gif':
-                $sourceImage = @imagecreatefromgif($file['tmp_name']);
-                break;
-            case 'image/webp':
-                $sourceImage = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file['tmp_name']) : null;
-                break;
-        }
-
-        if (!$sourceImage) {
-            json_error('Nuk u lexua foto e ngarkuar.', 400);
-        }
-
-        $origWidth = imagesx($sourceImage);
-        $origHeight = imagesy($sourceImage);
-        if ($origWidth <= 0 || $origHeight <= 0) {
-            imagedestroy($sourceImage);
-            json_error('Përmasat e fotos janë të pavlefshme.', 400);
-        }
-
-        $maxDimension = 640;
-        $scale = min(1, $maxDimension / max($origWidth, $origHeight));
-        $newWidth = max(1, (int) round($origWidth * $scale));
-        $newHeight = max(1, (int) round($origHeight * $scale));
-
-        $resized = imagecreatetruecolor($newWidth, $newHeight);
-        if (!$resized) {
-            imagedestroy($sourceImage);
-            json_error('Nuk u krijua varianti i optimizuar i fotos.', 500);
-        }
-
-        imagealphablending($resized, false);
-        imagesavealpha($resized, true);
-        $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
-        imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
-
-        if (!imagecopyresampled($resized, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight)) {
-            imagedestroy($sourceImage);
-            imagedestroy($resized);
-            json_error('Gabim gjatë përpunimit të fotos.', 500);
-        }
-
-        imagedestroy($sourceImage);
-
-        $filename = generate_upload_filename('webp');
-        $uploadDir = __DIR__ . '/../uploads/images/profiles';
-        if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true)) {
-            imagedestroy($resized);
-            json_error('Nuk u krijua dosja e fotove të profilit.', 500);
-        }
-
-        $destination = $uploadDir . '/' . $filename;
-        if (!@imagewebp($resized, $destination, 78)) {
-            imagedestroy($resized);
-            json_error('Gabim gjatë ruajtjes së fotos WebP.', 500);
-        }
-        imagedestroy($resized);
-
-        $photoUrl = '/TiranaSolidare/uploads/images/profiles/' . $filename;
         $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = ? WHERE id_perdoruesi = ?');
-        $updateStmt->execute([$photoUrl, $user['id']]);
+        $updateStmt->execute([$result['url'], $user['id']]);
 
-        json_success([
-            'url' => $photoUrl,
-            'filename' => $filename,
-            'size' => filesize($destination),
-            'mime' => 'image/webp',
-            'width' => $newWidth,
-            'height' => $newHeight,
-        ]);
+        json_success($result);
         break;
 
     // ── UPDATE OWN PROFILE (Auth) ───────────────
@@ -139,7 +56,7 @@ switch ($action) {
         require_method('PUT');
         $user   = require_auth();
         $body   = get_json_body();
-        $currentStmt = $pdo->prepare('SELECT emri, bio, profile_picture, profile_public, profile_color FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $currentStmt = $pdo->prepare('SELECT emri, bio, profile_picture, profile_public, profile_color, email_notifications FROM Perdoruesi WHERE id_perdoruesi = ?');
         $currentStmt->execute([$user['id']]);
         $current = $currentStmt->fetch();
 
@@ -152,6 +69,7 @@ switch ($action) {
         $profilePicture = array_key_exists('profile_picture', $body) ? trim((string) $body['profile_picture']) : $current['profile_picture'];
         $profilePublic = array_key_exists('profile_public', $body) ? ((int) $body['profile_public'] ? 1 : 0) : (int) $current['profile_public'];
         $profileColor = array_key_exists('profile_color', $body) ? trim((string) $body['profile_color']) : (string) ($current['profile_color'] ?? 'emerald');
+        $emailNotifications = array_key_exists('email_notifications', $body) ? ((int) $body['email_notifications'] ? 1 : 0) : (int) ($current['email_notifications'] ?? 1);
 
         if ($emri === '') {
             json_error('Emri është i detyrueshëm.', 422);
@@ -175,9 +93,9 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            'UPDATE Perdoruesi SET emri = ?, bio = ?, profile_picture = ?, profile_public = ?, profile_color = ? WHERE id_perdoruesi = ?'
+            'UPDATE Perdoruesi SET emri = ?, bio = ?, profile_picture = ?, profile_public = ?, profile_color = ?, email_notifications = ? WHERE id_perdoruesi = ?'
         );
-        $stmt->execute([$emri, $bio, $profilePicture ?: null, $profilePublic, $profileColor, $user['id']]);
+        $stmt->execute([$emri, $bio, $profilePicture ?: null, $profilePublic, $profileColor, $emailNotifications, $user['id']]);
 
         // Keep session values in sync for UI consistency
         $_SESSION['emri'] = $emri;
@@ -349,11 +267,11 @@ $params[] = $user['id'];
             json_error('Përdoruesi nuk u gjet.', 404);
         }
 
-        if ($targetUser['roli'] === 'Admin') {
+        if ($targetUser['roli'] === 'admin') {
             json_error('Nuk mund të bllokoni një administrator tjetër.', 403);
         }
 
-        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Bllokuar' WHERE id_perdoruesi = ?");
+        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'blocked' WHERE id_perdoruesi = ?");
         $stmt->execute([$id]);
 
         $targetInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
@@ -371,17 +289,22 @@ $params[] = $user['id'];
                 . 'Për arsye dhe hapa për zhbllokim, ju lutem shihni: ' . $blockedPageUrl;
         }
 
-        $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi) VALUES (?, ?)');
-        $notifStmt->execute([$id, $blockMessage]);
+        $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+        $notifStmt->execute([$id, $blockMessage, 'admin_veprim', 'user', $id, '/TiranaSolidare/views/blocked.php']);
 
         if ($target && filter_var($target['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
             send_notification_email(
                 $target['email'],
-                $target['emri'] ?? 'Vullnetar',
+                $target['emri'] ?? 'Volunteer',
                 'Llogaria juaj është bllokuar',
                 $blockMessage
             );
         }
+
+        log_admin_action($admin['id'], 'block_user', 'user', $id, [
+            'emri' => $target['emri'] ?? '',
+            'arsye' => $blockReason,
+        ]);
 
         json_success(['message' => 'Përdoruesi u bllokua.']);
         break;
@@ -389,22 +312,27 @@ $params[] = $user['id'];
     // ── UNBLOCK USER ───────────────────────────────
     case 'unblock':
         require_method('PUT');
-        require_admin();
+        $admin = require_admin();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e përdoruesit është e pavlefshme.', 400);
         }
 
-        // Fix D-05: Use fetch() instead of rowCount() for unblock
-        $checkUser = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $checkUser = $pdo->prepare('SELECT id_perdoruesi, statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ?');
         $checkUser->execute([$id]);
-        if (!$checkUser->fetch()) {
+        $target = $checkUser->fetch();
+        if (!$target) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
+        if ($target['statusi_llogarise'] !== 'blocked') {
+            json_error('Vetëm përdoruesit e bllokuar mund të zhbllokohen.', 400);
+        }
 
-        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'Aktiv' WHERE id_perdoruesi = ?");
+        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'active' WHERE id_perdoruesi = ?");
         $stmt->execute([$id]);
+
+        log_admin_action($admin['id'], 'unblock_user', 'user', $id, []);
 
         json_success(['message' => 'Përdoruesi u zhbllokua.']);
         break;
@@ -425,8 +353,8 @@ $params[] = $user['id'];
         }
 
         $newRole = $body['roli'] ?? '';
-        if (!in_array($newRole, ['Admin', 'Vullnetar'], true)) {
-            json_error("Roli duhet të jetë 'Admin' ose 'Vullnetar'.", 422);
+        if (!in_array($newRole, ['admin', 'volunteer'], true)) {
+            json_error("Roli duhet të jetë 'admin' ose 'volunteer'.", 422);
         }
 
         // Fix D-05: Use fetch() for role change
@@ -438,6 +366,10 @@ $params[] = $user['id'];
 
         $stmt = $pdo->prepare('UPDATE Perdoruesi SET roli = ? WHERE id_perdoruesi = ?');
         $stmt->execute([$newRole, $id]);
+
+        log_admin_action($admin['id'], 'change_role', 'user', $id, [
+            'roli_ri' => $newRole,
+        ]);
 
         json_success(['message' => "Roli u ndryshua në '$newRole'."]);
         break;
@@ -464,17 +396,19 @@ $params[] = $user['id'];
         if (!$target) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
-        if ($target['roli'] === 'Admin') {
+        if ($target['roli'] === 'admin') {
             json_error('Nuk mund të çaktivizoni një administrator tjetër.', 403);
         }
-        if ($target['statusi_llogarise'] === 'Çaktivizuar') {
+        if ($target['statusi_llogarise'] === 'deactivated') {
             json_error('Llogaria është tashmë e çaktivizuar.', 400);
         }
 
         $stmt = $pdo->prepare(
-            "UPDATE Perdoruesi SET statusi_llogarise = 'Çaktivizuar', deaktivizuar_me = NOW() WHERE id_perdoruesi = ?"
+            "UPDATE Perdoruesi SET statusi_llogarise = 'deactivated', deaktivizuar_me = NOW() WHERE id_perdoruesi = ?"
         );
         $stmt->execute([$id]);
+
+        log_admin_action($admin['id'], 'deactivate_user', 'user', $id, []);
 
         json_success(['message' => 'Llogaria u çaktivizua (soft-delete). Të dhënat ruhen.']);
         break;
@@ -482,7 +416,7 @@ $params[] = $user['id'];
     // ── REACTIVATE USER ────────────────────────────
     case 'reactivate':
         require_method('PUT');
-        require_admin();
+        $admin = require_admin();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
@@ -497,14 +431,16 @@ $params[] = $user['id'];
         if ($current === false) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
-        if ($current !== 'Çaktivizuar') {
+        if ($current !== 'deactivated') {
             json_error('Llogaria nuk është e çaktivizuar.', 400);
         }
 
         $stmt = $pdo->prepare(
-            "UPDATE Perdoruesi SET statusi_llogarise = 'Aktiv', deaktivizuar_me = NULL WHERE id_perdoruesi = ?"
+            "UPDATE Perdoruesi SET statusi_llogarise = 'active', deaktivizuar_me = NULL WHERE id_perdoruesi = ?"
         );
         $stmt->execute([$id]);
+
+        log_admin_action($admin['id'], 'reactivate_user', 'user', $id, []);
 
         json_success(['message' => 'Llogaria u riaktivizua me sukses.']);
         break;
@@ -521,7 +457,7 @@ $params[] = $user['id'];
         $stmt = $pdo->prepare(
             "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, profile_color, krijuar_me
              FROM Perdoruesi
-             WHERE id_perdoruesi = ? AND statusi_llogarise = 'Aktiv'"
+             WHERE id_perdoruesi = ? AND statusi_llogarise = 'active'"
         );
         $stmt->execute([$id]);
         $profile = $stmt->fetch();
@@ -552,7 +488,7 @@ $params[] = $user['id'];
             "SELECT e.id_eventi, e.titulli, e.data, e.vendndodhja
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
-             WHERE a.id_perdoruesi = ? AND a.statusi = 'Pranuar'
+             WHERE a.id_perdoruesi = ? AND a.statusi = 'approved'
              ORDER BY e.data DESC
              LIMIT 10"
         );

@@ -8,7 +8,7 @@ $stmtReq = $pdo->prepare(
     "SELECT kn.*, p.emri AS krijuesi_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
-     WHERE kn.statusi = 'Open'
+     WHERE kn.statusi = 'open'
      ORDER BY kn.krijuar_me DESC
      LIMIT 8"
 );
@@ -20,6 +20,7 @@ $stmtEv = $pdo->prepare(
     "SELECT e.*, k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
+     WHERE e.is_archived = 0
      ORDER BY CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END, e.data ASC
      LIMIT 8"
 );
@@ -27,15 +28,15 @@ $stmtEv->execute();
 $eventet = $stmtEv->fetchAll(PDO::FETCH_ASSOC);
 
 // Counts for hero stats
-$totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
-$totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi")->fetchColumn();
-$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'Closed'")->fetchColumn();
+$totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
+$totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
+$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'closed'")->fetchColumn();
 
 // Categories with event counts
 $kategorite = $pdo->query(
     "SELECT k.id_kategoria, k.emri, COUNT(e.id_eventi) AS event_count
      FROM Kategoria k
-     LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria
+     LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND e.is_archived = 0
      GROUP BY k.id_kategoria
      ORDER BY event_count DESC"
 )->fetchAll(PDO::FETCH_ASSOC);

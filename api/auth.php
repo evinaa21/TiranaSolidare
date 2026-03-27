@@ -48,11 +48,11 @@ switch ($action) {
             json_error('Email ose fjalëkalimi i gabuar.', 401);
         }
 
-        if ($user['statusi_llogarise'] === 'Bllokuar') {
+        if ($user['statusi_llogarise'] === 'blocked') {
             json_error('Llogaria juaj është bllokuar. Kontaktoni administratorin.', 403);
         }
 
-        if ($user['statusi_llogarise'] === 'Çaktivizuar') {
+        if ($user['statusi_llogarise'] === 'deactivated') {
             json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
         }
 
@@ -134,7 +134,7 @@ switch ($action) {
 
             $stmt = $pdo->prepare(
                  "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires)
-                VALUES (?, ?, ?, 'Vullnetar', 'Aktiv', 0, 0, 'emerald', ?, ?)"
+                VALUES (?, ?, ?, 'volunteer', 'active', 0, 0, 'emerald', ?, ?)"
             );
             $stmt->execute([$emri, $email, $hashed, $tokenHash, $expiresAt]);
 
@@ -150,7 +150,7 @@ switch ($action) {
                 'id'      => $newId,
                 'emri'    => $emri,
                 'email'   => $email,
-                'roli'    => 'Vullnetar',
+                'roli'    => 'volunteer',
                 'message' => 'Llogaria u krijua. Konfirmoni email-in para hyrjes.',
             ], 201);
         } catch (Throwable $e) {
@@ -285,6 +285,64 @@ switch ($action) {
         json_success($profile);
         break;
 
+    // ── DELETE ACCOUNT ──────────────────────────
+    case 'delete_account':
+        require_method('DELETE');
+        $user = require_auth();
+        $body = get_json_body();
+
+        $password = $body['password'] ?? '';
+        if (empty($password)) {
+            json_error('Fjalëkalimi është i nevojshëm për konfirmimin e fshirjes.', 422);
+        }
+
+        // Verify password
+        $stmt = $pdo->prepare('SELECT fjalekalimi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $stmt->execute([$user['id']]);
+        $existingHash = $stmt->fetchColumn();
+
+        if (!$existingHash || !password_verify($password, $existingHash)) {
+            json_error('Fjalëkalimi është i pasaktë.', 401);
+        }
+
+        // Admins cannot delete their own account (protect platform)
+        if ($user['roli'] === 'admin') {
+            json_error('Administratorët nuk mund të fshijnë llogarinë e tyre. Kontaktoni një administrator tjetër.', 403);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Delete user's notifications
+            $pdo->prepare('DELETE FROM Njoftimi WHERE id_perdoruesi = ?')->execute([$user['id']]);
+
+            // Delete user's applications
+            $pdo->prepare('DELETE FROM Aplikimi WHERE id_perdoruesi = ?')->execute([$user['id']]);
+            $pdo->prepare('DELETE FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?')->execute([$user['id']]);
+
+            // Delete user's help requests
+            $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?')->execute([$user['id']]);
+
+            // Delete user's messages
+            $pdo->prepare('DELETE FROM Mesazhi WHERE derguesi_id = ? OR marruesi_id = ?')->execute([$user['id'], $user['id']]);
+
+            // Delete the user
+            $pdo->prepare('DELETE FROM Perdoruesi WHERE id_perdoruesi = ?')->execute([$user['id']]);
+
+            $pdo->commit();
+
+            // Destroy session
+            session_unset();
+            session_destroy();
+
+            json_success(['message' => 'Llogaria juaj u fshi përfundimisht.']);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('delete_account failed: ' . $e->getMessage());
+            json_error('Gabim gjatë fshirjes së llogarise.', 500);
+        }
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, change_email, me.', 400);
+        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, change_email, me, delete_account.', 400);
 }

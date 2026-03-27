@@ -25,9 +25,9 @@ switch ($action) {
         $userStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_perdorues,
-                SUM(CASE WHEN roli = 'Admin' THEN 1 ELSE 0 END) AS admin_count,
-                SUM(CASE WHEN roli = 'Vullnetar' THEN 1 ELSE 0 END) AS vullnetar_count,
-                SUM(CASE WHEN statusi_llogarise = 'Bllokuar' THEN 1 ELSE 0 END) AS bllokuar_count
+                SUM(CASE WHEN roli = 'admin' THEN 1 ELSE 0 END) AS admin_count,
+                SUM(CASE WHEN roli = 'volunteer' THEN 1 ELSE 0 END) AS vullnetar_count,
+                SUM(CASE WHEN statusi_llogarise = 'blocked' THEN 1 ELSE 0 END) AS bllokuar_count
              FROM Perdoruesi"
         )->fetch();
 
@@ -44,19 +44,19 @@ switch ($action) {
         $appStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_aplikime,
-                COALESCE(SUM(CASE WHEN statusi = 'Në pritje' THEN 1 ELSE 0 END), 0) AS ne_pritje,
-                COALESCE(SUM(CASE WHEN statusi = 'Pranuar' THEN 1 ELSE 0 END), 0) AS pranuar,
-                COALESCE(SUM(CASE WHEN statusi = 'Refuzuar' THEN 1 ELSE 0 END), 0) AS refuzuar
+                COALESCE(SUM(CASE WHEN statusi = 'pending' THEN 1 ELSE 0 END), 0) AS ne_pritje,
+                COALESCE(SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END), 0) AS pranuar,
+                COALESCE(SUM(CASE WHEN statusi = 'rejected' THEN 1 ELSE 0 END), 0) AS refuzuar
              FROM Aplikimi"
         )->fetch();
 
         $helpStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' AND statusi = 'Open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
-                COALESCE(SUM(CASE WHEN tipi = 'Kërkesë' AND statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS kerkese_closed,
-                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' AND statusi = 'Open' THEN 1 ELSE 0 END), 0) AS oferte_open,
-                COALESCE(SUM(CASE WHEN tipi = 'Ofertë' AND statusi = 'Closed' THEN 1 ELSE 0 END), 0) AS oferte_closed
+                COALESCE(SUM(CASE WHEN tipi = 'request' AND statusi = 'open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
+                COALESCE(SUM(CASE WHEN tipi = 'request' AND statusi = 'closed' THEN 1 ELSE 0 END), 0) AS kerkese_closed,
+                COALESCE(SUM(CASE WHEN tipi = 'offer' AND statusi = 'open' THEN 1 ELSE 0 END), 0) AS oferte_open,
+                COALESCE(SUM(CASE WHEN tipi = 'offer' AND statusi = 'closed' THEN 1 ELSE 0 END), 0) AS oferte_closed
              FROM Kerkesa_per_Ndihme"
         )->fetch();
 
@@ -99,9 +99,9 @@ switch ($action) {
         $appStats = $pdo->prepare(
             "SELECT
                 COUNT(*) AS total_aplikime,
-                SUM(CASE WHEN statusi = 'Në pritje' THEN 1 ELSE 0 END) AS ne_pritje,
-                SUM(CASE WHEN statusi = 'Pranuar' THEN 1 ELSE 0 END) AS pranuar,
-                SUM(CASE WHEN statusi = 'Refuzuar' THEN 1 ELSE 0 END) AS refuzuar
+                SUM(CASE WHEN statusi = 'pending' THEN 1 ELSE 0 END) AS ne_pritje,
+                SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END) AS pranuar,
+                SUM(CASE WHEN statusi = 'rejected' THEN 1 ELSE 0 END) AS refuzuar
              FROM Aplikimi
              WHERE id_perdoruesi = ?"
         );
@@ -110,8 +110,8 @@ switch ($action) {
         $helpStats = $pdo->prepare(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                SUM(CASE WHEN statusi = 'Open' THEN 1 ELSE 0 END) AS te_hapura,
-                SUM(CASE WHEN statusi = 'Closed' THEN 1 ELSE 0 END) AS te_mbyllura
+                SUM(CASE WHEN statusi = 'open' THEN 1 ELSE 0 END) AS te_hapura,
+                SUM(CASE WHEN statusi = 'closed' THEN 1 ELSE 0 END) AS te_mbyllura
              FROM Kerkesa_per_Ndihme
              WHERE id_perdoruesi = ?"
         );
@@ -127,7 +127,7 @@ switch ($action) {
             "SELECT e.titulli, e.data, e.vendndodhja
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
-             WHERE a.id_perdoruesi = ? AND a.statusi = 'Pranuar' AND e.data >= NOW()
+             WHERE a.id_perdoruesi = ? AND a.statusi = 'approved' AND e.data >= NOW()
              ORDER BY e.data ASC
              LIMIT 5"
         );
@@ -246,7 +246,7 @@ case 'monthly':
 
             case 'Vullnetarë Aktivë':
                 $activeVols = $pdo->query(
-                    "SELECT COUNT(DISTINCT id_perdoruesi) FROM Aplikimi WHERE statusi = 'Pranuar'"
+                    "SELECT COUNT(DISTINCT id_perdoruesi) FROM Aplikimi WHERE statusi = 'approved'"
                 )->fetchColumn();
                 $content = "Vullnetarë aktivë (me të paktën 1 aplikim të pranuar): $activeVols";
                 break;

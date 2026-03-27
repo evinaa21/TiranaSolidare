@@ -9,7 +9,7 @@ if (!function_exists('ts_resolve_profile_color')) {
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
-$isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'Admin');
+$isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'admin');
 
 $firstChar = function_exists('mb_substr') ? mb_substr($userName ?: 'P', 0, 1) : substr($userName ?: 'P', 0, 1);
 $userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : strtoupper($firstChar);
@@ -74,7 +74,10 @@ $headerColorTheme = $headerColorResolved['theme'];
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=settings">Cilësimet</a>
-            <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="header-user-signout">Dil</a>
+            <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
+              <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+              <button type="submit" class="header-user-signout">Dil</button>
+            </form>
           </div>
         </div>
       <?php endif; ?>

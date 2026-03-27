@@ -28,7 +28,7 @@ switch ($action) {
         $total = (int) $countStmt->fetchColumn();
 
         $stmt = $pdo->prepare(
-            "SELECT id_njoftimi, mesazhi, is_read, krijuar_me
+            "SELECT id_njoftimi, mesazhi, tipi, target_type, target_id, linku, is_read, krijuar_me
              FROM Njoftimi
              WHERE id_perdoruesi = ?
              ORDER BY krijuar_me DESC

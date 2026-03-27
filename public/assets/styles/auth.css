@@ -190,6 +190,23 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   border-radius: 12px;      
   background-color: #E17254; 
 }
+.auth-checkbox-label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #555;
+  cursor: pointer;
+}
+.auth-checkbox-label input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.auth-checkbox-label a {
+  color: var(--clr-primary, #00715D);
+  text-decoration: underline;
+}
 .auth-meta {
   margin-top: 12px;
   font-size: 0.95rem;

@@ -3,6 +3,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/status_labels.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /TiranaSolidare/views/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
@@ -10,14 +11,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // If admin, redirect to admin dashboard
-if (($_SESSION['roli'] ?? '') === 'Admin') {
+if (($_SESSION['roli'] ?? '') === 'admin') {
     header("Location: /TiranaSolidare/views/dashboard.php");
     exit();
 }
 
 $userId    = $_SESSION['user_id'];
 $userEmri  = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
-$userRoli  = htmlspecialchars($_SESSION['roli'] ?? 'Vullnetar');
+$userRoli  = htmlspecialchars($_SESSION['roli'] ?? 'volunteer');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');
 $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
@@ -75,10 +76,10 @@ $myRequests = $stmtReqs->fetchAll(PDO::FETCH_ASSOC);
 
 // Stats
 $totalApps     = count($myApps);
-$acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Pranuar'));
-$pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'Në pritje'));
+$acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'approved'));
+$pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'pending'));
 $totalRequests = count($myRequests);
-$openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'Open'));
+$openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'open'));
 $score        = ($acceptedApps * 5) + ($totalApps * 1) + ($totalRequests * 2);
 $scoreMax     = 150;
 $scorePercent = min(100, round(($score / $scoreMax) * 100));
@@ -105,6 +106,7 @@ $badgeIcons = [
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260321a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
   <?= csrf_meta() ?>
@@ -188,6 +190,11 @@ $badgeIcons = [
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       Njoftimet
       <span class="vp-tab-badge" id="notif-tab-badge" style="display:none"></span>
+    </a>
+    <a href="?tab=messages" class="vp-tab <?= $tab === 'messages' ? 'active' : '' ?>">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+      Mesazhet
+      <span class="vp-tab-badge" id="msg-tab-badge" style="display:none"></span>
     </a>
     <a href="?tab=settings" class="vp-tab <?= $tab === 'settings' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -333,6 +340,7 @@ $badgeIcons = [
       <button type="button" class="vp-settings-nav__item active" data-settings-target="account" role="tab" aria-selected="true">Llogaria</button>
       <button type="button" class="vp-settings-nav__item" data-settings-target="public-profile" role="tab" aria-selected="false">Profili publik</button>
       <button type="button" class="vp-settings-nav__item" data-settings-target="email" role="tab" aria-selected="false">Email</button>
+      <button type="button" class="vp-settings-nav__item" data-settings-target="notifications" role="tab" aria-selected="false">Njoftimet</button>
       <button type="button" class="vp-settings-nav__item" data-settings-target="security" role="tab" aria-selected="false">Siguria</button>
     </aside>
 
@@ -402,6 +410,29 @@ $badgeIcons = [
               <button type="submit" class="btn_primary">Përditëso email-in</button>
             </form>
             <div id="vp-email-status" class="vp-status" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vp-settings-panel" id="vp-settings-notifications" data-settings-panel="notifications" role="tabpanel" hidden>
+        <div class="vp-card">
+          <div class="vp-card__header">
+            <h3>Preferencat e njoftimeve</h3>
+            <p>Zgjidh nëse dëshiron të marrësh njoftime me email për aktivitetet në platformë.</p>
+          </div>
+          <div class="vp-card__body">
+            <form id="vp-notifications-form" class="vp-form">
+              <div class="vp-field" style="display:flex;align-items:center;flex-direction:row;justify-content:space-between">
+                <label for="vp-email-notif" style="margin:0;cursor:pointer">Merr njoftime me email</label>
+                <div class="vp-toggle-wrapper">
+                  <input type="checkbox" id="vp-email-notif" name="email_notifications" class="vp-toggle-input" <?= ($user['email_notifications'] ?? 1) ? 'checked' : '' ?>>
+                  <label for="vp-email-notif" class="vp-toggle-label"></label>
+                </div>
+              </div>
+              <p class="vp-muted" style="margin:0;">Kur njoftimet me email janë çaktivizuar, do të merrni vetëm njoftime brenda platformës. Email-et e verifikimit dhe rivendosjes së fjalëkalimit do të dërgohen gjithmonë.</p>
+              <button type="submit" class="btn_primary">Ruaj preferencat</button>
+            </form>
+            <div id="vp-notifications-status" class="vp-status" style="display:none"></div>
           </div>
         </div>
       </section>
@@ -480,13 +511,13 @@ $badgeIcons = [
                 </td>
                 <td><?= date('d M Y, H:i', strtotime($app['eventi_data'])) ?></td>
                 <td>
-                  <span class="vp-badge vp-badge--<?= $app['statusi'] === 'Pranuar' ? 'success' : ($app['statusi'] === 'Refuzuar' ? 'danger' : 'pending') ?>">
-                     <?= htmlspecialchars($app['statusi'] ?? '—') ?>
+                  <span class="vp-badge vp-badge--<?= $app['statusi'] === 'approved' ? 'success' : ($app['statusi'] === 'rejected' ? 'danger' : 'pending') ?>">
+                     <?= htmlspecialchars(status_label($app['statusi'] ?? '')) ?>
                   </span>
                 </td>
                 <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>
                 <td>
-                  <?php if ($app['statusi'] === 'Në pritje'): ?>
+                  <?php if ($app['statusi'] === 'pending'): ?>
                     <button class="btn_secondary vp-btn-sm vp-btn-danger" onclick="withdrawApp(<?= $app['id_aplikimi'] ?>)">Tërhiq</button>
                   <?php else: ?>
                     <span class="vp-muted">—</span>
@@ -524,8 +555,8 @@ $badgeIcons = [
                       </a>
                     </td>
                     <td>
-                      <span class="vp-badge vp-badge--<?= $app['kerkesa_tipi'] === 'Ofertë' ? 'offer' : 'request' ?>">
-                        <?= $app['kerkesa_tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+                      <span class="vp-badge vp-badge--<?= $app['kerkesa_tipi'] === 'offer' ? 'offer' : 'request' ?>">
+                        <?= $app['kerkesa_tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
                       </span>
                     </td>
                     <td><?= htmlspecialchars($app['postuesi_emri']) ?></td>
@@ -535,8 +566,8 @@ $badgeIcons = [
                       </span>
                     </td>
                     <td>
-                      <span class="vp-badge vp-badge--<?= $app['statusi'] === 'Pranuar' ? 'success' : ($app['statusi'] === 'Refuzuar' ? 'danger' : 'pending') ?>">
-                         <?= htmlspecialchars($app['statusi'] ?? '—') ?>
+                      <span class="vp-badge vp-badge--<?= $app['statusi'] === 'approved' ? 'success' : ($app['statusi'] === 'rejected' ? 'danger' : 'pending') ?>">
+                         <?= htmlspecialchars(status_label($app['statusi'] ?? '')) ?>
                       </span>
                     </td>
                     <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>
@@ -572,8 +603,8 @@ $badgeIcons = [
               <div class="vp-request-card__visual">
                 <img src="<?= !empty($req['imazhi']) ? htmlspecialchars($req['imazhi']) : '/TiranaSolidare/public/assets/images/default-request.svg' ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
                 <div class="vp-request-card__overlay">
-                  <span class="vp-badge vp-badge--<?= $req['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-                  <span class="vp-badge vp-badge--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span>
+                  <span class="vp-badge vp-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+                  <span class="vp-badge vp-badge--<?= htmlspecialchars($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span>
                 </div>
               </div>
 
@@ -612,8 +643,8 @@ $badgeIcons = [
           <div class="vp-field">
             <label for="vp-req-type">Tipi</label>
             <select id="vp-req-type" name="tipi" required class="vp-input">
-              <option value="Kërkesë">Kërkoj ndihmë</option>
-              <option value="Ofertë">Dua të ndihmoj</option>
+              <option value="request">Kërkoj ndihmë</option>
+              <option value="offer">Dua të ndihmoj</option>
             </select>
           </div>
         </div>
@@ -621,16 +652,9 @@ $badgeIcons = [
           <label for="vp-req-desc">Përshkrimi</label>
           <textarea id="vp-req-desc" name="pershkrimi" rows="4" placeholder="Përshkruani kërkesën tuaj në detaje..." class="vp-input"></textarea>
         </div>
-        <div class="vp-form-row">
-          <div class="vp-field">
-            <label for="vp-req-location">Vendndodhja</label>
-            <input type="text" id="vp-req-location" name="vendndodhja" placeholder="Vendndodhja (opsionale)" class="vp-input">
-          </div>
-          <div class="vp-field">
-            <label for="vp-req-image">Imazhi (Ngarkoni skedarin)</label>
-            <input type="file" id="vp-req-image" name="image" accept="image/*" class="vp-input">
-            <small style="color: #999;">Maksimumi 5MB. Formatet: JPG, PNG, GIF, WEBP</small>
-          </div>
+        <div class="vp-field">
+          <label for="vp-req-location">Vendndodhja</label>
+          <input type="text" id="vp-req-location" name="vendndodhja" placeholder="Vendndodhja (opsionale)" class="vp-input">
         </div>
         <div class="vp-field">
           <div class="ts-map-wrapper">
@@ -699,6 +723,27 @@ $badgeIcons = [
   </div>
 </div>
 
+<?php elseif ($tab === 'messages'): ?>
+<!-- ════════════ MESSAGES TAB ════════════ -->
+<div class="vp-panel">
+  <div class="vp-card">
+    <div class="vp-card__header" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 id="vp-msg-title">Mesazhet</h3>
+      <div id="vp-msg-actions">
+        <button class="vp-notif-toolbar-btn" onclick="vpShowNewConversation()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          <span>Mesazh i ri</span>
+        </button>
+      </div>
+    </div>
+    <div class="vp-card__body">
+      <div id="vp-msg-content">
+        <div class="vp-loading">Duke ngarkuar bisedat…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php endif; ?>
 
 </section>
@@ -710,7 +755,24 @@ $badgeIcons = [
 <!-- Volunteer Panel JavaScript -->
 <script>
 const API = '/TiranaSolidare/api';
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+// Live getter — always reads the current meta tag (auto-refreshed after mutations)
+function getCSRF() { return document.querySelector('meta[name="csrf-token"]')?.content || ''; }
+// Auto-update meta tag from API response
+function refreshCSRF(json) { if (json && json.csrf_token) { const m = document.querySelector('meta[name="csrf-token"]'); if (m) m.content = json.csrf_token; } return json; }
+// Compat alias so existing code like headers: { 'X-CSRF-Token': csrfToken } still works
+let csrfToken = getCSRF();
+// Wrap fetch to auto-refresh CSRF from mutation responses
+(function() {
+  const _fetch = window.fetch;
+  window.fetch = async function(...args) {
+    const res = await _fetch.apply(this, args);
+    const m = (args[1]?.method || 'GET').toUpperCase();
+    if (['POST','PUT','DELETE'].includes(m)) {
+      try { refreshCSRF(await res.clone().json()); csrfToken = getCSRF(); } catch(e) {}
+    }
+    return res;
+  };
+})();
 
 function vpStatus(elId, type, message) {
   const el = document.getElementById(elId);
@@ -814,30 +876,8 @@ if (reqForm) {
   reqForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(reqForm);
-    const imageFile = fd.get('image');
-    let imazhiValue = null;
 
-    // Upload image if provided
-    if (imageFile && imageFile.size > 0) {
-      try {
-        const uploadFd = new FormData();
-        uploadFd.append('image', imageFile);
-        const uploadRes = await fetch(API + '/upload.php', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'X-CSRF-Token': csrfToken },
-          body: uploadFd,
-        });
-        const uploadJson = await uploadRes.json();
-        if (!uploadRes.ok || !uploadJson.success) throw new Error(uploadJson.message || 'Gabim në ngarkimin e imazhit.');
-        imazhiValue = uploadJson.data.filename;
-      } catch (err) {
-        vpStatus('vp-req-status', 'error', 'Gabim në ngarkimin e imazhit: ' + err.message);
-        return;
-      }
-    }
-
-    // Build request body with filename only
+    // Build request body
     const body = Object.fromEntries(fd);
     // Convert lat/lng to numbers if present
     if (body.latitude) body.latitude = parseFloat(body.latitude);
@@ -846,9 +886,6 @@ if (reqForm) {
     else delete body.longitude;
     
     delete body.image;
-    if (imazhiValue) {
-      body.imazhi = imazhiValue;
-    }
 
     try {
       const res = await fetch(API + '/help_requests.php?action=create', {
@@ -899,7 +936,9 @@ async function loadVPNotifications() {
       html += '<div class="vp-notif ' + (unread ? 'vp-notif--unread' : '') + '">'
         + '<div class="vp-notif__dot"></div>'
         + '<div class="vp-notif__body">'
+        + (n.linku ? '<a href="' + escapeHtml(n.linku) + '" style="text-decoration:none;color:inherit;">' : '')
         + '<p>' + escapeHtml(n.mesazhi) + '</p>'
+        + (n.linku ? '</a>' : '')
         + '<span>' + formatDate(n.krijuar_me) + '</span>'
         + '</div>'
         + '<div class="vp-notif__actions">'
@@ -1203,6 +1242,28 @@ if (visibilityForm) {
   });
 }
 
+// ── Notifications form ──
+const notifForm = document.getElementById('vp-notifications-form');
+if (notifForm) {
+  notifForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email_notifications = document.getElementById('vp-email-notif').checked ? 1 : 0;
+    try {
+      const res = await fetch(API + '/users.php?action=update_profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email_notifications }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+      vpStatus('vp-notifications-status', 'success', 'Preferencat e njoftimeve u ruajtën.');
+    } catch (err) {
+      vpStatus('vp-notifications-status', 'error', err.message);
+    }
+  });
+}
+
 const avatarClickTarget = document.getElementById('vp-avatar-click-target');
 const avatarUploadInput = document.getElementById('vp-avatar-upload-input');
 const avatarDeleteBtn = document.getElementById('vp-avatar-delete-btn');
@@ -1360,6 +1421,182 @@ if (avatarDeleteBtn) {
   initDeleteButton();
 }
 
+// Initialize delete button if it exists on page load
+if (avatarDeleteBtn) {
+  initDeleteButton();
+}
+
 </script>
+<?php if ($tab === 'messages'): ?>
+<script>
+(function() {
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  function getCSRF() { return csrfMeta?.content || ''; }
+
+  async function vpApiCall(url, opts = {}) {
+    const base = '/TiranaSolidare/api/';
+    const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': getCSRF(), ...(opts.headers || {}) };
+    const res = await fetch(base + url, { credentials: 'same-origin', ...opts, headers });
+    const json = await res.json();
+    if (json.csrf_token && csrfMeta) csrfMeta.content = json.csrf_token;
+    return json;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmtDate(d) { if (!d) return ''; const dt = new Date(d); return dt.toLocaleDateString('sq-AL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); }
+
+  let currentThread = null;
+  let pollTimer = null;
+
+  window.vpLoadConversations = async function() {
+    const container = document.getElementById('vp-msg-content');
+    const title = document.getElementById('vp-msg-title');
+    const actions = document.getElementById('vp-msg-actions');
+    if (!container) return;
+    if (title) title.textContent = 'Mesazhet';
+    if (actions) actions.style.display = '';
+    currentThread = null;
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+    try {
+      const json = await vpApiCall('messages.php?action=conversations');
+      if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
+
+      if (!json.data.length) {
+        container.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;"><p>Nuk keni biseda ende.</p><p style="font-size:0.85rem;">Klikoni "Mesazh i ri" për të filluar.</p></div>';
+        return;
+      }
+
+      let html = '<div class="msg-conversation-list">';
+      json.data.forEach(c => {
+        const unread = c.unread_count > 0 ? '<span class="vp-tab-badge" style="display:inline-flex;margin-left:auto;">' + c.unread_count + '</span>' : '';
+        const init = (c.emri || 'P').charAt(0).toUpperCase();
+        const preview = c.last_message ? esc(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
+        html += '<div class="msg-convo-item' + (c.unread_count > 0 ? ' msg-convo-item--unread' : '') + '" onclick="vpOpenThread(' + c.user_id + ',\'' + esc(c.emri).replace(/'/g, "\\'") + '\')">'
+          + '<div style="width:40px;height:40px;border-radius:50%;background:var(--db-primary,#00715D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + esc(init) + '</div>'
+          + '<div class="msg-convo-info"><div class="msg-convo-name">' + esc(c.emri) + ' ' + unread + '</div><div class="msg-convo-preview">' + preview + '</div></div>'
+          + '<div class="msg-convo-time">' + fmtDate(c.last_message_time) + '</div></div>';
+      });
+      html += '</div>';
+      container.innerHTML = html;
+      vpLoadUnreadBadge();
+    } catch (e) { container.innerHTML = '<div class="vp-loading">Gabim rrjeti.</div>'; }
+  };
+
+  window.vpOpenThread = async function(userId, userName) {
+    currentThread = userId;
+    const container = document.getElementById('vp-msg-content');
+    const title = document.getElementById('vp-msg-title');
+    const actions = document.getElementById('vp-msg-actions');
+    if (title) title.innerHTML = '<a href="?tab=messages" style="margin-right:8px;color:inherit;">← </a> ' + esc(userName);
+    if (actions) actions.style.display = 'none';
+
+    try {
+      const json = await vpApiCall('messages.php?action=thread&user_id=' + userId + '&limit=50');
+      if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
+
+      const messages = json.data.messages.reverse();
+      let html = '<div class="msg-thread" id="vp-msg-thread">';
+      if (!messages.length) html += '<div style="text-align:center;color:#94a3b8;padding:2rem;">Shkruaj mesazhin e parë!</div>';
+      messages.forEach(m => {
+        html += '<div class="msg-bubble ' + (m.is_mine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
+          + '<div class="msg-bubble__text">' + esc(m.mesazhi) + '</div>'
+          + '<div class="msg-bubble__time">' + fmtDate(m.krijuar_me) + '</div></div>';
+      });
+      html += '</div><div class="msg-compose">'
+        + '<textarea id="vp-msg-input" class="msg-compose__input" placeholder="Shkruaj mesazhin…" rows="2" maxlength="2000" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();vpSendMessage(' + userId + ');}"></textarea>'
+        + '<button class="vp-notif-toolbar-btn" onclick="vpSendMessage(' + userId + ')" style="padding:10px 14px;background:var(--db-primary,#00715D);color:#fff;border-radius:12px;border:none;cursor:pointer;">'
+        + '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></div>';
+      container.innerHTML = html;
+      const thread = document.getElementById('vp-msg-thread');
+      if (thread) setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+      pollTimer = setInterval(() => vpRefreshThread(userId), 5000);
+      vpLoadUnreadBadge();
+    } catch (e) { container.innerHTML = '<div class="vp-loading">Gabim rrjeti.</div>'; }
+  };
+
+  window.vpSendMessage = async function(toUserId) {
+    const input = document.getElementById('vp-msg-input');
+    const text = (input?.value || '').trim();
+    if (!text) return;
+    input.value = '';
+    input.focus();
+    try {
+      const json = await vpApiCall('messages.php?action=send', { method: 'POST', body: JSON.stringify({ marruesi_id: toUserId, mesazhi: text }) });
+      if (json.success) vpRefreshThread(toUserId);
+    } catch (e) {}
+  };
+
+  window.vpRefreshThread = async function(userId) {
+    const thread = document.getElementById('vp-msg-thread');
+    if (!thread) return;
+    try {
+      const json = await vpApiCall('messages.php?action=thread&user_id=' + userId + '&limit=50');
+      if (!json.success) return;
+      const messages = json.data.messages.reverse();
+      let html = '';
+      if (!messages.length) html = '<div style="text-align:center;color:#94a3b8;padding:2rem;">Shkruaj mesazhin e parë!</div>';
+      messages.forEach(m => {
+        html += '<div class="msg-bubble ' + (m.is_mine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
+          + '<div class="msg-bubble__text">' + esc(m.mesazhi) + '</div>'
+          + '<div class="msg-bubble__time">' + fmtDate(m.krijuar_me) + '</div></div>';
+      });
+      thread.innerHTML = html;
+      setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+      vpLoadUnreadBadge();
+    } catch (e) {}
+  };
+
+  window.vpShowNewConversation = function() {
+    const container = document.getElementById('vp-msg-content');
+    const title = document.getElementById('vp-msg-title');
+    const actions = document.getElementById('vp-msg-actions');
+    if (title) title.innerHTML = '<a href="?tab=messages" style="margin-right:8px;color:inherit;">← </a> Mesazh i ri';
+    if (actions) actions.style.display = 'none';
+    container.innerHTML = '<div style="padding:1rem;"><input type="text" id="vp-msg-search" class="vp-input" placeholder="Kërko përdorues sipas emrit…" oninput="vpSearchUsers(this.value)" style="margin-bottom:1rem;width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;"><div id="vp-msg-search-results"></div></div>';
+  };
+
+  let searchTimer = null;
+  window.vpSearchUsers = function(q) {
+    clearTimeout(searchTimer);
+    const results = document.getElementById('vp-msg-search-results');
+    if (!results) return;
+    if (q.trim().length < 2) { results.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;">Shkruaj të paktën 2 shkronja…</div>'; return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const json = await vpApiCall('messages.php?action=search_users&q=' + encodeURIComponent(q.trim()));
+        if (!json.success || !json.data.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
+        let html = '';
+        json.data.forEach(u => {
+          const init = (u.emri || 'P').charAt(0).toUpperCase();
+          html += '<div class="msg-convo-item" onclick="vpOpenThread(' + u.id_perdoruesi + ',\'' + esc(u.emri).replace(/'/g, "\\'") + '\')">'
+            + '<div style="width:36px;height:36px;border-radius:50%;background:var(--db-primary,#00715D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + esc(init) + '</div>'
+            + '<div class="msg-convo-info"><div class="msg-convo-name">' + esc(u.emri) + '</div></div></div>';
+        });
+        results.innerHTML = html;
+      } catch (e) { results.innerHTML = '<div style="color:#dc3545;">Gabim rrjeti.</div>'; }
+    }, 300);
+  };
+
+  window.vpLoadUnreadBadge = async function() {
+    try {
+      const json = await vpApiCall('messages.php?action=conversations');
+      if (!json.success) return;
+      const total = json.data.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+      const badge = document.getElementById('msg-tab-badge');
+      if (badge) {
+        if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
+        else { badge.style.display = 'none'; }
+      }
+    } catch (e) {}
+  };
+
+  // Auto-load on page ready
+  document.addEventListener('DOMContentLoaded', function() {
+    vpLoadConversations();
+  });
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>

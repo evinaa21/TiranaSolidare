@@ -9,14 +9,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Redirect volunteers to their own panel
-if (($_SESSION['roli'] ?? '') !== 'Admin') {
+if (($_SESSION['roli'] ?? '') !== 'admin') {
     header("Location: /TiranaSolidare/views/volunteer_panel.php");
     exit();
 }
 
 $isAdmin = true;
 $userEmri = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
-$userRoli = htmlspecialchars($_SESSION['roli'] ?? 'Vullnetar');
+$userRoli = htmlspecialchars($_SESSION['roli'] ?? 'volunteer');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');
 $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 ?>
@@ -67,7 +67,17 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
       <span>Kërkesat</span>
     </button>
+    <button class="db-nav-item" data-panel="reports" onclick="switchPanel('reports', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      <span>Raportet</span>
+    </button>
     <?php endif; ?>
+
+    <button class="db-nav-item" data-panel="messages" onclick="switchPanel('messages', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+      <span>Mesazhet</span>
+      <span class="db-nav-badge" id="msg-badge" style="display:none"></span>
+    </button>
 
     <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -90,9 +100,12 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <strong><?= $userEmri ?></strong>
       <span><?= $userRoli ?></span>
     </div>
-    <a href="/TiranaSolidare/src/actions/logout.php?token=<?= urlencode(csrf_token()) ?>" class="db-sidebar__logout" title="Dil">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-    </a>
+    <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
+      <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+      <button type="submit" class="db-sidebar__logout" title="Dil">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+      </button>
+    </form>
   </div>
 </aside>
 
@@ -240,7 +253,45 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <div class="db-loading">Duke ngarkuar kërkesat…</div>
     </div>
   </div>
+
+  <!-- ═══════════════ PANEL: REPORTS (Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-reports">
+    <div class="db-panel__header">
+      <h3>Raportet & Statistikat</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="db-btn db-btn--primary" onclick="generateReport()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          Gjenero raport
+        </button>
+      </div>
+    </div>
+    <div class="reports-grid" id="reports-charts">
+      <div class="db-loading" style="grid-column:1/-1;">Duke ngarkuar grafikët…</div>
+    </div>
+    <div style="margin-top:24px;">
+      <h4 style="margin-bottom:12px;">Raportet e gjeneruara</h4>
+      <div id="reports-list">
+        <div class="db-loading">Duke ngarkuar…</div>
+      </div>
+    </div>
+  </div>
   <?php endif; ?>
+
+  <!-- ═══════════════ PANEL: MESSAGES ═══════════════ -->
+  <div class="db-panel" id="panel-messages">
+    <div class="db-panel__header">
+      <h3 id="msg-panel-title">Mesazhet</h3>
+      <div id="msg-header-actions">
+        <button class="db-btn db-btn--primary" onclick="showNewConversation()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          Mesazh i ri
+        </button>
+      </div>
+    </div>
+    <div id="msg-content">
+      <div class="db-loading">Duke ngarkuar bisedat…</div>
+    </div>
+  </div>
 
   <!-- ═══════════════ PANEL: NOTIFICATIONS ═══════════════ -->
   <div class="db-panel" id="panel-notifications">
@@ -304,6 +355,21 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
 
   </div>
+
+  <?php if (!$isAdmin): ?>
+  <div class="ud-card" style="border-color:#dc3545;margin-top:1.5rem;">
+    <div class="ud-card__header">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      <h4 style="color:#dc3545;">Fshi llogarinë</h4>
+    </div>
+    <p class="ud-card__desc">Kjo veprim është i pakthyeshëm. Të gjitha të dhënat tuaja do të fshihen përfundimisht.</p>
+    <div class="ud-card__body">
+      <input type="password" id="delete-account-pw" class="ud-input" placeholder="Konfirmo fjalëkalimin" autocomplete="new-password">
+      <button class="db-btn" style="background:#dc3545;color:#fff;border:none;" onclick="deleteAccount()">Fshi llogarinë përfundimisht</button>
+      <div id="delete-account-status" style="font-size:13px;min-height:16px;color:#dc3545;"></div>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
 </main>
 
@@ -384,7 +450,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-const adminCsrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const adminCsrf_meta = document.querySelector('meta[name="csrf-token"]');
+function getAdminCSRF() { return adminCsrf_meta?.content || ''; }
+function refreshCSRF(json) { if (json && json.csrf_token && adminCsrf_meta) adminCsrf_meta.content = json.csrf_token; return json; }
+let adminCsrf = getAdminCSRF();
+(function() {
+  const _fetch = window.fetch;
+  window.fetch = async function(...args) {
+    const res = await _fetch.apply(this, args);
+    const m = (args[1]?.method || 'GET').toUpperCase();
+    if (['POST','PUT','DELETE'].includes(m)) {
+      try { refreshCSRF(await res.clone().json()); adminCsrf = getAdminCSRF(); } catch(e) {}
+    }
+    return res;
+  };
+})();
 
 async function adminSaveName() {
   const emri = document.getElementById('admin-emri').value.trim();
@@ -434,6 +514,28 @@ async function adminLoadProfile() {
     if (!json.success) return;
     document.getElementById('admin-emri').value = json.data.emri || '';
   } catch(e) {}
+}
+
+async function deleteAccount() {
+  const st = document.getElementById('delete-account-status');
+  const pw = document.getElementById('delete-account-pw')?.value;
+  if (!pw) { st.textContent = 'Shkruani fjalëkalimin.'; return; }
+  if (!confirm('KUJDES: Kjo do të fshijë llogarinë tuaj përfundimisht. Jeni të sigurt?')) return;
+  try {
+    const res = await fetch('/TiranaSolidare/api/auth.php?action=delete_account', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': adminCsrf },
+      credentials: 'same-origin',
+      body: JSON.stringify({ password: pw }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      alert('Llogaria u fshi. Do të ridrejtoheni.');
+      window.location.href = '/TiranaSolidare/public/';
+    } else {
+      st.textContent = json.message || 'Gabim.';
+    }
+  } catch(e) { st.textContent = 'Gabim rrjeti.'; }
 }
 
 document.addEventListener('DOMContentLoaded', adminLoadProfile);

@@ -20,11 +20,9 @@
         <li><a href="/TiranaSolidare/views/map.php">Harta</a></li></ul>
       <ul>
         <li>Legal</li>
-        <li><a href="#">Termat dhe Kushtet</a></li>
-        <li><a href="#">Politika e Privatësisë</a></li>
-        <li><a href="#">Politika e Cookies</a></li>
-        <li><a href="#">Rregullat e Përdorimit</a></li>
-        <li><a href="#">Politika e Sigurisë</a></li>
+        <li><a href="/TiranaSolidare/views/privacy.php">Politika e Privatësisë</a></li>
+        <li><a href="/TiranaSolidare/views/blocked.php">Rregullat e Përdorimit</a></li>
+        <li><a href="mailto:info@tiranasolidare.al">Kontakto</a></li>
       </ul>
       <ul>
         <li>Kontakt</li>
