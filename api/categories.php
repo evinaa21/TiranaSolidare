@@ -19,6 +19,7 @@ switch ($action) {
     // ── LIST CATEGORIES ────────────────────────────
     case 'list':
         require_method('GET');
+        release_session();
 
         $stmt = $pdo->query(
             "SELECT k.*, COUNT(e.id_eventi) AS event_count

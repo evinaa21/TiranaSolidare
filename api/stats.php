@@ -20,15 +20,16 @@ switch ($action) {
     case 'overview':
         require_method('GET');
         require_admin();
+        release_session();
 
         // User counts
         $userStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_perdorues,
-                SUM(CASE WHEN roli = 'admin' THEN 1 ELSE 0 END) AS admin_count,
+                SUM(CASE WHEN roli IN ('admin', 'super_admin') THEN 1 ELSE 0 END) AS admin_count,
                 SUM(CASE WHEN roli = 'volunteer' THEN 1 ELSE 0 END) AS vullnetar_count,
                 SUM(CASE WHEN statusi_llogarise = 'blocked' THEN 1 ELSE 0 END) AS bllokuar_count
-             FROM Perdoruesi"
+            FROM Perdoruesi"
         )->fetch();
 
         // Event counts (A-04: COALESCE to prevent NULL)
@@ -37,30 +38,29 @@ switch ($action) {
                 COUNT(*) AS total_evente,
                 COALESCE(SUM(CASE WHEN data >= NOW() THEN 1 ELSE 0 END), 0) AS evente_te_ardhshme,
                 COALESCE(SUM(CASE WHEN data < NOW() THEN 1 ELSE 0 END), 0) AS evente_te_kaluara
-             FROM Eventi"
+            FROM Eventi"
         )->fetch();
 
         // Application counts (A-04: COALESCE)
         $appStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_aplikime,
-                COALESCE(SUM(CASE WHEN statusi = 'pending' THEN 1 ELSE 0 END), 0) AS ne_pritje,
-                COALESCE(SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END), 0) AS pranuar,
-                COALESCE(SUM(CASE WHEN statusi = 'rejected' THEN 1 ELSE 0 END), 0) AS refuzuar
-             FROM Aplikimi"
+                COALESCE(SUM(CASE WHEN LOWER(statusi) IN ('pending', 'në pritje', 'ne pritje') THEN 1 ELSE 0 END), 0) AS ne_pritje,
+                COALESCE(SUM(CASE WHEN LOWER(statusi) IN ('approved', 'pranuar') THEN 1 ELSE 0 END), 0) AS pranuar,
+                COALESCE(SUM(CASE WHEN LOWER(statusi) IN ('rejected', 'refuzuar') THEN 1 ELSE 0 END), 0) AS refuzuar
+            FROM Aplikimi"
         )->fetch();
 
         $helpStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                COALESCE(SUM(CASE WHEN tipi = 'request' AND statusi = 'open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
-                COALESCE(SUM(CASE WHEN tipi = 'request' AND statusi = 'closed' THEN 1 ELSE 0 END), 0) AS kerkese_closed,
-                COALESCE(SUM(CASE WHEN tipi = 'offer' AND statusi = 'open' THEN 1 ELSE 0 END), 0) AS oferte_open,
-                COALESCE(SUM(CASE WHEN tipi = 'offer' AND statusi = 'closed' THEN 1 ELSE 0 END), 0) AS oferte_closed
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('open', 'e hapur') THEN 1 ELSE 0 END), 0) AS kerkese_open,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('closed', 'mbyllur') THEN 1 ELSE 0 END), 0) AS kerkese_closed,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('open', 'e hapur') THEN 1 ELSE 0 END), 0) AS oferte_open,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('closed', 'mbyllur') THEN 1 ELSE 0 END), 0) AS oferte_closed
              FROM Kerkesa_per_Ndihme"
-        )->fetch();
+        )->fetch(PDO::FETCH_ASSOC);
 
-        // Top categories by event count
         $topCategories = $pdo->query(
             "SELECT k.emri, COUNT(e.id_eventi) AS event_count
              FROM Kategoria k
@@ -79,7 +79,10 @@ switch ($action) {
              JOIN Eventi e ON e.id_eventi = a.id_eventi
              ORDER BY a.aplikuar_me DESC
              LIMIT 10"
-        )->fetchAll();
+        )->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Include functions for normalizer
+        require_once __DIR__ . '/../includes/functions.php';
 
         json_success([
             'users'              => $userStats,
@@ -87,7 +90,7 @@ switch ($action) {
             'applications'       => $appStats,
             'help_requests'      => $helpStats,
             'top_categories'     => $topCategories,
-            'recent_applications' => $recentApps,
+            'recent_applications' => ts_normalize_rows($recentApps),
         ]);
         break;
 
@@ -144,6 +147,7 @@ switch ($action) {
 case 'monthly':
     require_method('GET');
     require_admin();
+    release_session();
 
     $monthly_apps = $pdo->query(
         "SELECT DATE_FORMAT(aplikuar_me, '%Y-%m') AS muaji, COUNT(*) AS total
@@ -267,6 +271,115 @@ case 'monthly':
         ], 201);
         break;
 
+    // ── PUBLIC LEADERBOARD ─────────────────────────
+    case 'leaderboard':
+        require_method('GET');
+        $limit = min(max((int) ($_GET['limit'] ?? 20), 1), 50);
+
+        $stmt = $pdo->query(
+            "SELECT
+                p.id_perdoruesi,
+                p.emri,
+                p.profile_color,
+                p.krijuar_me AS anetaresuar_me,
+                COALESCE(apps.total_apps, 0) AS total_apps,
+                COALESCE(apps.accepted_apps, 0) AS accepted_apps,
+                COALESCE(reqs.total_requests, 0) AS total_requests,
+                (COALESCE(apps.accepted_apps, 0) * 5
+                 + COALESCE(apps.total_apps, 0) * 1
+                 + COALESCE(reqs.total_requests, 0) * 2) AS score
+             FROM Perdoruesi p
+             LEFT JOIN (
+                SELECT id_perdoruesi,
+                       COUNT(*) AS total_apps,
+                       SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END) AS accepted_apps
+                FROM Aplikimi
+                GROUP BY id_perdoruesi
+             ) apps ON apps.id_perdoruesi = p.id_perdoruesi
+             LEFT JOIN (
+                SELECT id_perdoruesi, COUNT(*) AS total_requests
+                FROM Kerkesa_per_Ndihme
+                GROUP BY id_perdoruesi
+             ) reqs ON reqs.id_perdoruesi = p.id_perdoruesi
+             WHERE p.roli = 'volunteer'
+               AND p.statusi_llogarise = 'active'
+               AND p.verified = 1
+             ORDER BY score DESC, p.emri ASC
+             LIMIT {$limit}"
+        );
+        $volunteers = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        json_success(['leaderboard' => $volunteers]);
+        break;
+
+    // ── ADMIN AUDIT LOG (Super Admin) ─────────────────
+    case 'admin_log':
+        require_method('GET');
+        require_super_admin();
+        release_session();
+        $pagination  = get_pagination(30);
+        $adminFilter = (int) ($_GET['admin_id'] ?? 0);
+        $actionFilter = trim($_GET['veprim'] ?? '');
+        $dateFrom    = trim($_GET['date_from'] ?? '');
+        $dateTo      = trim($_GET['date_to'] ?? '');
+
+        $where  = [];
+        $params = [];
+        if ($adminFilter > 0) {
+            $where[]  = 'l.admin_id = ?';
+            $params[] = $adminFilter;
+        }
+        if ($actionFilter) {
+            $where[]  = 'l.veprim LIKE ?';
+            $params[] = '%' . $actionFilter . '%';
+        }
+        if ($dateFrom) {
+            $where[]  = 'l.krijuar_me >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo) {
+            $where[]  = 'l.krijuar_me <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+        $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM admin_log l $whereClause");
+        $cntStmt->execute($params);
+        $total = (int) $cntStmt->fetchColumn();
+
+        $params[] = $pagination['limit'];
+        $params[] = $pagination['offset'];
+        $stmt = $pdo->prepare(
+            "SELECT l.id, l.veprim, l.target_type, l.target_id, l.detaje, l.krijuar_me,
+                    p.emri AS admin_emri, p.roli AS admin_roli
+             FROM admin_log l
+             JOIN Perdoruesi p ON p.id_perdoruesi = l.admin_id
+             $whereClause
+             ORDER BY l.krijuar_me DESC
+             LIMIT ? OFFSET ?"
+        );
+        $stmt->execute($params);
+        json_success([
+            'logs'        => $stmt->fetchAll(),
+            'total'       => $total,
+            'page'        => $pagination['page'],
+            'total_pages' => (int) ceil($total / $pagination['limit']),
+        ]);
+        break;
+
+    // ── DELETE REPORT ──────────────────────────────
+    case 'delete_report':
+        require_method('DELETE');
+        require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) json_error('ID-ja e raportit është e pavlefshme.', 400);
+
+        $stmt = $pdo->prepare('DELETE FROM Raporti WHERE id_raporti = ?');
+        $stmt->execute([$id]);
+        if ($stmt->rowCount() === 0) json_error('Raporti nuk u gjet.', 404);
+        json_success(['message' => 'Raporti u fshi.']);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: overview, my_stats, reports, generate, monthly.', 400);
+        json_error('Veprim i panjohur. Përdorni: overview, my_stats, reports, generate, monthly, admin_log, delete_report.', 400);
 }

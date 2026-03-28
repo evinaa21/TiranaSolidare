@@ -5,20 +5,22 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
-$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'admin');
+$isAdmin = ($isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true));
 $currentUserId = $_SESSION['user_id'] ?? null;
 
 // ── Single help request detail ──
 if (isset($_GET['id'])) {
     $id = (int) $_GET['id'];
     $stmt = $pdo->prepare(
-        "SELECT k.*, p.emri AS krijuesi_emri, p.email AS krijuesi_email
+        "SELECT k.*, p.emri AS krijuesi_emri, p.email AS krijuesi_email, kat.emri AS kategoria_emri
          FROM Kerkesa_per_Ndihme k
          LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
+         LEFT JOIN Kategoria kat ON kat.id_kategoria = k.id_kategoria
          WHERE k.id_kerkese_ndihme = ?"
     );
     $stmt->execute([$id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($request) $request = ts_normalize_row($request);
 }
 
   $isOwner = false;
@@ -44,6 +46,7 @@ if (isset($_GET['id'])) {
         );
         $myApplyStmt->execute([(int) $request['id_kerkese_ndihme'], (int) $currentUserId]);
         $myRequestApplication = $myApplyStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($myRequestApplication) $myRequestApplication = ts_normalize_row($myRequestApplication);
       }
 
       if ($isOwner || $isAdmin) {
@@ -60,7 +63,7 @@ if (isset($_GET['id'])) {
            ORDER BY ak.aplikuar_me DESC'
         );
         $applicantsStmt->execute([(int) $request['id_kerkese_ndihme']]);
-        $requestApplicants = $applicantsStmt->fetchAll(PDO::FETCH_ASSOC);
+        $requestApplicants = ts_normalize_rows($applicantsStmt->fetchAll(PDO::FETCH_ASSOC));
       }
     } catch (Throwable $e) {
       // Keep the page functional even if the DB table has not been migrated yet.
@@ -81,6 +84,10 @@ $offset = ($page - 1) * $limit;
 $search = trim($_GET['search'] ?? '');
 $tipi   = trim($_GET['tipi'] ?? '');
 $statusi = trim($_GET['statusi'] ?? '');
+$kategoria = trim($_GET['kategoria'] ?? '');
+
+// Fetch categories for filter
+$categories = $pdo->query("SELECT id_kategoria, emri FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
 $where  = [];
 $params = [];
@@ -97,6 +104,10 @@ if ($statusi !== '') {
     $where[] = 'k.statusi = ?';
     $params[] = $statusi;
 }
+if ($kategoria !== '') {
+    $where[] = 'k.id_kategoria = ?';
+    $params[] = (int) $kategoria;
+}
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $countStmt = $pdo->prepare("SELECT COUNT(*) FROM Kerkesa_per_Ndihme k $whereSQL");
@@ -104,19 +115,20 @@ $countStmt->execute($params);
 $total = (int) $countStmt->fetchColumn();
 $totalPages = (int) ceil($total / $limit);
 
-$sql = "SELECT k.*, p.emri AS krijuesi_emri
+$sql = "SELECT k.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
         FROM Kerkesa_per_Ndihme k
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
+        LEFT JOIN Kategoria kat ON kat.id_kategoria = k.id_kategoria
         $whereSQL
         ORDER BY 
-        CASE WHEN k.statusi = 'open' THEN 0 ELSE 1 END ASC,
+        CASE WHEN k.statusi IN ('open','Open') THEN 0 ELSE 1 END ASC,
         k.krijuar_me DESC
         LIMIT ? OFFSET ?";
 $params[] = $limit;
 $params[] = $offset;
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
-$requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$requests = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
 // Trust stats
 $statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme")->fetchColumn();
@@ -133,7 +145,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260320b">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
   <?= csrf_meta() ?>
@@ -163,6 +175,12 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <?= $request['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
       </span>
      <span class="rq-badge rq-badge--<?= $request['statusi'] ?>"><?= status_label($request['statusi']) ?></span>
+     <?php if (!empty($request['kategoria_emri'])): ?>
+     <span class="rq-badge rq-badge--category">
+       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+       <?= htmlspecialchars($request['kategoria_emri']) ?>
+     </span>
+     <?php endif; ?>
     </div>
     <h1><?= htmlspecialchars($request['titulli']) ?></h1>
     <div class="rq-detail-hero__meta">
@@ -176,16 +194,6 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <div class="rq-detail-layout">
     <!-- Main content -->
     <div class="rq-detail-main">
-      <div class="rq-detail-banner">
-        <?php
-          $detailImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
-          if (!empty($request['imazhi'])) {
-              $detailImgSrc = strpos($request['imazhi'], '/') === 0 ? $request['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $request['imazhi'];
-          }
-        ?>
-        <img src="<?= htmlspecialchars($detailImgSrc) ?>" alt="<?= htmlspecialchars($request['titulli']) ?>" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
-      </div>
-
       <div class="rq-detail-text">
         <h2>Përshkrimi i kërkesës</h2>
         <p><?= nl2br(htmlspecialchars($request['pershkrimi'] ?? 'Nuk ka përshkrim.')) ?></p>
@@ -259,7 +267,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
           <?php elseif ($canApplyToRequest && !$myRequestApplication): ?>
             <button type="button" class="rq-btn-full" id="rq-apply-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-              Apliko për këtë kërkesë
+              <?= $request['tipi'] === 'request' ? 'Dua të ndihmoj' : 'Kam nevojë për këtë' ?>
             </button>
             <p class="rq-sidebar-hint">Postuesi do të njoftohet menjëherë dhe do të mund t'ju kontaktojë me email.</p>
             <div class="rq-inline-status" id="rq-apply-status" style="display:none"></div>
@@ -359,13 +367,22 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <?php endif; ?>
       </div>
 
-      <!-- Trust box -->
-      <div class="rq-sidebar-trust">
-        <div class="rq-sidebar-trust__icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+      <!-- Trust box & Reporting -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="rq-sidebar-trust">
+          <div class="rq-sidebar-trust__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+          <p><strong>Platformë komunitare</strong></p>
+          <p class="rq-sidebar-trust__sub">Kjo platformë mundëson lidhje direkte midis vullnetarëve dhe atyre që kanë nevojë.</p>
         </div>
-        <p><strong>Platformë komunitare</strong></p>
-        <p class="rq-sidebar-trust__sub">Kjo platformë mundëson lidhje direkte midis vullnetarëve dhe atyre që kanë nevojë.</p>
+
+        <?php if ($currUserId && !$isOwner): ?>
+        <button class="rq-btn-full rq-btn-sm" style="background:#fff;color:#ef4444;border:1.5px solid #fee2e2" onclick="reportHelpRequest(<?= (int) $request['id_kerkese_ndihme'] ?>)">
+          <svg style="margin-right:8px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+          Raporto këtë kërkesë
+        </button>
+        <?php endif; ?>
       </div>
     </aside>
   </div>
@@ -443,6 +460,12 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <option value="open" <?= $statusi === 'open' ? 'selected' : '' ?>>Hapur</option>
         <option value="closed" <?= $statusi === 'closed' ? 'selected' : '' ?>>Mbyllur</option>
       </select>
+      <select name="kategoria" onchange="this.form.submit()">
+        <option value="">Të gjitha kategoritë</option>
+        <?php foreach ($categories as $cat): ?>
+        <option value="<?= (int) $cat['id_kategoria'] ?>" <?= $kategoria === (string) $cat['id_kategoria'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['emri']) ?></option>
+        <?php endforeach; ?>
+      </select>
       <button type="submit" class="rq-filters__btn">Kërko</button>
     </div>
   </form>
@@ -492,25 +515,43 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <h3>Asnjë rezultat për këtë filtrim</h3>
         <p>Provo të zgjedhish një tab tjetër ose hiq filtrat.</p>
       </div>
-      <?php foreach ($requests as $i => $req): ?>
-        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card rq-card--typed" data-type="<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>" style="animation-delay: <?= $i * 0.05 ?>s">
-          <div class="rq-card__type-bar rq-card__type-bar--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"></div>
-          <div class="rq-card__visual">
-            <?php
-              $cardImgSrc = '/TiranaSolidare/public/assets/images/default-request.svg';
-              if (!empty($req['imazhi'])) {
-                  $cardImgSrc = strpos($req['imazhi'], '/') === 0 ? $req['imazhi'] : '/TiranaSolidare/public/assets/uploads/' . $req['imazhi'];
-              }
-            ?>
-            <img src="<?= htmlspecialchars($cardImgSrc) ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="rq-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
-            <div class="rq-card__overlay">
-              <span class="rq-badge rq-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+      <?php foreach ($requests as $i => $req):
+        $cardType = $req['tipi'] === 'offer' ? 'offer' : 'request';
+        $isFeatured = ($i === 0 && $page <= 1);
+      ?>
+        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card rq-card--typed<?= $isFeatured ? ' rq-card--featured' : '' ?>" data-type="<?= $cardType ?>" style="animation-delay: <?= $i * 0.05 ?>s">
+          <div class="rq-card__type-bar rq-card__type-bar--<?= $cardType ?>"></div>
+          <?php if ($isFeatured): ?>
+          <div class="rq-card__featured-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Më e reja
+          </div>
+          <?php endif; ?>
+          <div class="rq-card__header">
+            <div class="rq-card__badges">
+              <span class="rq-badge rq-badge--<?= $cardType ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
               <span class="rq-badge rq-badge--<?= $req['statusi'] ?>"><?= status_label($req['statusi']) ?></span>
+              <?php if (!empty($req['kategoria_emri'])): ?>
+              <span class="rq-badge rq-badge--category"><?= htmlspecialchars($req['kategoria_emri']) ?></span>
+              <?php endif; ?>
+            </div>
+            <div class="rq-card__type-icon rq-card__type-icon--<?= $cardType ?>">
+              <?php if ($req['tipi'] === 'request'): ?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <?php else: ?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/></svg>
+              <?php endif; ?>
             </div>
           </div>
           <div class="rq-card__content">
             <h3 class="rq-card__title"><?= htmlspecialchars($req['titulli']) ?></h3>
-            <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($req['pershkrimi'] ?? '', 0, 110)) ?>...</p>
+            <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($req['pershkrimi'] ?? '', 0, $isFeatured ? 220 : 110)) ?><?= mb_strlen($req['pershkrimi'] ?? '') > ($isFeatured ? 220 : 110) ? '...' : '' ?></p>
+            <?php if ($isFeatured && !empty($req['vendndodhja'])): ?>
+            <div class="rq-card__location">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <?= htmlspecialchars($req['vendndodhja']) ?>
+            </div>
+            <?php endif; ?>
             <div class="rq-card__footer">
               <div class="rq-card__meta">
                 <span class="rq-card__poster js-profile-link" role="link" tabindex="0" data-profile-url="<?= htmlspecialchars(ts_public_profile_url((int) ($req['id_perdoruesi'] ?? 0), (string) ($req['krijuesi_emri'] ?? 'Anonim'))) ?>" aria-label="Hap profilin publik të <?= htmlspecialchars($req['krijuesi_emri'] ?? 'Anonim') ?>">
@@ -534,14 +575,14 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
     <?php if ($totalPages > 1): ?>
       <nav class="rq-pagination">
         <?php if ($page > 1): ?>
-          <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>" class="rq-pagination__btn rq-pagination__btn--nav">&larr; Para</a>
+          <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>&kategoria=<?= urlencode($kategoria) ?>" class="rq-pagination__btn rq-pagination__btn--nav">&larr; Para</a>
         <?php endif; ?>
         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-          <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>"
+          <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>&kategoria=<?= urlencode($kategoria) ?>"
              class="rq-pagination__btn <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
         <?php endfor; ?>
         <?php if ($page < $totalPages): ?>
-          <a href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>" class="rq-pagination__btn rq-pagination__btn--nav">Tjetër &rarr;</a>
+          <a href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>&tipi=<?= urlencode($tipi) ?>&statusi=<?= urlencode($statusi) ?>&kategoria=<?= urlencode($kategoria) ?>" class="rq-pagination__btn rq-pagination__btn--nav">Tjetër &rarr;</a>
         <?php endif; ?>
       </nav>
     <?php endif; ?>
@@ -922,6 +963,33 @@ if (deleteBtn) {
         }
     });
 }
+
+// ─── Animated count-up for trust bar numbers ───
+(function() {
+  const trustItems = document.querySelectorAll('.rq-trust-item strong');
+  if (!trustItems.length) return;
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const target = parseInt(el.textContent, 10);
+      if (isNaN(target) || el.dataset.counted) return;
+      el.dataset.counted = '1';
+      const duration = 1200;
+      const start = performance.now();
+      function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased);
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      el.textContent = '0';
+      requestAnimationFrame(step);
+      observer.unobserve(el);
+    });
+  }, { threshold: 0.3 });
+  trustItems.forEach(el => observer.observe(el));
+})();
 
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js"></script>

@@ -20,6 +20,7 @@ switch ($action) {
     case 'conversations':
         require_method('GET');
         $user = require_auth();
+        release_session();
 
         // Get list of users with whom the current user has exchanged messages,
         // along with the last message and unread count
@@ -153,7 +154,7 @@ switch ($action) {
 
         // Verify receiver exists and is active
         $receiverCheck = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ?'
+            'SELECT id_perdoruesi, emri, statusi_llogarise, roli FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $receiverCheck->execute([$receiverId]);
         $receiver = $receiverCheck->fetch();
@@ -173,8 +174,11 @@ switch ($action) {
             $stmt->execute([$user['id'], $receiverId, $message]);
             $msgId = (int) $pdo->lastInsertId();
 
-            // Create notification for receiver
+            // Create notification for receiver (route to correct panel)
             $notifMsg = "{$user['emri']} ju dërgoi një mesazh.";
+            $notifLink = (is_admin_role($receiver['roli']))
+                ? '/TiranaSolidare/views/dashboard.php#messages'
+                : '/TiranaSolidare/views/volunteer_panel.php?tab=messages';
             $notifStmt = $pdo->prepare(
                 'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku) VALUES (?, ?, ?, ?)'
             );
@@ -182,7 +186,7 @@ switch ($action) {
                 $receiverId,
                 $notifMsg,
                 'mesazh',
-                '/TiranaSolidare/views/dashboard.php#messages'
+                $notifLink
             ]);
 
             json_success([

@@ -24,7 +24,7 @@ switch ($action) {
         $user       = require_auth();
         $pagination = get_pagination();
 
-        if ($user['roli'] === 'admin') {
+        if (is_admin_role($user['roli'])) {
             // Admin sees all
             $countStmt = $pdo->query('SELECT COUNT(*) FROM Aplikimi');
             $total = (int) $countStmt->fetchColumn();
@@ -57,7 +57,7 @@ switch ($action) {
             $stmt->execute([$user['id'], $pagination['limit'], $pagination['offset']]);
         }
 
-        $applications = $stmt->fetchAll();
+        $applications = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         json_success([
             'applications' => $applications,
@@ -102,7 +102,7 @@ switch ($action) {
              LIMIT ? OFFSET ?"
         );
         $stmt->execute([$eventId, $pagination['limit'], $pagination['offset']]);
-        $apps = $stmt->fetchAll();
+        $apps = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         // Summary counts
         $summary = $pdo->prepare(
@@ -134,7 +134,7 @@ switch ($action) {
         require_method('POST');
         $user = require_auth();
 
-        if ($user['roli'] === 'admin') {
+        if (is_admin_role($user['roli'])) {
             json_error('Administratorët nuk mund të aplikojnë si vullnetarë.', 403);
         }
 
@@ -197,7 +197,7 @@ switch ($action) {
         $appId = (int) $pdo->lastInsertId();
 
         // Create notification for admins
-        $admins = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE roli = 'admin'");
+        $admins = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE roli IN ('admin','super_admin')");
         $notifStmt = $pdo->prepare(
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
@@ -337,7 +337,7 @@ try {
          ORDER BY a.aplikuar_me DESC"
     );
     $stmt->execute([$targetId]);
-    json_success(['applications' => $stmt->fetchAll()]);
+    json_success(['applications' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC))]);
 } catch (\Exception $e) {
     error_log('applications by_user: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     json_error('Gabim gjatë marrjes së aplikimeve.', 500);

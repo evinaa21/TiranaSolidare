@@ -9,10 +9,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Redirect volunteers to their own panel
-if (($_SESSION['roli'] ?? '') !== 'admin') {
+if (!in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
     header("Location: /TiranaSolidare/views/volunteer_panel.php");
     exit();
 }
+
+$isSuperAdmin = ts_normalize_value($_SESSION['roli'] ?? '') === 'super_admin';
 
 $isAdmin = true;
 $userEmri = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
@@ -27,10 +29,15 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?= csrf_meta() ?>
   <title>Paneli — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=<?= filemtime(__DIR__.'/../public/assets/styles/main.css') ?>">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css?v=<?= filemtime(__DIR__.'/../public/assets/styles/dashboard.css') ?>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=<?= filemtime(__DIR__.'/../assets/css/map.css') ?>">
+  <!-- Emergency panel visibility override – cannot be cached -->
+  <style>
+    .db-panel { display: none !important; }
+    .db-panel.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
+  </style>
 </head>
 <body class="db-body">
 
@@ -71,6 +78,16 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
       <span>Raportet</span>
     </button>
+    <button class="db-nav-item" data-panel="categories" onclick="switchPanel('categories', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+      <span>Kategoritë</span>
+    </button>
+    <?php if ($isSuperAdmin): ?>
+    <button class="db-nav-item" data-panel="audit" onclick="switchPanel('audit', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+      <span>Auditimi</span>
+    </button>
+    <?php endif; ?>
     <?php endif; ?>
 
     <button class="db-nav-item" data-panel="messages" onclick="switchPanel('messages', this)">
@@ -121,7 +138,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </button>
     <h1 class="db-topbar__title">Paneli</h1>
     <div class="db-topbar__right">
-      <span class="db-topbar__role db-topbar__role--<?= $isAdmin ? 'admin' : 'vol' ?>"><?= $userRoli ?></span>
+      <span class="db-topbar__role db-topbar__role--<?= $isAdmin ? 'admin' : 'vol' ?>"><?= $isSuperAdmin ? 'Super Admin' : e($userRoli) ?></span>
     </div>
   </header>
 
@@ -149,13 +166,17 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <div class="db-panel" id="panel-events">
     <div class="db-panel__header">
       <h3>Menaxho Eventet</h3>
-      <button class="db-btn db-btn--primary" onclick="toggleCreateEvent()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-        Krijo Event
-      </button>
+        <div style="display:flex; gap:10px;">
+            <button class="db-btn db-btn--primary" onclick="window.openQrScanner()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="5" height="5" x="7" y="7" rx="1"/><rect width="5" height="5" x="12" y="12" rx="1"/></svg>
+              Skano QR
+            </button>
+            <button class="db-btn db-btn--primary" onclick="toggleCreateEvent()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Krijo Event
+            </button>
+        </div>
     </div>
-
-    <!-- Create event form -->
     <div class="db-create-form" id="create-event-wrapper" style="display:none">
       <form id="create-event-form" class="db-form">
         <div class="db-form__row">
@@ -221,8 +242,14 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <!-- ═══════════════ PANEL: USERS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-users">
     <div class="db-panel__header">
-      <h3>Menaxho Përdoruesit</h3>
-      <p class="db-panel__subtitle">Shikoni, bllokoni ose menaxhoni llogaritë e përdoruesve.</p>
+      <div>
+        <h3>Menaxho Përdoruesit</h3>
+        <p class="db-panel__subtitle">Shikoni, bllokoni ose menaxhoni llogaritë e përdoruesve.</p>
+      </div>
+      <a href="/TiranaSolidare/api/export.php?type=users" target="_blank" class="db-btn db-btn--success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Eksporto CSV
+      </a>
     </div>
     <div class="db-table-wrap" id="admin-user-list">
       <div class="db-loading">Duke ngarkuar përdoruesit…</div>
@@ -258,9 +285,17 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <div class="db-panel" id="panel-reports">
     <div class="db-panel__header">
       <h3>Raportet & Statistikat</h3>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/TiranaSolidare/api/export.php?type=events" target="_blank" class="db-btn db-btn--ghost">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          CSV Evente
+        </a>
+        <a href="/TiranaSolidare/api/export.php?type=applications" target="_blank" class="db-btn db-btn--ghost">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          CSV Aplikime
+        </a>
         <button class="db-btn db-btn--primary" onclick="generateReport()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
           Gjenero raport
         </button>
       </div>
@@ -275,6 +310,62 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       </div>
     </div>
   </div>
+
+  <!-- ═══════════════ PANEL: CATEGORIES (Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-categories">
+    <div class="db-panel__header">
+      <div>
+        <h3>Menaxho Kategoritë</h3>
+        <p class="db-panel__subtitle">Krijoni, riemërtoni ose fshini kategoritë e eventeve.</p>
+      </div>
+      <button class="db-btn db-btn--primary" onclick="toggleCategoryForm()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Krijo Kategori
+      </button>
+    </div>
+
+    <div id="category-create-form" class="db-create-form" style="display:none">
+      <div class="db-form__group" style="max-width:360px;">
+        <label>Emri i Kategorisë</label>
+        <input type="text" id="new-category-name" class="ud-input" placeholder="p.sh. Mjedisi, Ushqimi…" maxlength="60">
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="db-btn db-btn--primary" onclick="createCategory()">Shto</button>
+          <button class="db-btn db-btn--ghost" onclick="toggleCategoryForm()">Anulo</button>
+        </div>
+        <div id="cat-create-status" style="font-size:13px;min-height:16px;margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <div id="category-list">
+      <div class="db-loading">Duke ngarkuar kategoritë…</div>
+    </div>
+  </div>
+
+  <?php if ($isSuperAdmin): ?>
+  <!-- ═══════════════ PANEL: AUDIT LOG (Super Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-audit">
+    <div class="db-panel__header">
+      <div>
+        <h3>Regjistri i Auditimit</h3>
+        <p class="db-panel__subtitle">Të gjitha veprimet administrative të regjistruara.</p>
+      </div>
+    </div>
+
+    <!-- Audit filters -->
+    <div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;">
+      <input type="date" id="audit-date-from" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAuditLog(1)">
+      <input type="date" id="audit-date-to" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAuditLog(1)">
+      <input type="text" id="audit-filter-action" placeholder="Filtro sipas veprimit…" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:180px;" onkeydown="if(event.key==='Enter')loadAuditLog(1)">
+      <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAuditLog(1)">Filtro</button>
+      <button class="db-btn db-btn--sm" onclick="document.getElementById('audit-date-from').value='';document.getElementById('audit-date-to').value='';document.getElementById('audit-filter-action').value='';loadAuditLog(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+    </div>
+
+    <div id="audit-log-container">
+      <div class="db-loading">Duke ngarkuar regjistrin…</div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <?php endif; ?>
 
   <!-- ═══════════════ PANEL: MESSAGES ═══════════════ -->
@@ -297,11 +388,50 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <div class="db-panel" id="panel-notifications">
     <div class="db-panel__header">
       <h3>Njoftimet</h3>
-      <button class="db-btn db-btn--ghost" onclick="markAllRead()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-        Shëno të gjitha si të lexuara
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <?php if ($isSuperAdmin): ?>
+        <button class="db-btn db-btn--accent" onclick="toggleBroadcastForm()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+          Dërgo Njoftim
+        </button>
+        <?php endif; ?>
+        <button class="db-btn db-btn--ghost" onclick="markAllRead()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          Shëno të gjitha
+        </button>
+      </div>
     </div>
+
+    <?php if ($isSuperAdmin): ?>
+    <!-- Broadcast form (super_admin only) -->
+    <div id="broadcast-form" class="db-broadcast-form" style="display:none">
+      <h4 class="db-broadcast-form__title">Dërgo njoftim masiv</h4>
+      <div class="db-form__row" style="grid-template-columns:1fr auto;gap:12px;align-items:end;">
+        <div class="db-form__group" style="margin-bottom:0">
+          <label>Mesazhi</label>
+          <textarea id="broadcast-msg" class="ud-input" rows="2" maxlength="300" placeholder="Shkruaj njoftimin për të gjithë…" style="resize:vertical;"></textarea>
+        </div>
+        <div class="db-form__group" style="margin-bottom:0">
+          <label>Destinacioni</label>
+          <select id="broadcast-role" class="ud-input" style="padding:8px 12px;">
+            <option value="all">Të gjithë</option>
+            <option value="volunteer">Vetëm Vullnetarët</option>
+            <option value="admin">Vetëm Adminët</option>
+          </select>
+        </div>
+      </div>
+      <div class="db-form__group" style="margin-top:10px;">
+        <label>Link (opsional)</label>
+        <input type="text" id="broadcast-link" class="ud-input" placeholder="https://… ose /TiranaSolidare/…">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="db-btn db-btn--primary" onclick="sendBroadcast()">Dërgo Njoftimin</button>
+        <button class="db-btn db-btn--ghost" onclick="toggleBroadcastForm()">Anulo</button>
+      </div>
+      <div id="broadcast-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+    </div>
+    <?php endif; ?>
+
     <div id="notification-list">
       <div class="db-loading">Duke ngarkuar njoftimet…</div>
     </div>
@@ -311,27 +441,41 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <div class="db-panel" id="panel-profile">
   <div class="db-panel__header">
     <h3>Profili im</h3>
+    <a href="/TiranaSolidare/views/public_profile.php" target="_blank" class="db-btn db-btn--ghost">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+      Shiko profilin publik
+    </a>
   </div>
 
-  <div class="ud-header">
-    <div class="ud-avatar ud-avatar--active"><?= $userInitial ?></div>
+  <!-- Avatar + Identity header -->
+  <div class="ud-header" style="margin-bottom:2rem;">
+    <div class="db-profile-avatar-wrap" id="profile-avatar-wrap">
+      <div class="ud-avatar ud-avatar--active" id="profile-avatar-initials"><?= $userInitial ?></div>
+      <img id="profile-avatar-img" src="" alt="" style="display:none;width:64px;height:64px;border-radius:16px;object-fit:cover;">
+      <label class="db-avatar-upload-btn" title="Ndrysho foton">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="adminUploadPicture(this)">
+      </label>
+    </div>
     <div class="ud-header__info">
       <h2 class="ud-header__name"><?= $userEmri ?></h2>
       <p class="ud-header__email"><?= $userEmail ?></p>
       <div class="ud-header__badges">
-        <span class="db-badge db-badge--admin"><?= $userRoli ?></span>
+        <span class="db-badge db-badge--admin"><?= $isSuperAdmin ? 'Super Admin' : e($userRoli) ?></span>
       </div>
+      <div id="profile-avatar-status" style="font-size:12px;min-height:14px;margin-top:4px;color:var(--db-primary);"></div>
     </div>
   </div>
 
   <div class="ud-actions-grid">
 
+    <!-- Name -->
     <div class="ud-card">
       <div class="ud-card__header">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <h4>Ndrysho emrin</h4>
+        <h4>Emri</h4>
       </div>
-      <p class="ud-card__desc">Emri shfaqet në panelin e administrimit dhe te njoftimet.</p>
+      <p class="ud-card__desc">Emri shfaqet në panel dhe te njoftimet.</p>
       <div class="ud-card__body">
         <input type="text" id="admin-emri" class="ud-input" placeholder="Emri Mbiemri">
         <button class="db-btn db-btn--primary" onclick="adminSaveName()">Ruaj emrin</button>
@@ -339,10 +483,28 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       </div>
     </div>
 
+    <!-- Bio -->
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        <h4>Bio</h4>
+      </div>
+      <p class="ud-card__desc">Bio shfaqet në profilin tuaj publik.</p>
+      <div class="ud-card__body">
+        <textarea id="admin-bio" class="ud-input" rows="3" maxlength="300" placeholder="Shkruaj diçka rreth vetes…" style="resize:vertical;"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <button class="db-btn db-btn--primary" onclick="adminSaveBio()">Ruaj bio-n</button>
+          <span id="admin-bio-counter" style="font-size:12px;color:#94a3b8;">0/300</span>
+        </div>
+        <div id="admin-bio-status" style="font-size:13px;min-height:16px;margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Password -->
     <div class="ud-card">
       <div class="ud-card__header">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <h4>Ndrysho fjalëkalimin</h4>
+        <h4>Fjalëkalimi</h4>
       </div>
       <p class="ud-card__desc">Vendos një fjalëkalim të fortë dhe unik.</p>
       <div class="ud-card__body">
@@ -354,22 +516,59 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       </div>
     </div>
 
-  </div>
+    <!-- Profile Color -->
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+        <h4>Ngjyra e Profilit</h4>
+      </div>
+      <p class="ud-card__desc">Personalizo ngjyrën e avatarit tënd.</p>
+      <div class="ud-card__body">
+        <div class="db-color-grid" id="profile-color-grid"></div>
+        <button class="db-btn db-btn--primary" style="margin-top:12px;" onclick="adminSaveColor()">Ruaj ngjyrën</button>
+        <div id="admin-color-status" style="font-size:13px;min-height:16px;margin-top:4px;"></div>
+      </div>
+    </div>
 
-  <?php if (!$isAdmin): ?>
-  <div class="ud-card" style="border-color:#dc3545;margin-top:1.5rem;">
-    <div class="ud-card__header">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      <h4 style="color:#dc3545;">Fshi llogarinë</h4>
+    <!-- Notification preferences -->
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <h4>Preferencat e Njoftimeve</h4>
+      </div>
+      <p class="ud-card__desc">Zgjidhni nëse dëshironi njoftime me email.</p>
+      <div class="ud-card__body">
+        <label class="db-toggle-row">
+          <span>Njoftime me email</span>
+          <label class="db-toggle">
+            <input type="checkbox" id="admin-email-notif" onchange="adminSaveNotifPrefs()">
+            <span class="db-toggle__slider"></span>
+          </label>
+        </label>
+        <div id="admin-notif-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+      </div>
     </div>
-    <p class="ud-card__desc">Kjo veprim është i pakthyeshëm. Të gjitha të dhënat tuaja do të fshihen përfundimisht.</p>
-    <div class="ud-card__body">
-      <input type="password" id="delete-account-pw" class="ud-input" placeholder="Konfirmo fjalëkalimin" autocomplete="new-password">
-      <button class="db-btn" style="background:#dc3545;color:#fff;border:none;" onclick="deleteAccount()">Fshi llogarinë përfundimisht</button>
-      <div id="delete-account-status" style="font-size:13px;min-height:16px;color:#dc3545;"></div>
+
+    <!-- Profile visibility -->
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <h4>Dukshmëria e Profilit</h4>
+      </div>
+      <p class="ud-card__desc">Kur aktivizohet, profili juaj është i dukshëm për publikun.</p>
+      <div class="ud-card__body">
+        <label class="db-toggle-row">
+          <span>Profil publik</span>
+          <label class="db-toggle">
+            <input type="checkbox" id="admin-profile-public" onchange="adminSaveVisibility()">
+            <span class="db-toggle__slider"></span>
+          </label>
+        </label>
+        <div id="admin-visibility-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+      </div>
     </div>
+
   </div>
-  <?php endif; ?>
 </div>
 </main>
 
@@ -377,11 +576,15 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <div id="db-toast-container"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/TiranaSolidare/assets/js/map-component.js"></script>
-<script src="/TiranaSolidare/assets/js/main.js"></script>
-<script src="/TiranaSolidare/assets/js/ajax-polling.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js?v=<?= filemtime(__DIR__.'/../assets/js/map-component.js') ?>"></script>
+<script src="/TiranaSolidare/assets/js/main.js?v=<?= filemtime(__DIR__.'/../assets/js/main.js') ?>"></script>
+<script src="/TiranaSolidare/assets/js/ajax-polling.js?v=<?= filemtime(__DIR__.'/../assets/js/ajax-polling.js') ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="/TiranaSolidare/assets/js/dashboard-ui.js"></script>
+<script>
+const CURRENT_USER_ID = <?= (int) $_SESSION['user_id'] ?>;
+const IS_SUPER_ADMIN = <?= $isSuperAdmin ? 'true' : 'false' ?>;
+</script>
+<script src="/TiranaSolidare/assets/js/dashboard-ui.js?v=<?= filemtime(__DIR__.'/../assets/js/dashboard-ui.js') ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   let eventMapPicker = null;
@@ -458,6 +661,10 @@ let adminCsrf = getAdminCSRF();
   const _fetch = window.fetch;
   window.fetch = async function(...args) {
     const res = await _fetch.apply(this, args);
+    // Handle session expiry / unauthorized for ALL fetch calls on this page
+    if (res.status === 401 || res.status === 403) {
+      if (typeof handleSessionExpired === 'function') handleSessionExpired();
+    }
     const m = (args[1]?.method || 'GET').toUpperCase();
     if (['POST','PUT','DELETE'].includes(m)) {
       try { refreshCSRF(await res.clone().json()); adminCsrf = getAdminCSRF(); } catch(e) {}
@@ -508,12 +715,8 @@ async function adminSavePassword() {
 }
 
 async function adminLoadProfile() {
-  try {
-    const res = await fetch('/TiranaSolidare/api/auth.php?action=me', { credentials: 'same-origin' });
-    const json = await res.json();
-    if (!json.success) return;
-    document.getElementById('admin-emri').value = json.data.emri || '';
-  } catch(e) {}
+  // Full implementation is in dashboard-ui.js → window.loadAdminProfile
+  if (typeof loadAdminProfile === 'function') await loadAdminProfile();
 }
 
 async function deleteAccount() {

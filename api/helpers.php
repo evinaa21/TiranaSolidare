@@ -30,7 +30,7 @@ if (isset($_SESSION['user_id'])) {
         session_destroy();
         if (session_status() === PHP_SESSION_NONE) session_start();
         http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Sesioni ka skaduar. Ju lutem kyçuni përsëri.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['success' => false, 'message' => 'Sesioni ka skaduar. Ju lutem kyçuni përsëri.'], JSON_UNESCAPED_UNICODE);
         exit();
     }
     $_SESSION['last_activity'] = time();
@@ -162,26 +162,58 @@ function require_auth(): array
             json_error('Llogaria juaj është çaktivizuar.', 403);
         }
 
-        // Sync role from DB into session (handles demotions)
-        $_SESSION['roli'] = $dbUser['roli'];
+        // Sync role from DB into session (handles multiple string cases)
+        $_SESSION['roli'] = ts_normalize_value($dbUser['roli'] ?? 'volunteer');
         $_SESSION['_auth_verified_at'] = $now;
     }
 
     return [
         'id'   => (int) $_SESSION['user_id'],
         'emri' => $_SESSION['emri'] ?? '',
-        'roli' => $_SESSION['roli'] ?? 'volunteer',
+        'roli' => ts_normalize_value($_SESSION['roli'] ?? 'volunteer'),
     ];
 }
 
 /**
- * Require the current user to be an Admin.
+ * Check if a role string represents an admin-level role.
+ */
+function is_admin_role(string $role): bool
+{
+    return in_array($role, ['admin', 'super_admin'], true);
+}
+
+/**
+ * Release the session lock for read-only requests.
+ * Call this after auth checks are done and no more session writes needed.
+ * Allows other concurrent API requests to proceed without waiting.
+ */
+function release_session(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+}
+
+/**
+ * Require the current user to be an Admin (admin or super_admin).
  */
 function require_admin(): array
 {
     $user = require_auth();
-    if ($user['roli'] !== 'admin') {
+    if (!in_array($user['roli'], ['admin', 'super_admin'], true)) {
         json_error('Kjo veprim kërkon privilegje administratori. / Forbidden.', 403);
+    }
+    return $user;
+}
+
+/**
+ * Require the current user to be a Super Admin.
+ */
+function require_super_admin(): array
+{
+    $user = require_auth();
+    if ($user['roli'] !== 'super_admin') {
+        json_error('Kjo veprim kërkon privilegje super administratori. / Forbidden.', 403);
     }
     return $user;
 }

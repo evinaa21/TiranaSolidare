@@ -1,0 +1,1 @@
+<?php session_id('test1234'); session_start(); ['user_id']=1; ['roli']='admin'; session_write_close();

@@ -22,7 +22,7 @@ $isOwner = $isLoggedIn && (int) $_SESSION['user_id'] === $userId;
 $stmt = $pdo->prepare(
     "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, profile_color, krijuar_me
      FROM Perdoruesi
-     WHERE id_perdoruesi = ? AND statusi_llogarise = 'Aktiv'"
+     WHERE id_perdoruesi = ? AND statusi_llogarise = 'active'"
 );
 $stmt->execute([$userId]);
 $profile = $stmt->fetch(PDO::FETCH_ASSOC);

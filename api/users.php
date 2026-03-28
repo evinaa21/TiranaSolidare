@@ -113,15 +113,14 @@ switch ($action) {
     // ── LIST USERS ─────────────────────────────────
     case 'list':
         require_method('GET');
-        require_admin();
+        $user = require_admin();
+        release_session();
         $pagination = get_pagination();
 
         // Filters
         $roli    = $_GET['roli'] ?? null;
         $statusi = $_GET['statusi'] ?? null;
         $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-        $user = require_auth();
 
 $where  = [];
 $params = [];
@@ -161,7 +160,7 @@ $params[] = $user['id'];
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $users = $stmt->fetchAll();
+        $users = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         json_success([
             'users'       => $users,
@@ -267,7 +266,7 @@ $params[] = $user['id'];
             json_error('Përdoruesi nuk u gjet.', 404);
         }
 
-        if ($targetUser['roli'] === 'admin') {
+        if (is_admin_role($targetUser['roli'])) {
             json_error('Nuk mund të bllokoni një administrator tjetër.', 403);
         }
 
@@ -337,10 +336,10 @@ $params[] = $user['id'];
         json_success(['message' => 'Përdoruesi u zhbllokua.']);
         break;
 
-    // ── CHANGE ROLE ────────────────────────────────
+    // ── CHANGE ROLE (Super Admin only) ────────────
     case 'change_role':
         require_method('PUT');
-        $admin = require_admin();
+        $admin = require_super_admin();
         $id    = (int) ($_GET['id'] ?? 0);
         $body  = get_json_body();
 
@@ -358,10 +357,16 @@ $params[] = $user['id'];
         }
 
         // Fix D-05: Use fetch() for role change
-        $checkUser = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $checkUser = $pdo->prepare('SELECT id_perdoruesi, roli FROM Perdoruesi WHERE id_perdoruesi = ?');
         $checkUser->execute([$id]);
-        if (!$checkUser->fetch()) {
+        $targetUser = $checkUser->fetch();
+        if (!$targetUser) {
             json_error('Përdoruesi nuk u gjet.', 404);
+        }
+
+        // Cannot change another super_admin's role
+        if ($targetUser['roli'] === 'super_admin') {
+            json_error('Nuk mund të ndryshoni rolin e një Super Administratori.', 403);
         }
 
         $stmt = $pdo->prepare('UPDATE Perdoruesi SET roli = ? WHERE id_perdoruesi = ?');
@@ -396,7 +401,7 @@ $params[] = $user['id'];
         if (!$target) {
             json_error('Përdoruesi nuk u gjet.', 404);
         }
-        if ($target['roli'] === 'admin') {
+        if (is_admin_role($target['roli'])) {
             json_error('Nuk mund të çaktivizoni një administrator tjetër.', 403);
         }
         if ($target['statusi_llogarise'] === 'deactivated') {
@@ -507,8 +512,8 @@ $params[] = $user['id'];
         $profile['total_kerkesa'] = $badgeInfo['metrics']['total_requests'];
         $profile['kerkesa_pranuar'] = $badgeInfo['metrics']['accepted_help_applications'];
         $profile['badges'] = $badgeInfo['badges'];
-        $profile['evente_te_fundit'] = $recentEvents->fetchAll();
-        $profile['kerkesa_te_fundit'] = $recentRequests->fetchAll();
+        $profile['evente_te_fundit'] = ts_normalize_rows($recentEvents->fetchAll(PDO::FETCH_ASSOC));
+        $profile['kerkesa_te_fundit'] = ts_normalize_rows($recentRequests->fetchAll(PDO::FETCH_ASSOC));
 
         json_success($profile);
         break;

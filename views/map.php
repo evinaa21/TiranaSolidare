@@ -21,13 +21,17 @@ $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
 // Fetch all open help requests with coordinates
 $stmtRequests = $pdo->query(
     "SELECT kn.id_kerkese_ndihme, kn.titulli, kn.vendndodhja, kn.latitude, kn.longitude,
-            kn.tipi, kn.statusi, p.emri AS krijuesi_emri
+            kn.tipi, kn.statusi, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+     LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
      WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL
      ORDER BY kn.krijuar_me DESC"
 );
-$requests = $stmtRequests->fetchAll(PDO::FETCH_ASSOC);
+$requests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));
+
+// Fetch categories for event filters
+$categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
 // Build markers JSON
 $markers = [];
@@ -38,6 +42,7 @@ foreach ($events as $ev) {
         'title'   => $ev['titulli'],
         'address' => $ev['vendndodhja'] ?? '',
         'type'    => 'event',
+        'category'=> $ev['kategoria_emri'] ?? '',
         'url'     => '/TiranaSolidare/views/events.php?id=' . $ev['id_eventi'],
         'extra'   => date('d M Y', strtotime($ev['data'])) . ($ev['kategoria_emri'] ? ' • ' . $ev['kategoria_emri'] : ''),
     ];
@@ -49,8 +54,9 @@ foreach ($requests as $req) {
         'title'   => $req['titulli'],
         'address' => $req['vendndodhja'] ?? '',
         'type'    => $req['tipi'] === 'offer' ? 'offer' : 'request',
+        'category'=> $req['kategoria_emri'] ?? '',
         'url'     => '/TiranaSolidare/views/help_requests.php?id=' . $req['id_kerkese_ndihme'],
-        'extra'   => status_label($req['tipi']) . ' • ' . status_label($req['statusi']),
+        'extra'   => status_label($req['tipi']) . ($req['kategoria_emri'] ? ' • ' . $req['kategoria_emri'] : '') . ' • ' . status_label($req['statusi']),
     ];
 }
 ?>
@@ -95,12 +101,12 @@ foreach ($requests as $req) {
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></strong><span>Kërkesa</span></div>
+        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></strong><span>Kërkoj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></strong><span>Kontribute</span></div>
+        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></strong><span>Ofroj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
@@ -124,14 +130,26 @@ foreach ($requests as $req) {
   </button>
   <button class="map-filter-btn" data-filter="request" onclick="filterMarkers('request', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-    Kërkesa
+    Kërkoj Ndihmë
     <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></span>
   </button>
   <button class="map-filter-btn" data-filter="offer" onclick="filterMarkers('offer', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-    Kontribute
+    Ofroj Ndihmë
     <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></span>
   </button>
+</div>
+
+<!-- Category sub-filters for events -->
+<div class="map-page-filters map-page-filters--categories" id="map-cat-filters" style="margin-top:-6px;padding-top:0;">
+  <?php foreach ($categories as $cat): 
+    $catEventCount = count(array_filter($events, fn($e) => ($e['kategoria_emri'] ?? '') === $cat['emri']));
+  ?>
+  <button class="map-filter-btn map-filter-btn--cat" data-cat="<?= htmlspecialchars($cat['emri']) ?>" onclick="filterByCategory('<?= htmlspecialchars($cat['emri'], ENT_QUOTES) ?>', this)">
+    <?= htmlspecialchars($cat['emri']) ?>
+    <span class="filter-count"><?= $catEventCount ?></span>
+  </button>
+  <?php endforeach; ?>
 </div>
 
 <!-- ─── LEGEND ─── -->
@@ -179,9 +197,12 @@ function initMap(markers) {
 }
 
 function filterMarkers(type, btn) {
-  // Update active button
-  document.querySelectorAll('.map-filter-btn').forEach(b => b.classList.remove('active'));
+  // Update active button (type filters)
+  document.querySelectorAll('.map-filter-btn:not(.map-filter-btn--cat)').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+
+  // Clear category filter
+  document.querySelectorAll('.map-filter-btn--cat').forEach(b => b.classList.remove('active'));
 
   // Filter markers
   let filtered;
@@ -192,6 +213,28 @@ function filterMarkers(type, btn) {
   }
 
   initMap(filtered);
+}
+
+function filterByCategory(catName, btn) {
+  // Toggle category button
+  const wasActive = btn.classList.contains('active');
+  document.querySelectorAll('.map-filter-btn--cat').forEach(b => b.classList.remove('active'));
+
+  // Clear type filter active states and set "Evente" as active
+  document.querySelectorAll('.map-filter-btn:not(.map-filter-btn--cat)').forEach(b => b.classList.remove('active'));
+  const eventBtn = document.querySelector('.map-filter-btn[data-filter="event"]');
+
+  if (wasActive) {
+    // Deselect category → show all
+    const allBtn = document.querySelector('.map-filter-btn[data-filter="all"]');
+    if (allBtn) allBtn.classList.add('active');
+    initMap(allMarkers);
+  } else {
+    btn.classList.add('active');
+    if (eventBtn) eventBtn.classList.add('active');
+    const filtered = allMarkers.filter(m => m.type === 'event' && m.category === catName);
+    initMap(filtered);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

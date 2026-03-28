@@ -649,122 +649,44 @@ body.page-requests .rq-blob--filters {
   border-color: rgba(0,113,93,0.2);
 }
 
-/* Card visual / image */
-.rq-card__visual {
-  position: relative;
-  height: 210px;
-  overflow: hidden;
+/* Card visual / image — REMOVED, replaced with header layout */
+.rq-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 22px 0;
+  gap: 12px;
 }
 
-.rq-card__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+.rq-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
 }
 
-.rq-card:hover .rq-card__img {
-  transform: scale(1.06);
-}
-
-.rq-card__img--fallback {
+.rq-card__type-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #003229, #00715D);
-  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
 }
 
-.rq-card__img--fallback.rq-card__img--offer {
-  background: linear-gradient(135deg, #00715D, #22a68a);
+.rq-card:hover .rq-card__type-icon {
+  transform: scale(1.05);
 }
 
-.rq-card__img--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
-  color: #8b9bb4;
+.rq-card__type-icon--request {
+  background: rgba(220, 38, 38, 0.06);
+  color: #dc2626;
 }
 
-.rq-card__img--placeholder.rq-card__img--offer {
-  background: linear-gradient(135deg, #e8f5f0 0%, #d1e7e0 100%);
-  color: #22a68a;
-}
-
-/* Badge overlay on image */
-.rq-card__overlay {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  display: flex;
-  gap: 8px;
-  z-index: 2;
-}
-
-/* Ensure badges remain readable on any image tone */
-.rq-card__overlay .rq-badge {
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(10px) saturate(135%);
-  -webkit-backdrop-filter: blur(10px) saturate(135%);
-}
-
-.rq-card__overlay .rq-badge--event {
-  background: rgba(0, 55, 45, 0.78);
-  font-weight: 700;
-}
-
-.rq-card__overlay .rq-badge--event-spotlight {
-  background: linear-gradient(135deg, #ffb703 0%, #fb5607 55%, #ff006e 100%);
-  color: #fff;
-  border-color: rgba(255,255,255,0.5);
-  box-shadow: 0 10px 24px rgba(251, 86, 7, 0.45), 0 4px 10px rgba(0,0,0,0.28);
-}
-
-.rq-card__overlay .rq-badge--request {
-  background: rgba(170, 35, 23, 0.86);
-}
-
-.rq-card__overlay .rq-badge--offer {
-  background: rgba(7, 103, 70, 0.86);
-}
-
-.rq-card__overlay .rq-badge--open {
-  background: rgba(12, 102, 58, 0.82);
-}
-
-.rq-card__overlay .rq-badge--closed,
-.rq-card__overlay .rq-badge--past {
-  background: rgba(55, 65, 81, 0.82);
-}
-
-/* Gradient scrim at top of image — keeps badges readable on bright/dark images */
-.rq-card__visual::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.35), transparent);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Gradient scrim at bottom of image */
-.rq-card__visual::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
-  pointer-events: none;
-  z-index: 1;
+.rq-card__type-icon--offer {
+  background: rgba(0, 113, 93, 0.06);
+  color: #00715D;
 }
 
 /* Card content */
@@ -933,27 +855,37 @@ body.page-requests .rq-blob--filters {
 }
 
 .rq-badge--request {
-  background: rgba(255, 71, 43, 0.14);
-  color: #b42318;
-  border: 1px solid rgba(180,35,24,0.28);
+  background: rgba(180, 35, 24, 0.07);
+  color: #9a3412;
+  border: 1px solid rgba(180,35,24,0.14);
 }
 
 .rq-badge--offer {
-  background: rgba(16, 185, 129, 0.16);
+  background: rgba(0, 113, 93, 0.07);
   color: #065f46;
-  border: 1px solid rgba(5,150,105,0.32);
+  border: 1px solid rgba(5,150,105,0.14);
 }
 
 .rq-badge--open {
-  background: rgba(44, 255, 121, 0.12);
+  background: rgba(44, 255, 121, 0.07);
   color: #16a34a;
-  border: 1px solid rgba(34,197,94,0.2);
+  border: 1px solid rgba(34,197,94,0.12);
 }
 
 .rq-badge--closed {
-  background: rgba(209, 224, 255, 0.12);
+  background: rgba(107, 114, 128, 0.07);
   color: #6b7280;
-  border: 1px solid rgba(107,114,128,0.2);
+  border: 1px solid rgba(107,114,128,0.12);
+}
+
+.rq-badge--category {
+  background: rgba(107, 114, 128, 0.06);
+  color: #64748b;
+  border: 1px solid rgba(100,116,139,0.14);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
 }
 
 .rq-badge--past {
@@ -997,6 +929,12 @@ body.page-requests .rq-blob--filters {
 .rq-detail-hero .rq-badge--closed {
   background: rgba(255,255,255,0.15);
   color: rgba(255,255,255,0.7);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.rq-detail-hero .rq-badge--category {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255,255,255,0.85);
   border-color: rgba(255,255,255,0.2);
 }
 
@@ -1403,57 +1341,10 @@ body.page-requests .rq-detail-hero {
   gap: 0;
 }
 
-/* ── Banner image — cinematic treatment ── */
-.rq-detail-banner {
-  border-radius: 20px 20px 0 0;
-  overflow: hidden;
-  box-shadow: var(--rq-shadow-lg);
-  position: relative;
-}
-
-.rq-detail-banner img {
-  width: 100%;
-  height: auto;
-  display: block;
-  max-height: 500px;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.rq-detail-banner:hover img {
-  transform: scale(1.02);
-}
-
-.rq-detail-banner--placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 280px;
-  background: linear-gradient(160deg, #f4f7fa 0%, #e4eaf0 40%, #d0dce6 100%);
-  color: #8b9bb4;
-  gap: 14px;
-  padding: 48px 40px;
-  border-radius: 20px 20px 0 0;
-}
-
-.rq-detail-banner--placeholder svg {
-  opacity: 0.35;
-}
-
-.rq-detail-banner--placeholder p {
-  font-family: 'Raleway', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  margin: 0;
-  opacity: 0.6;
-}
-
-/* ── Description card — flows under banner ── */
+/* ── Description card ── */
 .rq-detail-text {
   background: var(--rq-card-bg);
-  border-radius: 0 0 20px 20px;
+  border-radius: 20px;
   padding: 40px 44px 44px;
   border: 1px solid var(--rq-border);
   border-top: none;
@@ -2627,6 +2518,17 @@ body.page-requests .rq-sidebar-trust__icon {
 .rq-hero__highlight {
   position: relative;
   color: var(--rq-warm-lt);
+  background: linear-gradient(90deg, var(--rq-warm-lt), #ffd700, var(--rq-warm-lt));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rqHighlightShimmer 4s ease-in-out infinite;
+}
+
+@keyframes rqHighlightShimmer {
+  0%, 100% { background-position: 0% center; }
+  50%      { background-position: 200% center; }
 }
 
 .rq-hero__highlight::after {
@@ -2636,7 +2538,7 @@ body.page-requests .rq-sidebar-trust__icon {
   bottom: 2px;
   width: 100%;
   height: 6px;
-  background: var(--rq-warm-bg);
+  background: linear-gradient(90deg, var(--rq-warm-bg), rgba(255,215,0,0.15), var(--rq-warm-bg));
   border-radius: 4px;
   z-index: -1;
 }
@@ -2804,8 +2706,9 @@ body.page-requests .rq-sidebar-trust__icon {
   top: 0;
   left: 0;
   width: 100%;
-  height: 4px;
+  height: 3px;
   z-index: 2;
+  opacity: 0.5;
 }
 
 .rq-card__type-bar--request { background: var(--rq-warm); }
@@ -2943,6 +2846,7 @@ body.page-requests .rq-sidebar-trust__icon {
   font-family: 'Bitter', serif;
   font-size: 1.5rem;
   font-weight: 700;
+  color: #fff;
   margin: 0 0 10px;
 }
 
@@ -3031,4 +2935,175 @@ body.page-requests .rq-sidebar-trust__icon {
   .rq-calendar-cell { min-height: 70px; padding: 4px; }
   .rq-calendar-cell__day { font-size: 0.78rem; }
   .rq-calendar-event { font-size: 0.6rem; padding: 2px 4px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURED / SPOTLIGHT CARD  (First card on page 1)
+   ═══════════════════════════════════════════════════════════ */
+
+.rq-card--featured {
+  grid-column: 1 / -1;
+  flex-direction: column;
+  border: 1.5px solid rgba(0,113,93,0.15);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fdfb 60%, #f0faf5 100%);
+  box-shadow: 0 8px 32px rgba(0,113,93,0.08), 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.rq-card--featured .rq-card__type-bar {
+  height: 5px;
+  background: linear-gradient(90deg, var(--rq-primary), var(--rq-accent));
+}
+
+.rq-card--featured .rq-card__header {
+  padding: 28px 32px 0;
+}
+
+.rq-card--featured .rq-card__content {
+  padding: 20px 32px 32px;
+}
+
+.rq-card--featured .rq-card__title {
+  font-size: 1.5rem;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.rq-card--featured .rq-card__desc {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 0.95rem;
+  max-width: 720px;
+}
+
+.rq-card--featured .rq-card__type-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+}
+
+.rq-card--featured .rq-card__type-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.rq-card--featured:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0,113,93,0.14), 0 8px 20px rgba(0,0,0,0.06);
+  border-color: rgba(0,113,93,0.3);
+}
+
+/* Featured label badge */
+.rq-card__featured-label {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 100px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  color: #5d4200;
+  box-shadow: 0 4px 12px rgba(255,215,0,0.25);
+  pointer-events: none;
+}
+
+/* Location tag inside featured card */
+.rq-card__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(0,113,93,0.06);
+  color: var(--rq-primary);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rq-card__location svg {
+  flex-shrink: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   ENHANCED CARD STYLES  (Premium Glass Effect)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Subtle animated gradient border on hover */
+.rq-card--typed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, transparent, transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.rq-card--typed[data-type="request"]::before {
+  background: linear-gradient(135deg, var(--rq-warm), var(--rq-warm-lt), rgba(225,114,84,0.2));
+}
+
+.rq-card--typed[data-type="offer"]::before {
+  background: linear-gradient(135deg, var(--rq-green), var(--rq-green-lt), rgba(0,168,138,0.2));
+}
+
+.rq-card--typed:hover::before {
+  opacity: 1;
+}
+
+/* Inner glow on hover for request cards */
+.rq-card--typed[data-type="request"]:hover {
+  background: linear-gradient(180deg, rgba(225,114,84,0.03) 0%, #fff 40%);
+}
+
+/* Inner glow on hover for offer cards */
+.rq-card--typed[data-type="offer"]:hover {
+  background: linear-gradient(180deg, rgba(0,113,93,0.03) 0%, #fff 40%);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — FEATURED CARD
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .rq-card--featured .rq-card__header {
+    padding: 24px 20px 0;
+  }
+  .rq-card--featured .rq-card__content {
+    padding: 16px 20px 24px;
+  }
+  .rq-card--featured .rq-card__title {
+    font-size: 1.2rem;
+  }
+  .rq-card--featured .rq-card__desc {
+    font-size: 0.9rem;
+  }
+  .rq-card__featured-label {
+    top: 10px;
+    right: 12px;
+    font-size: 0.68rem;
+    padding: 4px 10px;
+  }
 }

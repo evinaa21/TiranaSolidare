@@ -22,6 +22,7 @@ switch ($action) {
     // ── LIST / FILTER EVENTS ───────────────────────
     case 'list':
         require_method('GET');
+        release_session();
         $pagination = get_pagination();
 
         // Optional filters
@@ -84,7 +85,7 @@ switch ($action) {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $events = $stmt->fetchAll();
+        $events = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         json_success([
             'events'      => $events,
@@ -114,11 +115,12 @@ switch ($action) {
              WHERE e.id_eventi = ? AND e.is_archived = 0"
         );
         $stmt->execute([$id]);
-        $event = $stmt->fetch();
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$event) {
             json_error('Eventi nuk u gjet.', 404);
         }
+        $event = ts_normalize_row($event);
 
         json_success($event);
         break;

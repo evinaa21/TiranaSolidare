@@ -23,7 +23,7 @@ switch ($action) {
         require_method('POST');
         $user = require_auth();
 
-        if ($user['roli'] === 'admin') {
+        if (is_admin_role($user['roli'])) {
             json_error('Administratorët nuk mund të aplikojnë për kërkesa ndihme.', 403);
         }
 
@@ -123,7 +123,7 @@ switch ($action) {
             $stmt->execute([$user['id'], $pagination['limit'], $pagination['offset']]);
 
             json_success([
-                'applications' => $stmt->fetchAll(),
+                'applications' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC)),
                 'total' => $total,
                 'page' => $pagination['page'],
                 'limit' => $pagination['limit'],
@@ -155,7 +155,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ((int) $requestRow['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
+            if ((int) $requestRow['id_perdoruesi'] !== (int) $user['id'] && !is_admin_role($user['roli'])) {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
@@ -175,7 +175,7 @@ switch ($action) {
             $stmt->execute([$requestId, $pagination['limit'], $pagination['offset']]);
 
             json_success([
-                'applicants' => $stmt->fetchAll(),
+                'applicants' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC)),
                 'total' => $total,
                 'page' => $pagination['page'],
                 'limit' => $pagination['limit'],
@@ -224,7 +224,7 @@ switch ($action) {
             if (!$request) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
-            if ((int) $request['id_perdoruesi'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
+            if ((int) $request['id_perdoruesi'] !== (int) $user['id'] && !is_admin_role($user['roli'])) {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
@@ -307,7 +307,7 @@ switch ($action) {
                 json_error('Aplikimi nuk u gjet.', 404);
             }
 
-            if ((int) $app['pronari_id'] !== (int) $user['id'] && $user['roli'] !== 'admin') {
+            if ((int) $app['pronari_id'] !== (int) $user['id'] && !is_admin_role($user['roli'])) {
                 json_error('Nuk keni leje për këtë veprim.', 403);
             }
 
@@ -339,6 +339,7 @@ switch ($action) {
     // ── LIST HELP REQUESTS ─────────────────────────
     case 'list':
         require_method('GET');
+        release_session();
         $pagination = get_pagination();
 
         try {
@@ -347,6 +348,8 @@ switch ($action) {
             $statusi = $_GET['statusi'] ?? null;   // Open | Closed
             $userId  = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
             $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
+            $kategoria = isset($_GET['kategoria']) ? (int) $_GET['kategoria'] : null;
+            $flaggedOnly = isset($_GET['flagged']) && $_GET['flagged'] == '1';
 
             $where  = [];
             $params = [];
@@ -363,6 +366,13 @@ switch ($action) {
                 $where[]  = 'kn.id_perdoruesi = ?';
                 $params[] = $userId;
             }
+            if ($kategoria) {
+                $where[]  = 'kn.id_kategoria = ?';
+                $params[] = $kategoria;
+            }
+            if ($flaggedOnly) {
+                $where[]  = 'kn.flags > 0';
+            }
             if ($search !== '') {
                 $where[]  = '(kn.titulli LIKE ? OR kn.pershkrimi LIKE ?)';
                 $params[] = "%$search%";
@@ -375,9 +385,10 @@ switch ($action) {
             $countStmt->execute($params);
             $total = (int) $countStmt->fetchColumn();
 
-            $sql = "SELECT kn.*, p.emri AS krijuesi_emri
+            $sql = "SELECT kn.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
                     FROM Kerkesa_per_Ndihme kn
                     JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                    LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
                     $whereSQL
                     ORDER BY 
                     CASE WHEN kn.statusi = 'open' THEN 0 ELSE 1 END ASC,
@@ -389,7 +400,7 @@ switch ($action) {
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            $requests = $stmt->fetchAll();
+            $requests = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
             json_success([
                 'requests'    => $requests,
@@ -415,9 +426,10 @@ switch ($action) {
 
         try {
             $stmt = $pdo->prepare(
-                "SELECT kn.*, p.emri AS krijuesi_emri
+                "SELECT kn.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
                  FROM Kerkesa_per_Ndihme kn
                  JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
+                 LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
                  WHERE kn.id_kerkese_ndihme = ?"
             );
             $stmt->execute([$id]);
@@ -448,6 +460,7 @@ switch ($action) {
         $vendndodhja  = $body['vendndodhja'] ?? null;
         $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
         $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;
+        $idKategoria  = isset($body['id_kategoria']) && $body['id_kategoria'] !== '' ? (int) $body['id_kategoria'] : null;
 
         if (!in_array($tipi, ['request', 'offer'], true)) {
             $errors[] = "Tipi duhet të jetë 'request' ose 'offer'.";
@@ -470,12 +483,21 @@ switch ($action) {
             json_error('URL-ja e imazhit nuk është e vlefshme.', 422);
         }
 
+        // Validate category if provided
+        if ($idKategoria !== null) {
+            $catCheck = $pdo->prepare('SELECT COUNT(*) FROM Kategoria WHERE id_kategoria = ?');
+            $catCheck->execute([$idKategoria]);
+            if ((int) $catCheck->fetchColumn() === 0) {
+                json_error('Kategoria e zgjedhur nuk ekziston.', 422);
+            }
+        }
+
         try {
             $stmt = $pdo->prepare(
-                "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, tipi, titulli, pershkrimi, statusi, imazhi, vendndodhja, latitude, longitude)
-                 VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)"
+                "INSERT INTO Kerkesa_per_Ndihme (id_perdoruesi, id_kategoria, tipi, titulli, pershkrimi, statusi, imazhi, vendndodhja, latitude, longitude)
+                 VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)"
             );
-            $stmt->execute([$user['id'], $tipi, $titulli, $pershkrimi, $imazhi, $vendndodhja, $latitude, $longitude]);
+            $stmt->execute([$user['id'], $idKategoria, $tipi, $titulli, $pershkrimi, $imazhi, $vendndodhja, $latitude, $longitude]);
 
             json_success([
                 'id_kerkese_ndihme' => (int) $pdo->lastInsertId(),
@@ -507,7 +529,7 @@ switch ($action) {
             json_error('Kërkesa nuk u gjet.', 404);
         }
 
-        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
+        if ($existing['id_perdoruesi'] != $user['id'] && !is_admin_role($user['roli'])) {
             json_error('Nuk keni leje për të ndryshuar këtë kërkesë.', 403);
         }
 
@@ -582,7 +604,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
+            if ($existing['id_perdoruesi'] != $user['id'] && !is_admin_role($user['roli'])) {
                 json_error('Nuk keni leje.', 403);
             }
 
@@ -635,7 +657,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
+            if ($existing['id_perdoruesi'] != $user['id'] && !is_admin_role($user['roli'])) {
                 json_error('Nuk keni leje.', 403);
             }
 
@@ -650,6 +672,43 @@ switch ($action) {
         } catch (\Exception $e) {
             error_log('help_requests reopen: ' . $e->getMessage());
             json_error('Gabim gjatë rihapjes të kërkesës.', 500);
+        }
+        break;
+
+    // ── FLAG (REPORT) REQUEST ──────────────────────
+    case 'flag':
+        require_method('POST');
+        $user = require_auth();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID e kërkesës e pavlefshme.', 400);
+        }
+
+        try {
+            $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = COALESCE(flags, 0) + 1 WHERE id_kerkese_ndihme = ?')->execute([$id]);
+            json_success(['message' => 'Kërkesa u raportua me sukses.']);
+        } catch (\Exception $e) {
+            error_log('help_requests flag: ' . $e->getMessage());
+            json_error('Gabim gjatë raportimit.', 500);
+        }
+        break;
+
+    case 'clear_flags':
+        require_method('POST');
+        $user = require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID e kërkesës e pavlefshme.', 400);
+        }
+
+        try {
+            $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = 0 WHERE id_kerkese_ndihme = ?')->execute([$id]);
+            json_success(['message' => 'Raportimet u fshinë.']);
+        } catch (\Exception $e) {
+            error_log('help_requests clear_flags: ' . $e->getMessage());
+            json_error('Gabim gjatë fshirjes së raportimeve.', 500);
         }
         break;
 
@@ -672,7 +731,7 @@ case 'delete':
             json_error('Kërkesa nuk u gjet.', 404);
         }
 
-        if ($existing['id_perdoruesi'] != $user['id'] && $user['roli'] !== 'admin') {
+        if ($existing['id_perdoruesi'] != $user['id'] && !is_admin_role($user['roli'])) {
             json_error('Nuk keni leje.', 403);
         }
 
@@ -710,7 +769,7 @@ case 'delete':
                  ORDER BY ak.aplikuar_me DESC"
             );
             $stmt->execute([$targetId]);
-            json_success(['applications' => $stmt->fetchAll()]);
+            json_success(['applications' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC))]);
         } catch (\Exception $e) {
             error_log('help_requests by_user: ' . $e->getMessage());
             json_error('Gabim gjatë marrjes së aplikimeve.', 500);

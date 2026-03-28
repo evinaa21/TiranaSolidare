@@ -9,7 +9,7 @@ if (!function_exists('ts_resolve_profile_color')) {
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
-$isAdminUser = (isset($_SESSION['roli']) && $_SESSION['roli'] === 'admin');
+$isAdminUser = (isset($_SESSION['roli']) && in_array(ts_normalize_value($_SESSION['roli']), ['admin', 'super_admin'], true));
 
 $firstChar = function_exists('mb_substr') ? mb_substr($userName ?: 'P', 0, 1) : substr($userName ?: 'P', 0, 1);
 $userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : strtoupper($firstChar);
@@ -47,9 +47,6 @@ $headerColorTheme = $headerColorResolved['theme'];
     <a href="/TiranaSolidare/views/map.php" class="header-main-link">Harta</a>
     <span></span>
     <?php if ($isLoggedIn): ?>
-      <?php if ($isAdminUser): ?>
-        <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary header-admin-btn">Paneli Admin</a>
-      <?php else: ?>
         <div class="header-user-menu" id="header-user-menu">
           <button type="button" class="header-user-avatar" style="--avatar-accent: <?= htmlspecialchars($headerColorTheme['mid']) ?>;" aria-haspopup="true" aria-expanded="false" aria-controls="header-user-dropdown" onclick="toggleUserMenu(event)">
             <?php if ($avatarUrl !== ''): ?>
@@ -57,30 +54,38 @@ $headerColorTheme = $headerColorResolved['theme'];
             <?php endif; ?>
             <span class="header-user-fallback" style="--avatar-hue: <?= (int) $avatarHue ?>; --avatar-from: <?= htmlspecialchars($headerColorTheme['from']) ?>; --avatar-to: <?= htmlspecialchars($headerColorTheme['to']) ?>;<?= $avatarUrl !== '' ? 'display:none;' : '' ?>"><?= htmlspecialchars($userInitial) ?></span>
             <span id="notif-badge"></span>
+            <span class="header-user-name"><?= htmlspecialchars($userName) ?></span>
             <span class="header-user-mobile-label">Llogaria ime</span>
             <span class="header-user-mobile-chevron" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </span>
           </button>
 
-          <div class="header-user-dropdown" id="header-user-dropdown">
+            <div class="header-user-dropdown" id="header-user-dropdown">
             <div class="header-user-dropdown__head">
               <strong><?= htmlspecialchars($userName) ?></strong>
-              <small>Paneli i vullnetarit</small>
+              <small><?= $isAdminUser ? 'Administrator' : 'Paneli i vullnetarit' ?></small>
             </div>
+            <?php if ($isAdminUser): ?>
+            <a href="/TiranaSolidare/views/dashboard.php" class="header-dropdown-admin-link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              Paneli Admin
+            </a>
+            <?php else: ?>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile">Profili</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=applications">Aplikimet e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=requests">Kërkesat e mia</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
+            <a href="/TiranaSolidare/views/leaderboard.php">Renditja</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=settings">Cilësimet</a>
+            <?php endif; ?>
             <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
               <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
               <button type="submit" class="header-user-signout">Dil</button>
             </form>
           </div>
         </div>
-      <?php endif; ?>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">
         Bëhu Vullnetar 

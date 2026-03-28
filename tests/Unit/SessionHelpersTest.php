@@ -53,10 +53,10 @@ class SessionHelpersTest extends TestCase
     }
 
     /** @test */
-    public function is_admin_returns_false_for_case_mismatch(): void
+    public function is_admin_returns_true_for_case_mismatch(): void
     {
-        $_SESSION['roli'] = 'Admin'; // Capital A
-        $this->assertFalse(is_admin());
+        $_SESSION['roli'] = 'Admin'; // Capital A — normalized by ts_normalize_value
+        $this->assertTrue(is_admin());
     }
 
     // ─────────────────────────────────────────

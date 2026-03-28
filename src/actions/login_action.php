@@ -35,11 +35,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Verify user and password
     if ($user && password_verify($password, $user['fjalekalimi'])) {
         // Check if account is blocked or deactivated
-        if ($user['statusi_llogarise'] === 'blocked') {
+        $accountStatus = ts_normalize_value($user['statusi_llogarise'] ?? '');
+        if ($accountStatus === 'blocked') {
             header("Location: /TiranaSolidare/views/login.php?error=account_blocked" . ($redirect ? '&redirect=' . urlencode($redirect) : ''));
             exit();
         }
-        if ($user['statusi_llogarise'] === 'deactivated') {
+        if ($accountStatus === 'deactivated') {
             header("Location: /TiranaSolidare/views/login.php?error=account_deactivated" . ($redirect ? '&redirect=' . urlencode($redirect) : ''));
             exit();
         }
@@ -55,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // SUCCESS: Set session variables
         $_SESSION['user_id'] = $user['id_perdoruesi'];
         $_SESSION['emri'] = $user['emri'];
-        $_SESSION['roli'] = $user['roli'];
+        $_SESSION['roli'] = ts_normalize_value($user['roli'] ?? 'volunteer');
         $_SESSION['email'] = $user['email'];
         $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
         $sessionProfilePicture = (string) ($user['profile_picture'] ?? '');
@@ -66,9 +67,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['profile_image'] = $sessionProfilePicture;
 
         // Safe redirect validation (H-02)
+        $normalizedRole = ts_normalize_value($user['roli'] ?? 'volunteer');
         if ($redirect && is_safe_redirect($redirect)) {
             header("Location: $redirect");
-        } elseif ($user['roli'] === 'admin') {
+        } elseif (in_array($normalizedRole, ['admin', 'super_admin'], true)) {
             header("Location: /TiranaSolidare/views/dashboard.php");
         } else {
             header("Location: /TiranaSolidare/views/volunteer_panel.php");

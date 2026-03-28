@@ -1,0 +1,1 @@
+<?php $_SERVER["REQUEST_METHOD"]="GET"; require "includes/functions.php"; require "config/db.php"; $_SESSION["user_id"]=1; $_SESSION["_auth_verified_at"]=time()+100; $_SESSION["roli"]="admin"; $_GET["action"]="list"; require "api/users.php";

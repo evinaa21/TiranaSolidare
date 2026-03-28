@@ -10,8 +10,8 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// If admin, redirect to admin dashboard
-if (($_SESSION['roli'] ?? '') === 'admin') {
+// If admin or super_admin, redirect to admin dashboard
+if (in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
     header("Location: /TiranaSolidare/views/dashboard.php");
     exit();
 }
@@ -46,7 +46,7 @@ $stmtApps = $pdo->prepare(
      ORDER BY a.aplikuar_me DESC"
 );
 $stmtApps->execute([$userId]);
-$myApps = $stmtApps->fetchAll(PDO::FETCH_ASSOC);
+$myApps = ts_normalize_rows($stmtApps->fetchAll(PDO::FETCH_ASSOC));
 
 // Fetch my help request applications
 $stmtHelpApps = $pdo->prepare(
@@ -61,7 +61,7 @@ $stmtHelpApps = $pdo->prepare(
 );
 try {
   $stmtHelpApps->execute([$userId]);
-  $myHelpApps = $stmtHelpApps->fetchAll(PDO::FETCH_ASSOC);
+  $myHelpApps = ts_normalize_rows($stmtHelpApps->fetchAll(PDO::FETCH_ASSOC));
 } catch (Throwable $e) {
   // Backward compatibility if DB schema is not yet migrated.
   $myHelpApps = [];
@@ -72,7 +72,7 @@ $stmtReqs = $pdo->prepare(
     "SELECT * FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ? ORDER BY krijuar_me DESC"
 );
 $stmtReqs->execute([$userId]);
-$myRequests = $stmtReqs->fetchAll(PDO::FETCH_ASSOC);
+$myRequests = ts_normalize_rows($stmtReqs->fetchAll(PDO::FETCH_ASSOC));
 
 // Stats
 $totalApps     = count($myApps);
@@ -519,6 +519,8 @@ $badgeIcons = [
                 <td>
                   <?php if ($app['statusi'] === 'pending'): ?>
                     <button class="btn_secondary vp-btn-sm vp-btn-danger" onclick="withdrawApp(<?= $app['id_aplikimi'] ?>)">Tërhiq</button>
+                  <?php elseif ($app['statusi'] === 'approved'): ?>
+                    <button class="btn_primary vp-btn-sm" onclick="showQRCode('<?= $app['id_aplikimi'] ?>', '<?= htmlspecialchars(addslashes($app['eventi_titulli'])) ?>')">Hyrja (QR)</button>
                   <?php else: ?>
                     <span class="vp-muted">—</span>
                   <?php endif; ?>
@@ -600,9 +602,8 @@ $badgeIcons = [
         <div class="vp-request-grid">
           <?php foreach ($myRequests as $req): ?>
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
-              <div class="vp-request-card__visual">
-                <img src="<?= !empty($req['imazhi']) ? htmlspecialchars($req['imazhi']) : '/TiranaSolidare/public/assets/images/default-request.svg' ?>" alt="<?= htmlspecialchars($req['titulli']) ?>" class="vp-request-card__img" onerror="this.src='/TiranaSolidare/public/assets/images/default-request.svg'">
-                <div class="vp-request-card__overlay">
+              <div class="vp-request-card__header">
+                <div class="vp-request-card__badges">
                   <span class="vp-badge vp-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
                   <span class="vp-badge vp-badge--<?= htmlspecialchars($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span>
                 </div>
@@ -647,6 +648,18 @@ $badgeIcons = [
               <option value="offer">Dua të ndihmoj</option>
             </select>
           </div>
+        </div>
+        <div class="vp-field">
+          <label for="vp-req-category">Kategoria</label>
+          <select id="vp-req-category" name="id_kategoria" class="vp-input">
+            <option value="">Zgjidh kategorinë (opsionale)</option>
+            <?php
+            $catStmt = $pdo->query("SELECT id_kategoria, emri FROM Kategoria ORDER BY emri");
+            while ($cat = $catStmt->fetch(PDO::FETCH_ASSOC)):
+            ?>
+            <option value="<?= (int) $cat['id_kategoria'] ?>"><?= htmlspecialchars($cat['emri']) ?></option>
+            <?php endwhile; ?>
+          </select>
         </div>
         <div class="vp-field">
           <label for="vp-req-desc">Përshkrimi</label>
@@ -700,6 +713,10 @@ $badgeIcons = [
              <strong><?= $totalRequests * 2 ?> pikë</strong>
         </div>
       </div>
+      <a href="/TiranaSolidare/views/leaderboard.php" class="btn_secondary vp-btn-sm" style="margin-top: 20px; display: inline-flex; align-items: center; gap: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        Shiko Renditjen e Vullnetarëve
+      </a>
     </div>
   </div>
 </div>
@@ -884,6 +901,9 @@ if (reqForm) {
     else delete body.latitude;
     if (body.longitude) body.longitude = parseFloat(body.longitude);
     else delete body.longitude;
+    // Convert category to int or remove if empty
+    if (body.id_kategoria) body.id_kategoria = parseInt(body.id_kategoria, 10);
+    else delete body.id_kategoria;
     
     delete body.image;
 
@@ -1430,6 +1450,7 @@ if (avatarDeleteBtn) {
 <?php if ($tab === 'messages'): ?>
 <script>
 (function() {
+  const CURRENT_USER_ID = <?= (int) $_SESSION['user_id'] ?>;
   const csrfMeta = document.querySelector('meta[name="csrf-token"]');
   function getCSRF() { return csrfMeta?.content || ''; }
 
@@ -1492,14 +1513,15 @@ if (avatarDeleteBtn) {
     if (actions) actions.style.display = 'none';
 
     try {
-      const json = await vpApiCall('messages.php?action=thread&user_id=' + userId + '&limit=50');
+      const json = await vpApiCall('messages.php?action=thread&with=' + userId + '&limit=50');
       if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
 
-      const messages = json.data.messages.reverse();
+      const messages = json.data.messages;
       let html = '<div class="msg-thread" id="vp-msg-thread">';
       if (!messages.length) html += '<div style="text-align:center;color:#94a3b8;padding:2rem;">Shkruaj mesazhin e parë!</div>';
       messages.forEach(m => {
-        html += '<div class="msg-bubble ' + (m.is_mine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
+        const isMine = m.derguesi_id == CURRENT_USER_ID;
+        html += '<div class="msg-bubble ' + (isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
           + '<div class="msg-bubble__text">' + esc(m.mesazhi) + '</div>'
           + '<div class="msg-bubble__time">' + fmtDate(m.krijuar_me) + '</div></div>';
       });
@@ -1531,13 +1553,14 @@ if (avatarDeleteBtn) {
     const thread = document.getElementById('vp-msg-thread');
     if (!thread) return;
     try {
-      const json = await vpApiCall('messages.php?action=thread&user_id=' + userId + '&limit=50');
+      const json = await vpApiCall('messages.php?action=thread&with=' + userId + '&limit=50');
       if (!json.success) return;
-      const messages = json.data.messages.reverse();
+      const messages = json.data.messages;
       let html = '';
       if (!messages.length) html = '<div style="text-align:center;color:#94a3b8;padding:2rem;">Shkruaj mesazhin e parë!</div>';
       messages.forEach(m => {
-        html += '<div class="msg-bubble ' + (m.is_mine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
+        const isMine = m.derguesi_id == CURRENT_USER_ID;
+        html += '<div class="msg-bubble ' + (isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs') + '">'
           + '<div class="msg-bubble__text">' + esc(m.mesazhi) + '</div>'
           + '<div class="msg-bubble__time">' + fmtDate(m.krijuar_me) + '</div></div>';
       });
@@ -1565,9 +1588,9 @@ if (avatarDeleteBtn) {
     searchTimer = setTimeout(async () => {
       try {
         const json = await vpApiCall('messages.php?action=search_users&q=' + encodeURIComponent(q.trim()));
-        if (!json.success || !json.data.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
+        if (!json.success || !json.data.users || !json.data.users.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
         let html = '';
-        json.data.forEach(u => {
+        json.data.users.forEach(u => {
           const init = (u.emri || 'P').charAt(0).toUpperCase();
           html += '<div class="msg-convo-item" onclick="vpOpenThread(' + u.id_perdoruesi + ',\'' + esc(u.emri).replace(/'/g, "\\'") + '\')">'
             + '<div style="width:36px;height:36px;border-radius:50%;background:var(--db-primary,#00715D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + esc(init) + '</div>'
@@ -1582,7 +1605,7 @@ if (avatarDeleteBtn) {
     try {
       const json = await vpApiCall('messages.php?action=conversations');
       if (!json.success) return;
-      const total = json.data.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+      const total = (json.data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
       const badge = document.getElementById('msg-tab-badge');
       if (badge) {
         if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
@@ -1596,6 +1619,33 @@ if (avatarDeleteBtn) {
     vpLoadConversations();
   });
 })();
+</script>
+
+<div id="qrModal" class="vp-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:24px;border-radius:12px;max-width:320px;text-align:center;position:relative;">
+        <button onclick="document.getElementById('qrModal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        <h3 id="qrModalTitle" style="margin-top:0;font-size:1.2rem;color:#0f172a;margin-bottom:16px;">Bileta juaj</h3>
+        <div id="qrModalCode" style="margin-bottom:16px;display:flex;justify-content:center;"></div>
+        <p style="font-size:0.85rem;color:#64748b;margin:0;">Tregojini këtë kod stafit në hyrje të eventit.</p>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+window.showQRCode = function(appId, eventTitle) {
+    document.getElementById('qrModalTitle').textContent = eventTitle;
+    const qrContainer = document.getElementById('qrModalCode');
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+        text: 'TS-APP-' + appId,
+        width: 200,
+        height: 200,
+        colorDark : "#0f172a",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+    document.getElementById('qrModal').style.display = 'flex';
+};
 </script>
 <?php endif; ?>
 </body>

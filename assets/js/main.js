@@ -16,6 +16,38 @@ function getCsrfToken() {
 
 // ── Generic API caller ──────────────────────────────
 
+/**
+ * Show a full-page session-expired overlay and redirect to login.
+ * Safe to call multiple times — only acts once.
+ */
+function handleSessionExpired() {
+    if (window._sessionExpiredHandled) return;
+    window._sessionExpiredHandled = true;
+
+    // Stop any polling intervals
+    for (let i = 1; i < 9999; i++) clearInterval(i);
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(10,30,42,0.92);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+    overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:40px 48px;text-align:center;max-width:380px;width:90%;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E17254" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <h3 style="margin:16px 0 8px;font-size:1.25rem;color:#003229;">Sesioni ka skaduar</h3>
+            <p style="color:#6b7a8d;font-size:0.9rem;margin:0 0 20px;">Ju lutem kyçuni përsëri për të vazhduar.</p>
+            <div style="width:100%;height:3px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+                <div id="_expiry_bar" style="height:100%;background:#00715D;width:100%;transition:width 2.2s linear;"></div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const bar = document.getElementById('_expiry_bar');
+        if (bar) bar.style.width = '0%';
+    }));
+    setTimeout(() => { window.location.href = '/TiranaSolidare/views/login.php'; }, 2300);
+}
+
 async function apiCall(endpoint, method = 'GET', body = null) {
     const opts = {
         method,
@@ -28,16 +60,29 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     }
     if (body) opts.body = JSON.stringify(body);
 
-    const res = await fetch(`${API}/${endpoint}`, opts);
-    const json = await res.json();
+    try {
+        const res = await fetch(`${API}/${endpoint}`, opts);
 
-    // Auto-refresh CSRF token from server response
-    if (json.csrf_token) {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta) meta.content = json.csrf_token;
+        // Session expired or unauthorized — redirect to login
+        if (res.status === 401 || res.status === 403) {
+            const j = await res.json().catch(() => ({}));
+            handleSessionExpired();
+            return { success: false, message: j.message || j.error || 'Sesioni ka skaduar.' };
+        }
+
+        const json = await res.json();
+
+        // Auto-refresh CSRF token from server response
+        if (json.csrf_token) {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.content = json.csrf_token;
+        }
+
+        return json;
+    } catch (err) {
+        console.error('[apiCall] Error for', endpoint, err);
+        return { success: false, message: 'Gabim rrjeti. Kontrolloni lidhjen tuaj.' };
     }
-
-    return json;
 }
 
 // ══════════════════════════════════════════════════════
@@ -577,11 +622,5 @@ window.showToast = function(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
     initCreateEventForm();
     initHelpRequestForm();
-
-    // Auto-load admin panels if elements exist
-    loadAdminEvents();
-    loadUsers();
-    loadDashboardStats();
-    loadNotifications();
-    loadHelpRequests();
+    // Data loading is handled by dashboard-ui.js
 });

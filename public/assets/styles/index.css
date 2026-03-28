@@ -1763,6 +1763,34 @@
   border: 1px solid rgba(0,113,93,0.15);
 }
 
+.cv-spotlight__category {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  border: 1px solid rgba(100,116,139,0.14);
+  margin-bottom: 14px;
+}
+
+.cv-card__category {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  border: 1px solid rgba(100,116,139,0.14);
+  margin-bottom: 6px;
+}
+
 .cv-spotlight__title {
   font-size: clamp(1.4rem, 2.5vw, 2rem);
   font-weight: 800;

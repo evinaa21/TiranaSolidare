@@ -378,11 +378,12 @@
 .db-panel {
   display: none;
   padding: 28px 36px 48px;
-  animation: dbFadeIn 0.35s ease both;
 }
 
 .db-panel.active {
-  display: block;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .db-panel__header {
@@ -1746,4 +1747,344 @@
 
 #event-applications-card {
     margin-top: 32px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   NEW ADMIN FEATURES — v2
+   Categories · Audit Log · Broadcast · Profile Enhancements
+   ═══════════════════════════════════════════════════════════ */
+
+/* (db-btn--accent is already defined above; hover enhanced below) */
+.db-btn--accent:hover {
+    background: #c65e41;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(225,114,84,0.30);
+}
+
+/* ─── Broadcast form card ─── */
+.db-broadcast-form {
+    background: #fff;
+    border: 1.5px solid var(--db-border);
+    border-radius: var(--db-radius);
+    padding: 20px 24px;
+    margin: 16px 0 24px;
+    animation: dbFadeIn 0.22s ease;
+}
+
+.db-broadcast-form__title {
+    font-family: var(--db-font-head);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--db-primary-dk);
+    margin: 0 0 16px;
+}
+
+/* ─── Profile avatar upload wrap ─── */
+.db-profile-avatar-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.db-avatar-upload-btn {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 26px;
+    height: 26px;
+    background: var(--db-primary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2.5px solid #fff;
+    transition: background 0.2s, transform 0.15s;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.db-avatar-upload-btn:hover {
+    background: var(--db-primary-dk);
+    transform: scale(1.1);
+}
+
+/* ─── Profile color palette grid ─── */
+.db-color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.db-color-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.db-color-swatch:hover {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.10);
+}
+
+.db-color-swatch.active {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 2px #fff inset, 0 0 0 4px rgba(0,0,0,0.55);
+}
+
+/* ─── Toggle switch ─── */
+.db-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.88rem;
+    color: var(--db-text);
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.db-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.db-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.db-toggle__slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 24px;
+    transition: background 0.22s;
+    cursor: pointer;
+}
+
+.db-toggle__slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.22s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+
+.db-toggle input:checked + .db-toggle__slider {
+    background: var(--db-primary);
+}
+
+.db-toggle input:checked + .db-toggle__slider::before {
+    transform: translateX(20px);
+}
+
+.db-toggle input:focus + .db-toggle__slider {
+    box-shadow: 0 0 0 3px rgba(0,113,93,0.15);
+}
+
+/* ─── Category grid & cards ─── */
+.db-cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+}
+
+.db-cat-card {
+    background: var(--db-surface);
+    border: 1.5px solid var(--db-border);
+    border-radius: var(--db-radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.db-cat-card:hover {
+    border-color: var(--db-primary);
+    box-shadow: var(--db-shadow);
+    transform: translateY(-1px);
+}
+
+.db-cat-card__name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--db-text);
+    word-break: break-word;
+    flex: 1;
+}
+
+.db-cat-card__actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.db-cat-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.15s;
+    padding: 0;
+}
+
+.db-cat-btn--edit {
+    background: var(--db-primary-lt);
+    color: var(--db-primary);
+}
+.db-cat-btn--edit:hover  { background: #c6e3db; transform: scale(1.08); }
+
+.db-cat-btn--del {
+    background: #fef2f2;
+    color: #ef4444;
+}
+.db-cat-btn--del:hover { background: #fde8e8; transform: scale(1.08); }
+
+/* ─── Audit log action badges ─── */
+.db-log-action {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 30px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    background: #f1f5f9;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.db-log-action--block      { background: #fef2f2;  color: #dc2626; }
+.db-log-action--unblock    { background: #f0fdf4;  color: #16a34a; }
+.db-log-action--delete     { background: #fff7ed;  color: #ea580c; }
+.db-log-action--create     { background: #f0fdf4;  color: #16a34a; }
+.db-log-action--update     { background: #eff6ff;  color: #2563eb; }
+.db-log-action--approve    { background: #f0fdf4;  color: #15803d; }
+.db-log-action--reject     { background: #fef2f2;  color: #dc2626; }
+.db-log-action--broadcast  { background: #fdf4ff;  color: #9333ea; }
+.db-log-action--role       { background: #fffbeb;  color: #d97706; }
+.db-log-action--deactivate { background: #f8fafc;  color: #64748b; }
+
+/* ─── Audit pagination ─── */
+.db-audit-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.db-audit-page-btn {
+    padding: 6px 14px;
+    border: 1.5px solid var(--db-border);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--db-text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.db-audit-page-btn:hover { background: var(--db-primary-lt); border-color: var(--db-primary); }
+.db-audit-page-btn.active { background: var(--db-primary); color: #fff; border-color: var(--db-primary); }
+.db-audit-page-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ─── System health alert banners ─── */
+.db-system-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: var(--db-radius-sm);
+    background: #fffbeb;
+    border: 1.5px solid #fbbf24;
+    color: #92400e;
+    font-size: 0.87rem;
+    font-weight: 500;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.db-system-alert--info {
+    background: var(--db-primary-lt);
+    border-color: var(--db-primary);
+    color: var(--db-primary-dk);
+}
+
+.db-system-alert--danger {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #991b1b;
+}
+
+.db-system-alert--success {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.db-system-alert__icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ─── Categories empty state ─── */
+.db-cat-empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--db-text-muted);
+    font-size: 0.9rem;
+}
+
+/* ─── Audit log table detail cell ─── */
+.db-audit-detail {
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.82rem;
+    color: var(--db-text-muted);
+    cursor: help;
+}
+
+/* ─── Audit filter bar date inputs focus ─── */
+#audit-date-from:focus,
+#audit-date-to:focus,
+#audit-filter-action:focus {
+    border-color: var(--db-primary) !important;
+    box-shadow: 0 0 0 3px rgba(0,113,93,0.10);
+    outline: none;
 }

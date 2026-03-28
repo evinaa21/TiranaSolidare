@@ -1,0 +1,1 @@
+<?php require 'config/db.php'; try { $pdo->query('SELECT COUNT(*) FROM Perdoruesi'); echo 'OK'; } catch (Exception $e) { echo $e->getMessage(); } ?>

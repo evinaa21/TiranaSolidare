@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
-$isAdmin = ($isLoggedIn && ($_SESSION['roli'] ?? '') === 'admin');
+$isAdmin = ($isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true));
 $currentUserId = $_SESSION['user_id'] ?? null;
 
 // ── Single event detail ──
@@ -85,7 +85,7 @@ $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $statTotalEvents = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
 $statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0 AND data >= NOW()")->fetchColumn();
 $statPast        = $statTotalEvents - $statUpcoming;
-$statVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'Vullnetar'")->fetchColumn();
+$statVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
 $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
 
 // ── Calendar data ──

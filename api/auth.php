@@ -272,7 +272,7 @@ switch ($action) {
         $user = require_auth();
 
         $stmt = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, profile_color, roli, statusi_llogarise, krijuar_me
+            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, profile_color, email_notifications, roli, statusi_llogarise, krijuar_me
              FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $stmt->execute([$user['id']]);
@@ -305,8 +305,7 @@ switch ($action) {
             json_error('Fjalëkalimi është i pasaktë.', 401);
         }
 
-        // Admins cannot delete their own account (protect platform)
-        if ($user['roli'] === 'admin') {
+        if (is_admin_role($user['roli'])) {
             json_error('Administratorët nuk mund të fshijnë llogarinë e tyre. Kontaktoni një administrator tjetër.', 403);
         }
 

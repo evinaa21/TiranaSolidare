@@ -1,0 +1,1 @@
+<?php require 'config/db.php'; \->exec('ALTER TABLE KerkesaNdihme ADD COLUMN flags INT DEFAULT 0;'); echo 'DONE'; ?>

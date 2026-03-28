@@ -611,3 +611,18 @@ CREATE TABLE IF NOT EXISTS `Mesazhi` (
   FOREIGN KEY (`derguesi_id`) REFERENCES `Perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE,
   FOREIGN KEY (`marruesi_id`) REFERENCES `Perdoruesi` (`id_perdoruesi`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Mesazhet ndërmjet përdoruesve';
+
+-- --------------------------------------------------------
+-- Migration: Add category support to help requests
+-- --------------------------------------------------------
+
+ALTER TABLE `kerkesa_per_ndihme`
+  ADD COLUMN `id_kategoria` INT DEFAULT NULL AFTER `id_perdoruesi`,
+  ADD KEY `idx_kategoria` (`id_kategoria`),
+  ADD CONSTRAINT `kerkesa_ndihme_kategoria_fk` FOREIGN KEY (`id_kategoria`) REFERENCES `kategoria` (`id_kategoria`) ON DELETE SET NULL;
+
+-- Assign categories to existing seed requests
+UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 2 WHERE `id_kerkese_ndihme` IN (1,2,9,10);
+UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 3 WHERE `id_kerkese_ndihme` IN (3,6,7,8);
+UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 5 WHERE `id_kerkese_ndihme` = 4;
+UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 4 WHERE `id_kerkese_ndihme` = 5;

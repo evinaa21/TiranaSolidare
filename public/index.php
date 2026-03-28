@@ -5,15 +5,16 @@ require_once __DIR__ . '/../includes/functions.php';
 
 // Fetch latest 8 help requests (Open only)
 $stmtReq = $pdo->prepare(
-    "SELECT kn.*, p.emri AS krijuesi_emri
+    "SELECT kn.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
-     WHERE kn.statusi = 'open'
+     LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
+     WHERE kn.statusi IN ('open','Open')
      ORDER BY kn.krijuar_me DESC
      LIMIT 8"
 );
 $stmtReq->execute();
-$kerkesat = $stmtReq->fetchAll(PDO::FETCH_ASSOC);
+$kerkesat = ts_normalize_rows($stmtReq->fetchAll(PDO::FETCH_ASSOC));
 
 // Fetch latest 8 events (upcoming first, then recent past)
 $stmtEv = $pdo->prepare(
@@ -30,7 +31,7 @@ $eventet = $stmtEv->fetchAll(PDO::FETCH_ASSOC);
 // Counts for hero stats
 $totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
 $totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
-$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'closed'")->fetchColumn();
+$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('closed','Closed')")->fetchColumn();
 
 // Categories with event counts
 $kategorite = $pdo->query(
@@ -352,7 +353,7 @@ $kategorite = $pdo->query(
             </div>
             <div class="cv-stat-divider"></div>
             <div class="cv-stat">
-              <span class="cv-stat__num"><?= count(array_filter($kerkesat, fn($k) => $k['tipi'] === 'Ofertë')) ?></span>
+              <span class="cv-stat__num"><?= count(array_filter($kerkesat, fn($k) => $k['tipi'] === 'offer')) ?></span>
               <span class="cv-stat__text">Oferta ndihme</span>
             </div>
           </div>
@@ -369,10 +370,10 @@ $kategorite = $pdo->query(
 
       <!-- Featured Spotlight -->
       <?php $feat = $kerkesat[0]; ?>
-      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'Ofertë' ? 'offer' : 'request' ?> reveal reveal-up">
+      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'offer' ? 'offer' : 'request' ?> reveal reveal-up">
         <div class="cv-spotlight__deco" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.07">
-            <?php if ($feat['tipi'] === 'Kërkesë'): ?>
+            <?php if ($feat['tipi'] === 'request'): ?>
               <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
             <?php else: ?>
               <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
@@ -382,14 +383,17 @@ $kategorite = $pdo->query(
         <div class="cv-spotlight__content">
           <div class="cv-spotlight__badge">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <?php if ($feat['tipi'] === 'Kërkesë'): ?>
+              <?php if ($feat['tipi'] === 'request'): ?>
                 <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
               <?php else: ?>
                 <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
               <?php endif; ?>
             </svg>
-            <?= $feat['tipi'] === 'Kërkesë' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+            <?= $feat['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
           </div>
+          <?php if (!empty($feat['kategoria_emri'])): ?>
+          <div class="cv-spotlight__category"><?= htmlspecialchars($feat['kategoria_emri']) ?></div>
+          <?php endif; ?>
           <h3 class="cv-spotlight__title"><?= htmlspecialchars($feat['titulli']) ?></h3>
           <p class="cv-spotlight__desc"><?= htmlspecialchars(mb_substr($feat['pershkrimi'] ?? '', 0, 220)) ?>...</p>
           <div class="cv-spotlight__meta">
@@ -414,20 +418,23 @@ $kategorite = $pdo->query(
       <div class="cv-gallery-wrap">
         <div class="cv-gallery" id="cv-gallery">
           <?php foreach (array_slice($kerkesat, 1) as $ki => $k): ?>
-          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="cv-card cv-card--<?= $k['tipi'] === 'Ofertë' ? 'offer' : 'request' ?>" style="--card-delay: <?= $ki * 0.1 ?>s">
+          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="cv-card cv-card--<?= $k['tipi'] === 'offer' ? 'offer' : 'request' ?>" style="--card-delay: <?= $ki * 0.1 ?>s">
             <div class="cv-card__top">
               <div class="cv-card__type">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <?php if ($k['tipi'] === 'Kërkesë'): ?>
+                  <?php if ($k['tipi'] === 'request'): ?>
                     <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
                   <?php else: ?>
                     <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
                   <?php endif; ?>
                 </svg>
-                <?= $k['tipi'] === 'Kërkesë' ? 'Ndihmë' : 'Ofertë' ?>
+                <?= $k['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Ofroj ndihmë' ?>
               </div>
               <span class="cv-card__time"><?= koheParapake($k['krijuar_me']) ?></span>
             </div>
+            <?php if (!empty($k['kategoria_emri'])): ?>
+            <div class="cv-card__category"><?= htmlspecialchars($k['kategoria_emri']) ?></div>
+            <?php endif; ?>
             <h3 class="cv-card__title"><?= htmlspecialchars($k['titulli']) ?></h3>
             <p class="cv-card__desc"><?= htmlspecialchars(mb_substr($k['pershkrimi'] ?? '', 0, 95)) ?>...</p>
             <div class="cv-card__bottom">

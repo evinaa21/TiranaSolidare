@@ -63,12 +63,64 @@ function check_login(): void
     }
 }
 
+// ═══════════════════════════════════════════════════════
+//  DB Value Normalization (Albanian → English lowercase)
+// ═══════════════════════════════════════════════════════
+
+const TS_DB_NORMALIZE = [
+    'Admin'       => 'admin',
+    'Vullnetar'   => 'volunteer',
+    'Kërkesë'     => 'request',
+    'Ofertë'      => 'offer',
+    'Open'        => 'open',
+    'Closed'      => 'closed',
+    'Hapur'       => 'open',
+    'Mbyllur'     => 'closed',
+    'Në pritje'   => 'pending',
+    'Pranuar'     => 'approved',
+    'Refuzuar'    => 'rejected',
+    'Aktiv'       => 'active',
+    'Bllokuar'    => 'blocked',
+    'Çaktivizuar' => 'deactivated',
+];
+
+function ts_normalize_value(string $val): string
+{
+    return TS_DB_NORMALIZE[$val] ?? strtolower($val);
+}
+
+function ts_normalize_row(array $row): array
+{
+    foreach (['roli', 'tipi', 'statusi', 'statusi_llogarise'] as $field) {
+        if (isset($row[$field])) {
+            $row[$field] = ts_normalize_value($row[$field]);
+        }
+    }
+    return $row;
+}
+
+function ts_normalize_rows(array $rows): array
+{
+    return array_map('ts_normalize_row', $rows);
+}
+
 /**
- * Check if the current user is an Admin.
+ * Check if the current user is an Admin (includes super_admin).
  */
 function is_admin(): bool
 {
-    return isset($_SESSION['roli']) && $_SESSION['roli'] === 'admin';
+    if (!isset($_SESSION['roli'])) return false;
+    $role = ts_normalize_value($_SESSION['roli']);
+    return in_array($role, ['admin', 'super_admin'], true);
+}
+
+/**
+ * Check if the current user is a Super Admin.
+ */
+function is_super_admin(): bool
+{
+    if (!isset($_SESSION['roli'])) return false;
+    return ts_normalize_value($_SESSION['roli']) === 'super_admin';
 }
 
 /**

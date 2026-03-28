@@ -21,6 +21,7 @@ switch ($action) {
     case 'list':
         require_method('GET');
         $user       = require_auth();
+        release_session();
         $pagination = get_pagination(30);
 
         $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Njoftimi WHERE id_perdoruesi = ?');
@@ -50,6 +51,7 @@ switch ($action) {
     case 'unread_count':
         require_method('GET');
         $user = require_auth();
+        release_session();
 
         $stmt = $pdo->prepare(
             'SELECT COUNT(*) FROM Njoftimi WHERE id_perdoruesi = ? AND is_read = 0'
@@ -117,6 +119,48 @@ switch ($action) {
         json_success(['message' => 'Njoftimi u fshi.']);
         break;
 
+    // ── BROADCAST NOTIFICATION (Super Admin) ───────
+    case 'broadcast':
+        require_method('POST');
+        require_super_admin();
+        $body   = get_json_body();
+        $errors = [];
+
+        $mesazhi = required_field($body, 'mesazhi', $errors);
+        if (!empty($errors)) {
+            json_error('Mesazhi është i nevojshëm.', 422, $errors);
+        }
+
+        $roli  = trim($body['roli'] ?? 'all');    // 'all' | 'volunteer' | 'admin'
+        $linku = !empty($body['linku']) ? trim($body['linku']) : null;
+
+        // Only allow known role values to avoid injection
+        if (!in_array($roli, ['all', 'volunteer', 'admin', 'super_admin'], true)) {
+            $roli = 'all';
+        }
+
+        if ($roli === 'all') {
+            $uStmt = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE statusi_llogarise = 'active'");
+        } else {
+            $uStmt = $pdo->prepare("SELECT id_perdoruesi FROM Perdoruesi WHERE roli = ? AND statusi_llogarise = 'active'");
+            $uStmt->execute([$roli]);
+        }
+        $userIds = $uStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($userIds)) {
+            json_error('Asnjë përdorues aktiv u gjet për rolin zgjedhur.', 404);
+        }
+
+        $ins   = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku, is_read) VALUES (?, ?, ?, ?, 0)');
+        $count = 0;
+        foreach ($userIds as $uid) {
+            $ins->execute([$uid, $mesazhi, 'broadcast', $linku]);
+            $count++;
+        }
+
+        json_success(['sent' => $count, 'message' => "Njoftimi u dërgua te $count përdorues."]);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: list, unread_count, mark_read, mark_all_read, delete.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, unread_count, mark_read, mark_all_read, delete, broadcast.', 400);
 }

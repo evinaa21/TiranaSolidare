@@ -13,32 +13,82 @@ const STATUS_LABELS = {
     pending: 'Në pritje', approved: 'Pranuar', rejected: 'Refuzuar',
     present: 'Prezent', absent: 'Munguar',
     active: 'Aktiv', blocked: 'Bllokuar', deactivated: 'Çaktivizuar',
-    admin: 'Admin', volunteer: 'Vullnetar',
+    admin: 'Admin', super_admin: 'Super Admin', volunteer: 'Vullnetar',
     request: 'Kërkesë', offer: 'Ofertë'
 };
 function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
 
 // ── Panel switching ─────────────────────────────────
 
+// Track which panels have had their data loaded
+const _loadedPanels = new Set();
+
+// Map each panel to its data-loader function(s)
+function _loadPanelData(panelId) {
+    switch (panelId) {
+        case 'overview':
+            loadDashboardStats();
+            break;
+        case 'events':
+            loadAdminEvents();
+            break;
+        case 'users':
+            loadUsers();
+            break;
+        case 'requests':
+            loadHelpRequests();
+            break;
+        case 'reports':
+            loadReportsPanel();
+            break;
+        case 'messages':
+            loadConversations();
+            loadUnreadBadge();
+            break;
+        case 'notifications':
+            loadNotifications();
+            break;
+        case 'categories':
+            loadCategories();
+            break;
+        case 'audit':
+            loadAuditLog();
+            break;
+        case 'profile':
+            loadAdminProfile();
+            break;
+    }
+    _loadedPanels.add(panelId);
+}
+
 function switchPanel(panelId, btn) {
     // Hide all panels
-    document.querySelectorAll('.db-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.db-panel').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = '';
+        p.style.opacity = '';
+    });
     // Deactivate all nav items
     document.querySelectorAll('.db-nav-item').forEach(n => n.classList.remove('active'));
 
-    // Show selected
+    // Show selected - belt AND suspenders: class + inline style
     const panel = document.getElementById(`panel-${panelId}`);
     if (panel) {
         panel.classList.add('active');
-        // Re-trigger animation
-        panel.style.animation = 'none';
-        panel.offsetHeight; // reflow
-        panel.style.animation = '';
+        panel.style.display = 'block';
+        panel.style.opacity = '1';
+    } else {
+        console.error('[switchPanel] Panel not found: panel-' + panelId);
     }
     if (btn) btn.classList.add('active');
 
+    // Load panel data if not loaded yet (lazy loading)
+    if (!_loadedPanels.has(panelId)) {
+        _loadPanelData(panelId);
+    }
+
     // Ruaj tab-in aktiv në URL
-      location.hash = panelId;
+    location.hash = panelId;
 }
 
 
@@ -121,7 +171,10 @@ window.loadDashboardStats = async function () {
     if (!container) return;
 
     const json = await apiCall('stats.php?action=overview');
-    if (!json.success) return;
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të statistikave.')}</div>`;
+        return;
+    }
 
     const d = json.data;
 
@@ -216,7 +269,10 @@ window.loadAdminEvents = async function (page = 1) {
     if (filterDateRange) params.set('dateRange', filterDateRange);
 
     const json = await apiCall(`events.php?${params}`);
-    if (!json.success) return;
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të eventeve.')}</div>`;
+        return;
+    }
 
     const { events, total, total_pages } = json.data;
 
@@ -239,13 +295,13 @@ window.loadAdminEvents = async function (page = 1) {
     let html = filterHtml;
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> evente</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>ID</th><th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
+        + '<th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     events.forEach(ev => {
         const isPast = ev.data && new Date(ev.data) < new Date();
         html += `<tr${isPast ? ' style="opacity:0.6"' : ''}>
-            <td><strong>#${ev.id_eventi}</strong></td>
+            
             <td>${escapeHtml(ev.titulli)}</td>
             <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
             <td>${formatDate(ev.data)}</td>
@@ -353,12 +409,11 @@ window.viewEventApps = async function (eventId) {
 };
 
 window.markPresence = async function (appId, status, eventId) {
-    const json = await apiCall(`applications.php?action=mark_presence&id=${appId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ statusi: status })
-    });
+    const json = await apiCall(`applications.php?action=mark_presence&id=${appId}`, 'PUT', { statusi: status });
     if (json.success) {
-        viewEventApps(eventId);
+        if (eventId) {
+            viewEventApps(eventId);
+        }
     }
 };
 
@@ -382,7 +437,10 @@ window.loadUsers = async function (page = 1) {
     if (filterStatus) params.set('statusi', filterStatus);
 
     const json = await apiCall(`users.php?${params}`);
-    if (!json.success) return;
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të përdoruesve.')}</div>`;
+        return;
+    }
 
     const { users, total, total_pages } = json.data;
 
@@ -391,6 +449,7 @@ window.loadUsers = async function (page = 1) {
         <select id="admin-usr-filter-role" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
             <option value=""${!filterRole ? ' selected' : ''}>Të gjitha rolet</option>
             <option value="admin"${filterRole === 'admin' ? ' selected' : ''}>Admin</option>
+            <option value="super_admin"${filterRole === 'super_admin' ? ' selected' : ''}>Super Admin</option>
             <option value="volunteer"${filterRole === 'volunteer' ? ' selected' : ''}>Vullnetar</option>
         </select>
         <select id="admin-usr-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
@@ -404,18 +463,28 @@ window.loadUsers = async function (page = 1) {
     </div>`;
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> përdorues</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>ID</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th>'
+        + '<th>Anëtarësuar</th><th>Emri</th><th>Email</th><th>Roli</th><th>Statusi</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     users.forEach(u => {
         const isBlocked = u.statusi_llogarise === 'blocked';
         const isDeactivated = u.statusi_llogarise === 'deactivated';
-        const roleClass = u.roli === 'admin' ? 'admin' : 'vol';
+        const roleClass = (u.roli === 'admin' || u.roli === 'super_admin') ? 'admin' : 'vol';
         const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
+        
+        // Role change button (super_admin only, cannot change self or other super_admins)
+        const canChangeRole = typeof IS_SUPER_ADMIN !== 'undefined' && IS_SUPER_ADMIN
+            && u.id_perdoruesi !== CURRENT_USER_ID && u.roli !== 'super_admin';
+        
+        let createdDate = '—';
+        if (u.krijuar_me) {
+            const d = new Date(u.krijuar_me);
+            createdDate = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
 
         html += `<tr class="${isBlocked ? 'db-row--blocked' : ''} ${isDeactivated ? 'db-row--deactivated' : ''}">
-            <td><strong>#${u.id_perdoruesi}</strong></td>
-            <td>${escapeHtml(u.emri)}</td>
+            <td><span style="color:#64748b;font-size:0.85rem;">${createdDate}</span></td>
+            <td><strong>${escapeHtml(u.emri)}</strong></td>
             <td>${escapeHtml(u.email)}</td>
             <td><span class="db-badge db-badge--${roleClass}">${statusLabel(u.roli)}</span></td>
             <td><span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span></td>
@@ -433,6 +502,10 @@ window.loadUsers = async function (page = 1) {
                              Riaktivizo</button>`
                         : `<button class="db-btn db-btn--warning db-btn--sm" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">
                              Blloko</button>`}
+                    ${canChangeRole
+                        ? `<button class="db-btn db-btn--sm" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;" onclick="changeUserRole(${u.id_perdoruesi}, '${u.roli}')">
+                             Ndrysho Rolin</button>`
+                        : ''}
                 </div>
             </td>
         </tr>`;
@@ -480,7 +553,7 @@ window.openUserDetail = async function (userId) {
     const isBlocked = u.statusi_llogarise === 'blocked';
     const isDeactivated = u.statusi_llogarise === 'deactivated';
     const isActive = u.statusi_llogarise === 'active';
-    const roleClass = u.roli === 'admin' ? 'admin' : 'vol';
+    const roleClass = (u.roli === 'admin' || u.roli === 'super_admin') ? 'admin' : 'vol';
     const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
     const initial = (u.emri || 'P').charAt(0).toUpperCase();
 
@@ -527,24 +600,6 @@ window.openUserDetail = async function (userId) {
 
         <!-- Action Cards Grid -->
         <div class="ud-actions-grid">
-
-            <!-- Change Role Card -->
-            <div class="ud-card">
-                <div class="ud-card__header">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <h4>Ndrysho Rolin</h4>
-                </div>
-                <p class="ud-card__desc">Roli aktual: <strong>${u.roli}</strong></p>
-                <div class="ud-card__body">
-                    <select id="ud-role-select" class="ud-select">
-                        <option value="admin" ${u.roli === 'admin' ? 'selected' : ''}>Admin</option>
-                        <option value="volunteer" ${u.roli === 'volunteer' ? 'selected' : ''}>Vullnetar</option>
-                    </select>
-                    <button class="db-btn db-btn--primary" onclick="changeUserRoleFromDetail(${u.id_perdoruesi})">
-                        Ruaj Rolin
-                    </button>
-                </div>
-            </div>
 
 
 
@@ -791,15 +846,20 @@ window.loadHelpRequests = async function (page = 1) {
     const filterSearch = document.getElementById('admin-req-filter-search')?.value.trim() || '';
     const filterStatus = document.getElementById('admin-req-filter-status')?.value || '';
     const filterType = document.getElementById('admin-req-filter-type')?.value || '';
+    const filterFlagged = document.getElementById('admin-req-filter-flagged')?.checked ? '1' : '';
 
     const filters = {};
     if (filterSearch) filters.search = filterSearch;
     if (filterStatus) filters.statusi = filterStatus;
     if (filterType) filters.tipi = filterType;
+    if (filterFlagged) filters.flagged = filterFlagged;
 
     const params = new URLSearchParams({ action: 'list', page, limit: 10, ...filters });
     const json = await apiCall(`help_requests.php?${params}`);
-    if (!json.success) return;
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të kërkesave.')}</div>`;
+        return;
+    }
 
     const { requests, total, total_pages } = json.data;
 
@@ -816,8 +876,12 @@ window.loadHelpRequests = async function (page = 1) {
             <option value="request"${filterType === 'request' ? ' selected' : ''}>Kërkesë</option>
             <option value="offer"${filterType === 'offer' ? ' selected' : ''}>Ofertë</option>
         </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;color:#ef4444;">
+             <input type="checkbox" id="admin-req-filter-flagged" onchange="loadHelpRequests(1)" ${filterFlagged ? 'checked' : ''}>
+             Vetëm të Raportuarat
+        </label>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadHelpRequests(1)">Filtro</button>
-        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';document.getElementById('admin-req-filter-flagged').checked=false;loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> kërkesa</div>`;
@@ -829,22 +893,25 @@ window.loadHelpRequests = async function (page = 1) {
     }
 
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Nga</th><th>Data</th><th>Veprime</th>'
+        + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Nga</th><th>Raportime</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     requests.forEach(r => {
         const tipClass = r.tipi === 'request' ? 'request' : 'offer';
         const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+        const flagIndicator = r.flags > 0 ? `<span style="color:#ef4444; font-weight: bold; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${r.flags} Raportime</span>` : '<span style="color:#9ca3af;">0</span>';
 
         html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
             <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'Open' ? 'Hapur' : 'Mbyllur'}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
+            <td>${flagIndicator}</td>
             <td>${formatDate(r.krijuar_me)}</td>
             <td>
                 <div class="db-table__actions">
     <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
+${r.flags > 0 ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="clearFlags(${r.id_kerkese_ndihme})">Pastro Raportimet</button>` : ''}
 ${r.statusi === 'Open' ?
     `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` :
     `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
@@ -860,6 +927,13 @@ ${r.statusi === 'Open' ?
     }
 
     container.innerHTML = html;
+};
+
+window.clearFlags = async function (id) {
+    if (!confirm('Pastro të gjitha raportimet për këtë kërkesë/ofertë?')) return;
+    const json = await apiCall(`help_requests.php?action=clear_flags&id=${id}`, 'POST');
+    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) loadHelpRequests();
 };
 
 // Close request action
@@ -886,7 +960,10 @@ window.loadNotifications = async function () {
     if (!container) return;
 
     const json = await apiCall('notifications.php?action=list&limit=20');
-    if (!json.success) return;
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të njoftimeve.')}</div>`;
+        return;
+    }
 
     const notifs = json.data.notifications;
 
@@ -1077,31 +1154,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load category dropdown for event creation form
     loadCategoryDropdown();
 
-    // Re-trigger data loads with new renderers
-    // (main.js DOMContentLoaded already fired, so these are
-    //  re-invoked with our overridden functions)
-    setTimeout(() => {
-        loadDashboardStats();
-        loadAdminEvents();
-        loadUsers();
-        loadNotifications();
-        loadHelpRequests();
-    }, 100);
-
-        // Rikthe tab-in nga URL pas refresh
+    // Determine the initial panel (from URL hash or default 'overview')
+    let initialPanel = 'overview';
     if (location.hash) {
-        const panelId = location.hash.replace('#', '');
-        const navBtn = document.querySelector(`[data-panel="${panelId}"]`);
-        if (document.getElementById(`panel-${panelId}`)) {
-            switchPanel(panelId, navBtn);
+        const hashPanel = location.hash.replace('#', '');
+        if (document.getElementById(`panel-${hashPanel}`)) {
+            initialPanel = hashPanel;
         }
-     }
+    }
 
-    // Load messaging conversations
-    loadConversations();
+    // Activate the initial panel via switchPanel (which will also load its data)
+    const navBtn = document.querySelector(`[data-panel="${initialPanel}"]`);
+    switchPanel(initialPanel, navBtn);
+
+    // Pre-load overview stats (always needed for badge counts etc.)
+    if (initialPanel !== 'overview') {
+        _loadPanelData('overview');
+    }
+
+    // Load notification badge count
+    loadNotifications();
+    _loadedPanels.add('notifications');
+
+    // Load message badge count (lightweight)
     loadUnreadBadge();
-    // Load reports
-    loadReportsPanel();
+
+    // ── Session heartbeat ──────────────────────────────
+    // Ping auth every 10 min so the PHP session doesn't expire while the
+    // admin tab is open.  apiCall's 401 handler will redirect if it does.
+    setInterval(() => apiCall('auth.php?action=me'), 10 * 60 * 1000);
 });
 
 
@@ -1281,10 +1362,7 @@ async function generateReport() {
     else tipi = type;
 
     try {
-        const json = await apiCall('stats.php?action=generate', {
-            method: 'POST',
-            body: JSON.stringify({ tipi_raportit: tipi })
-        });
+        const json = await apiCall('stats.php?action=generate', 'POST', { tipi_raportit: tipi });
         if (json.success) {
             showToast('Raporti u gjenerua me sukses!', 'success');
             loadReportsList();
@@ -1312,7 +1390,7 @@ async function loadConversations() {
         const json = await apiCall('messages.php?action=conversations');
         if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim.</div>'; return; }
 
-        const convos = json.data;
+        const convos = json.data.conversations || [];
         if (!convos.length) {
             container.innerHTML = `
                 <div style="text-align:center;padding:3rem 1rem;color:#94a3b8;">
@@ -1326,13 +1404,13 @@ async function loadConversations() {
         let html = '<div class="msg-conversation-list">';
         convos.forEach(c => {
             const unread = c.unread_count > 0 ? `<span class="db-nav-badge" style="display:inline-flex;margin-left:auto;">${c.unread_count}</span>` : '';
-            const initial = (c.emri || 'P').charAt(0).toUpperCase();
+            const initial = (c.other_emri || 'P').charAt(0).toUpperCase();
             const preview = c.last_message ? escapeHtml(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
-            const timeAgo = formatDate(c.last_message_time);
-            html += `<div class="msg-convo-item${c.unread_count > 0 ? ' msg-convo-item--unread' : ''}" onclick="openThread(${c.user_id}, '${escapeHtml(c.emri).replace(/'/g, "\\'")}')">
+            const timeAgo = formatDate(c.last_time);
+            html += `<div class="msg-convo-item${c.unread_count > 0 ? ' msg-convo-item--unread' : ''}" onclick="openThread(${c.other_id}, '${escapeHtml(c.other_emri).replace(/'/g, "\\'")}')">
                 <div class="ud-avatar ud-avatar--active" style="width:40px;height:40px;font-size:1rem;flex-shrink:0;">${escapeHtml(initial)}</div>
                 <div class="msg-convo-info">
-                    <div class="msg-convo-name">${escapeHtml(c.emri)} ${unread}</div>
+                    <div class="msg-convo-name">${escapeHtml(c.other_emri)} ${unread}</div>
                     <div class="msg-convo-preview">${preview}</div>
                 </div>
                 <div class="msg-convo-time">${timeAgo}</div>
@@ -1359,10 +1437,10 @@ async function openThread(userId, userName) {
     container.innerHTML = '<div class="db-loading">Duke ngarkuar…</div>';
 
     try {
-        const json = await apiCall(`messages.php?action=thread&user_id=${userId}&limit=50`);
+        const json = await apiCall(`messages.php?action=thread&with=${userId}&limit=50`);
         if (!json.success) { container.innerHTML = '<div class="db-loading">Gabim.</div>'; return; }
 
-        const messages = json.data.messages.reverse(); // oldest first
+        const messages = json.data.messages; // already oldest first from API
         let html = `<div class="msg-thread" id="msg-thread-list">`;
 
         if (!messages.length) {
@@ -1370,7 +1448,7 @@ async function openThread(userId, userName) {
         }
 
         messages.forEach(m => {
-            const isMine = m.is_mine;
+            const isMine = m.derguesi_id == CURRENT_USER_ID;
             html += `<div class="msg-bubble ${isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs'}">
                 <div class="msg-bubble__text">${escapeHtml(m.mesazhi)}</div>
                 <div class="msg-bubble__time">${formatDate(m.krijuar_me)}</div>
@@ -1413,10 +1491,7 @@ async function sendMessage(toUserId) {
     input.focus();
 
     try {
-        const json = await apiCall('messages.php?action=send', {
-            method: 'POST',
-            body: JSON.stringify({ marruesi_id: toUserId, mesazhi: text })
-        });
+        const json = await apiCall('messages.php?action=send', 'POST', { marruesi_id: toUserId, mesazhi: text });
         if (json.success) {
             refreshThread(toUserId);
         } else {
@@ -1432,16 +1507,16 @@ async function refreshThread(userId) {
     if (!list) return;
 
     try {
-        const json = await apiCall(`messages.php?action=thread&user_id=${userId}&limit=50`);
+        const json = await apiCall(`messages.php?action=thread&with=${userId}&limit=50`);
         if (!json.success) return;
 
-        const messages = json.data.messages.reverse();
+        const messages = json.data.messages;
         let html = '';
         if (!messages.length) {
             html = '<div style="text-align:center;color:#94a3b8;padding:2rem;">Nuk ka mesazhe ende.</div>';
         }
         messages.forEach(m => {
-            const isMine = m.is_mine;
+            const isMine = m.derguesi_id == CURRENT_USER_ID;
             html += `<div class="msg-bubble ${isMine ? 'msg-bubble--mine' : 'msg-bubble--theirs'}">
                 <div class="msg-bubble__text">${escapeHtml(m.mesazhi)}</div>
                 <div class="msg-bubble__time">${formatDate(m.krijuar_me)}</div>
@@ -1500,10 +1575,11 @@ async function searchUsersForMsg(query) {
             const json = await apiCall(`messages.php?action=search_users&q=${encodeURIComponent(query.trim())}`);
             if (!json.success) { results.innerHTML = '<div style="color:#dc3545;">Gabim.</div>'; return; }
 
-            if (!json.data.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
+            const users = json.data.users || [];
+            if (!users.length) { results.innerHTML = '<div style="color:#94a3b8;">Asnjë rezultat.</div>'; return; }
 
             let html = '';
-            json.data.forEach(u => {
+            users.forEach(u => {
                 const initial = (u.emri || 'P').charAt(0).toUpperCase();
                 html += `<div class="msg-convo-item" onclick="openThread(${u.id_perdoruesi}, '${escapeHtml(u.emri).replace(/'/g, "\\'")}')">
                     <div class="ud-avatar ud-avatar--active" style="width:36px;height:36px;font-size:0.9rem;flex-shrink:0;">${escapeHtml(initial)}</div>
@@ -1521,7 +1597,7 @@ async function loadUnreadBadge() {
     try {
         const json = await apiCall('messages.php?action=conversations');
         if (!json.success) return;
-        const total = json.data.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+        const total = (json.data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
         const badge = document.getElementById('msg-badge');
         if (badge) {
             if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
@@ -1529,3 +1605,433 @@ async function loadUnreadBadge() {
         }
     } catch (e) {}
 }
+
+
+
+// QR Scanner Mock
+window.openQrScanner = function() {
+  const input = prompt('Skanoni kodin QR ose shkruani ID e biletës (psh. TS-APP-123):');
+  if(!input) return;
+  const match = input.match(/TS-APP-(\d+)/i);
+  if(match && match[1]) {
+     const appId = match[1];
+     if (confirm('Konfirmoni prezencën për aplikimin #' + appId + '?')) {
+         window.markPresence(appId, 'present', null).then(() => alert('Prezenca u regjistrua me sukses!'));
+     }
+  } else {
+     alert('Kodi i pavlefshëm.');
+  }
+};
+
+// ── Change User Role (Super Admin only) ──
+window.changeUserRole = async function(userId, currentRole) {
+    const newRole = currentRole === 'admin' ? 'volunteer' : 'admin';
+    const label = STATUS_LABELS[newRole] || newRole;
+    if (!confirm(`Ndryshoni rolin e përdoruesit në "${label}"?`)) return;
+
+    const json = await apiCall(`users.php?action=change_role&id=${userId}`, 'PUT', { roli: newRole });
+    if (json.success) {
+        loadUsers();
+    } else {
+        alert(json.message || 'Gabim gjatë ndryshimit të rolit.');
+    }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   PROFILE PANEL
+   ═══════════════════════════════════════════════════════════ */
+
+// Color palette (mirrors PHP ts_profile_color_palette())
+const PROFILE_COLORS = {
+    emerald: { label: 'Emerald', mid: '#00715D' },
+    ocean:   { label: 'Ocean',   mid: '#1d4ed8' },
+    sunset:  { label: 'Sunset',  mid: '#ea580c' },
+    rose:    { label: 'Rose',    mid: '#be185d' },
+    violet:  { label: 'Violet',  mid: '#7e22ce' },
+    slate:   { label: 'Slate',   mid: '#334155' },
+    teal:    { label: 'Teal',    mid: '#0d9488' },
+    amber:   { label: 'Amber',   mid: '#d97706' },
+    indigo:  { label: 'Indigo',  mid: '#4f46e5' },
+    pink:    { label: 'Pink',    mid: '#ec4899' },
+    lime:    { label: 'Lime',    mid: '#84cc16' },
+    cyan:    { label: 'Cyan',    mid: '#0891b2' },
+};
+
+let _selectedColor = 'emerald';
+
+function initColorGrid(selectedKey) {
+    const grid = document.getElementById('profile-color-grid');
+    if (!grid) return;
+    _selectedColor = selectedKey || 'emerald';
+    let html = '';
+    for (const [key, val] of Object.entries(PROFILE_COLORS)) {
+        const active = key === _selectedColor ? ' active' : '';
+        html += `<button type="button" class="db-color-swatch${active}" title="${val.label}"
+                    style="background:${val.mid};"
+                    onclick="selectColorSwatch('${key}')"></button>`;
+    }
+    grid.innerHTML = html;
+}
+
+window.selectColorSwatch = function(key) {
+    _selectedColor = key;
+    document.querySelectorAll('.db-color-swatch').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('onclick') === `selectColorSwatch('${key}')`);
+    });
+};
+
+window.loadAdminProfile = async function() {
+    try {
+        const json = await apiCall('auth.php?action=me');
+        if (!json.success) return;
+        const d = json.data;
+
+        const emriEl = document.getElementById('admin-emri');
+        if (emriEl) emriEl.value = d.emri || '';
+
+        const bioEl = document.getElementById('admin-bio');
+        if (bioEl) {
+            bioEl.value = d.bio || '';
+            const counter = document.getElementById('admin-bio-counter');
+            if (counter) counter.textContent = `${(d.bio || '').length}/300`;
+            bioEl.addEventListener('input', function() {
+                const counter2 = document.getElementById('admin-bio-counter');
+                if (counter2) counter2.textContent = `${this.value.length}/300`;
+            });
+        }
+
+        const emailNotif = document.getElementById('admin-email-notif');
+        if (emailNotif) emailNotif.checked = !!parseInt(d.email_notifications ?? 1);
+
+        const profilePublic = document.getElementById('admin-profile-public');
+        if (profilePublic) profilePublic.checked = !!parseInt(d.profile_public ?? 1);
+
+        initColorGrid(d.profile_color || 'emerald');
+
+        // Avatar
+        const pic = d.profile_picture;
+        const imgEl = document.getElementById('profile-avatar-img');
+        const initEl = document.getElementById('profile-avatar-initials');
+        if (imgEl && initEl && pic) {
+            imgEl.src = '/TiranaSolidare/' + pic;
+            imgEl.style.display = 'block';
+            initEl.style.display = 'none';
+            imgEl.onerror = () => { imgEl.style.display = 'none'; initEl.style.display = ''; };
+        }
+    } catch (e) {
+        console.error('[loadAdminProfile]', e);
+    }
+};
+
+window.adminSaveBio = async function() {
+    const bio = (document.getElementById('admin-bio')?.value || '').trim();
+    const st = document.getElementById('admin-bio-status');
+    try {
+        const json = await apiCall('users.php?action=update_profile', 'PUT', { bio });
+        if (st) { st.style.color = json.success ? '#16a34a' : '#dc2626'; st.textContent = json.success ? 'Bio u ruajt.' : (json.message || 'Gabim.'); }
+    } catch (e) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; } }
+};
+
+window.adminSaveColor = async function() {
+    const st = document.getElementById('admin-color-status');
+    try {
+        const json = await apiCall('users.php?action=update_profile', 'PUT', { profile_color: _selectedColor });
+        if (st) { st.style.color = json.success ? '#16a34a' : '#dc2626'; st.textContent = json.success ? 'Ngjyra u ruajt.' : (json.message || 'Gabim.'); }
+    } catch (e) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; } }
+};
+
+window.adminSaveNotifPrefs = async function() {
+    const checked = document.getElementById('admin-email-notif')?.checked ? 1 : 0;
+    const st = document.getElementById('admin-notif-status');
+    try {
+        const json = await apiCall('users.php?action=update_profile', 'PUT', { email_notifications: checked });
+        if (st) { st.style.color = json.success ? '#16a34a' : '#dc2626'; st.textContent = json.success ? 'Preferencat u ruajtën.' : (json.message || 'Gabim.'); }
+    } catch (e) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; } }
+};
+
+window.adminSaveVisibility = async function() {
+    const checked = document.getElementById('admin-profile-public')?.checked ? 1 : 0;
+    const st = document.getElementById('admin-visibility-status');
+    try {
+        const json = await apiCall('users.php?action=update_profile', 'PUT', { profile_public: checked });
+        if (st) { st.style.color = json.success ? '#16a34a' : '#dc2626'; st.textContent = json.success ? 'Dukshmëria u ruajt.' : (json.message || 'Gabim.'); }
+    } catch (e) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; } }
+};
+
+window.adminUploadPicture = async function(input) {
+    if (!input.files || !input.files[0]) return;
+    const st = document.getElementById('profile-avatar-status');
+    if (st) { st.textContent = 'Duke ngarkuar…'; st.style.color = ''; }
+
+    const formData = new FormData();
+    formData.append('profile_picture', input.files[0]);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    try {
+        const res = await fetch('/TiranaSolidare/api/users.php?action=upload_profile_picture', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrf },
+            credentials: 'same-origin',
+            body: formData,
+        });
+        const json = await res.json();
+        if (json.success) {
+            const path = json.data?.profile_picture || json.data?.path;
+            const imgEl = document.getElementById('profile-avatar-img');
+            const initEl = document.getElementById('profile-avatar-initials');
+            if (imgEl && path) {
+                imgEl.src = '/TiranaSolidare/' + path + '?t=' + Date.now();
+                imgEl.style.display = 'block';
+                if (initEl) initEl.style.display = 'none';
+            }
+            if (st) { st.style.color = '#16a34a'; st.textContent = 'Foto u ngarkua me sukses!'; }
+        } else {
+            if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Ngarkimi dështoi.'; }
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; }
+    }
+    input.value = '';
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   BROADCAST NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════ */
+
+window.toggleBroadcastForm = function() {
+    const form = document.getElementById('broadcast-form');
+    if (!form) return;
+    const isHidden = form.style.display === 'none' || !form.style.display;
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        const msgEl = document.getElementById('broadcast-msg');
+        if (msgEl) msgEl.focus();
+    }
+};
+
+window.sendBroadcast = async function() {
+    const mesazhi = (document.getElementById('broadcast-msg')?.value || '').trim();
+    const roli = document.getElementById('broadcast-role')?.value || 'all';
+    const linku = (document.getElementById('broadcast-link')?.value || '').trim() || null;
+    const st = document.getElementById('broadcast-status');
+
+    if (!mesazhi) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Shkruaj mesazhin.'; }
+        return;
+    }
+    if (st) { st.textContent = 'Duke dërguar…'; st.style.color = ''; }
+
+    try {
+        const json = await apiCall('notifications.php?action=broadcast', 'POST', { mesazhi, roli, linku });
+        if (json.success) {
+            if (st) { st.style.color = '#16a34a'; st.textContent = json.data?.message || 'Njoftimi u dërgua.'; }
+            document.getElementById('broadcast-msg').value = '';
+            if (document.getElementById('broadcast-link')) document.getElementById('broadcast-link').value = '';
+            setTimeout(() => toggleBroadcastForm(), 2500);
+        } else {
+            if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Gabim.'; }
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; }
+    }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   CATEGORIES PANEL
+   ═══════════════════════════════════════════════════════════ */
+
+window.loadCategories = async function() {
+    const container = document.getElementById('category-list');
+    if (!container) return;
+    container.innerHTML = '<div class="db-loading">Duke ngarkuar kategoritë…</div>';
+
+    try {
+        const json = await apiCall('categories.php?action=list');
+        if (!json.success) { container.innerHTML = `<div class="db-empty">${escapeHtml(json.message || 'Gabim.')}</div>`; return; }
+
+        const cats = json.data.categories || [];
+        if (cats.length === 0) {
+            container.innerHTML = '<div class="db-cat-empty">Nuk ka kategori. Krijoni të parën duke klikuar "Krijo Kategori".</div>';
+            return;
+        }
+
+        let html = `<div class="db-cat-grid">`;
+        cats.forEach(c => {
+            html += `<div class="db-cat-card" id="cat-card-${c.id_kategoria}">
+                <span class="db-cat-card__name" id="cat-name-${c.id_kategoria}">${escapeHtml(c.emri)}</span>
+                <div class="db-cat-card__actions">
+                    <button class="db-cat-btn db-cat-btn--edit" title="Riemërto" onclick="renameCategoryPrompt(${c.id_kategoria})">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </button>
+                    <button class="db-cat-btn db-cat-btn--del" title="Fshi" onclick="deleteCategory(${c.id_kategoria}, '${escapeHtml(c.emri).replace(/'/g, "\\'")}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="m19 6-.867 13A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.867L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                </div>
+            </div>`;
+        });
+        html += `</div><p style="margin-top:10px;font-size:0.82rem;color:var(--db-text-muted);">${cats.length} kategori</p>`;
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div class="db-empty">Gabim rrjeti.</div>';
+    }
+};
+
+window.toggleCategoryForm = function() {
+    const form = document.getElementById('category-create-form');
+    if (!form) return;
+    const isHidden = form.style.display === 'none' || !form.style.display;
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        const inp = document.getElementById('new-category-name');
+        if (inp) { inp.value = ''; inp.focus(); }
+        const st = document.getElementById('cat-create-status');
+        if (st) st.textContent = '';
+    }
+};
+
+window.createCategory = async function() {
+    const emri = (document.getElementById('new-category-name')?.value || '').trim();
+    const st = document.getElementById('cat-create-status');
+    if (!emri) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Shkruaj emrin.'; } return; }
+
+    try {
+        const json = await apiCall('categories.php?action=create', 'POST', { emri });
+        if (json.success) {
+            if (st) { st.style.color = '#16a34a'; st.textContent = 'Kategoria u krijua!'; }
+            setTimeout(() => { toggleCategoryForm(); loadCategories(); }, 800);
+        } else {
+            if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Gabim.'; }
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; }
+    }
+};
+
+window.renameCategoryPrompt = function(id) {
+    const nameEl = document.getElementById(`cat-name-${id}`);
+    const currentName = nameEl ? nameEl.textContent : '';
+    const newName = prompt('Emri i ri i kategorisë:', currentName);
+    if (!newName || newName.trim() === currentName.trim()) return;
+    renameCategory(id, newName.trim());
+};
+
+window.renameCategory = async function(id, emri) {
+    try {
+        const json = await apiCall(`categories.php?action=update&id=${id}`, 'PUT', { emri });
+        if (json.success) {
+            const nameEl = document.getElementById(`cat-name-${id}`);
+            if (nameEl) nameEl.textContent = emri;
+        } else {
+            alert(json.message || 'Gabim gjatë riemërtimit.');
+        }
+    } catch (e) { alert('Gabim rrjeti.'); }
+};
+
+window.deleteCategory = async function(id, name) {
+    if (!confirm(`Fshi kategorinë "${name}"? Eventet me këtë kategori do të mbeten pa kategori.`)) return;
+    try {
+        const json = await apiCall(`categories.php?action=delete&id=${id}`, 'DELETE');
+        if (json.success) {
+            const card = document.getElementById(`cat-card-${id}`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                card.style.transition = 'opacity 0.25s, transform 0.25s';
+                setTimeout(() => { card.remove(); }, 260);
+            }
+        } else {
+            alert(json.message || 'Gabim gjatë fshirjes.');
+        }
+    } catch (e) { alert('Gabim rrjeti.'); }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   AUDIT LOG PANEL
+   ═══════════════════════════════════════════════════════════ */
+
+window.loadAuditLog = async function(page = 1) {
+    const container = document.getElementById('audit-log-container');
+    if (!container) return;
+    container.innerHTML = '<div class="db-loading">Duke ngarkuar regjistrin…</div>';
+
+    const dateFrom = document.getElementById('audit-date-from')?.value || '';
+    const dateTo   = document.getElementById('audit-date-to')?.value   || '';
+    const action   = document.getElementById('audit-filter-action')?.value?.trim() || '';
+
+    let url = `stats.php?action=admin_log&page=${page}`;
+    if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+    if (dateTo)   url += `&date_to=${encodeURIComponent(dateTo)}`;
+    if (action)   url += `&veprim=${encodeURIComponent(action)}`;
+
+    try {
+        const json = await apiCall(url);
+        if (!json.success) { container.innerHTML = `<div class="db-empty">${escapeHtml(json.message || 'Gabim.')}</div>`; return; }
+
+        const { logs = [], total = 0, total_pages = 1 } = json.data;
+
+        if (!logs.length) {
+            container.innerHTML = '<div class="db-empty" style="padding:40px;text-align:center;color:var(--db-text-muted);">Nuk ka regjistrime për filtrat e zgjedhura.</div>';
+            return;
+        }
+
+        const actionBadgeClass = (v) => {
+            const k = (v || '').toLowerCase();
+            if (k.includes('block'))     return 'db-log-action--block';
+            if (k.includes('unblock'))   return 'db-log-action--unblock';
+            if (k.includes('delete') || k.includes('fshi')) return 'db-log-action--delete';
+            if (k.includes('create') || k.includes('krijoi')) return 'db-log-action--create';
+            if (k.includes('update') || k.includes('përdit')) return 'db-log-action--update';
+            if (k.includes('approv') || k.includes('pranoi')) return 'db-log-action--approve';
+            if (k.includes('reject') || k.includes('refuzoi')) return 'db-log-action--reject';
+            if (k.includes('broadcast')) return 'db-log-action--broadcast';
+            if (k.includes('role') || k.includes('rol'))  return 'db-log-action--role';
+            return '';
+        };
+
+        let html = `<div class="db-table-wrap"><table class="db-table">
+            <thead><tr>
+                <th>#</th>
+                <th>Admin</th>
+                <th>Veprimi</th>
+                <th>Objekti</th>
+                <th>Detaje</th>
+                <th>Data</th>
+            </tr></thead><tbody>`;
+
+        logs.forEach(l => {
+            const cls = actionBadgeClass(l.veprim);
+            const target = l.target_type ? `${escapeHtml(l.target_type)} #${l.target_id || ''}` : '—';
+            const detaje = l.detaje ? escapeHtml(l.detaje) : '—';
+            html += `<tr>
+                <td style="color:var(--db-text-muted);font-size:0.8rem;">${l.id}</td>
+                <td><strong>${escapeHtml(l.admin_emri || '')} <span style="font-size:0.72rem;color:var(--db-text-muted)">#${l.admin_id}</span></strong></td>
+                <td><span class="db-log-action ${cls}">${escapeHtml(l.veprim)}</span></td>
+                <td style="font-size:0.83rem;">${target}</td>
+                <td><span class="db-audit-detail" title="${detaje}">${detaje}</span></td>
+                <td style="font-size:0.82rem;white-space:nowrap;">${formatDate(l.krijuar_me)}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        html += `<div style="margin-top:10px;font-size:0.82rem;color:var(--db-text-muted);">${total} regjistrime gjithsej</div>`;
+
+        // Pagination
+        if (total_pages > 1) {
+            html += `<div class="db-audit-pagination">`;
+            if (page > 1) html += `<button class="db-audit-page-btn" onclick="loadAuditLog(${page - 1})">← Para</button>`;
+            for (let p = Math.max(1, page - 2); p <= Math.min(total_pages, page + 2); p++) {
+                html += `<button class="db-audit-page-btn${p === page ? ' active' : ''}" onclick="loadAuditLog(${p})">${p}</button>`;
+            }
+            if (page < total_pages) html += `<button class="db-audit-page-btn" onclick="loadAuditLog(${page + 1})">Pas →</button>`;
+            html += `</div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div class="db-empty">Gabim rrjeti.</div>';
+    }
+};
