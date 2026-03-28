@@ -29,7 +29,10 @@ try {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && $user['statusi_llogarise'] !== 'blocked') {
+    // Only send a reset link to verified, non-blocked accounts.
+    // Unverified accounts cannot log in anyway, so resetting their password serves no purpose
+    // and would allow bypassing the email-verification requirement.
+    if ($user && (int) ($user['verified'] ?? 0) === 1 && !in_array($user['statusi_llogarise'] ?? '', ['blocked', 'deactivated'], true)) {
         $plainToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+1 hour'))->format('Y-m-d H:i:s');

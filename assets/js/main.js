@@ -143,7 +143,7 @@ async function editEventPrompt(id, btnEl) {
 
     const catsJson = await apiCall('categories.php?action=list');
     const cats = catsJson.success ? catsJson.data.categories : [];
-    const catOptions = cats.map(c =>
+    const catOptions = `<option value="">— Asnjë kategori —</option>` + cats.map(c =>
         `<option value="${c.id_kategoria}" ${c.id_kategoria == ev.id_kategoria ? 'selected' : ''}>${escapeHtml(c.emri)}</option>`
     ).join('');
 

@@ -354,13 +354,23 @@ window.viewEventApps = async function (eventId) {
     const { applications, summary, event_data } = json.data;
     const isPast = new Date(event_data) < new Date();
 
-    let body = `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    let body = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
         <span class="db-badge db-badge--pending">Në pritje: ${summary.ne_pritje}</span>
         <span class="db-badge db-badge--active">Pranuar: ${summary.pranuar}</span>
         <span class="db-badge db-badge--blocked">Refuzuar: ${summary.refuzuar}</span>
         ${isPast ? `<span class="db-badge" style="background:#d1fae5;color:#065f46;">Prezent: ${summary.prezent || 0}</span>
         <span class="db-badge" style="background:#fee2e2;color:#991b1b;">Munguar: ${summary.munguar || 0}</span>` : ''}
     </div>`;
+
+    // Bulk-action toolbar — shown when there are pending applications
+    if (parseInt(summary.ne_pritje) > 0) {
+        body += `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span style="font-size:0.875rem;font-weight:600;color:#166534;flex:1;">${summary.ne_pritje} aplikime në pritje</span>
+            <button class="db-btn db-btn--success db-btn--sm" onclick="bulkApprove(${eventId})">✓ Prano të gjitha</button>
+            <button class="db-btn db-btn--danger db-btn--sm" onclick="bulkReject(${eventId})">✗ Refuzo të gjitha</button>
+        </div>`;
+    }
 
     if (applications.length === 0) {
         body += '<div class="db-loading">Nuk ka aplikime për këtë event.</div>';
@@ -415,6 +425,20 @@ window.markPresence = async function (appId, status, eventId) {
             viewEventApps(eventId);
         }
     }
+};
+
+window.bulkApprove = async function (eventId) {
+    if (!confirm('Prano të gjitha aplikimet në pritje për këtë event?')) return;
+    const json = await apiCall(`applications.php?action=bulk_approve&event_id=${eventId}`, 'PUT');
+    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) viewEventApps(eventId);
+};
+
+window.bulkReject = async function (eventId) {
+    if (!confirm('Refuzo të gjitha aplikimet në pritje për këtë event?')) return;
+    const json = await apiCall(`applications.php?action=bulk_reject&event_id=${eventId}`, 'PUT');
+    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) viewEventApps(eventId);
 };
 
 
@@ -868,8 +892,8 @@ window.loadHelpRequests = async function (page = 1) {
         <input id="admin-req-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadHelpRequests(1)">
         <select id="admin-req-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
-            <option value="Open"${filterStatus === 'Open' ? ' selected' : ''}>Hapur</option>
-            <option value="Closed"${filterStatus === 'Closed' ? ' selected' : ''}>Mbyllur</option>
+            <option value="open"${filterStatus === 'open' ? ' selected' : ''}>Hapur</option>
+            <option value="closed"${filterStatus === 'closed' ? ' selected' : ''}>Mbyllur</option>
         </select>
         <select id="admin-req-filter-type" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterType ? ' selected' : ''}>Të gjitha tipet</option>
@@ -898,13 +922,13 @@ window.loadHelpRequests = async function (page = 1) {
 
     requests.forEach(r => {
         const tipClass = r.tipi === 'request' ? 'request' : 'offer';
-        const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+        const statClass = r.statusi === 'open' ? 'open' : 'closed';
         const flagIndicator = r.flags > 0 ? `<span style="color:#ef4444; font-weight: bold; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${r.flags} Raportime</span>` : '<span style="color:#9ca3af;">0</span>';
 
-        html += `<tr ${r.statusi === 'Closed' ? 'style="opacity:0.65"' : ''}>
+        html += `<tr ${r.statusi === 'closed' ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
-            <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'Open' ? 'Hapur' : 'Mbyllur'}</span></td>
+            <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'open' ? 'Hapur' : 'Mbyllur'}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${flagIndicator}</td>
             <td>${formatDate(r.krijuar_me)}</td>
@@ -912,7 +936,7 @@ window.loadHelpRequests = async function (page = 1) {
                 <div class="db-table__actions">
     <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
 ${r.flags > 0 ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="clearFlags(${r.id_kerkese_ndihme})">Pastro Raportimet</button>` : ''}
-${r.statusi === 'Open' ?
+${r.statusi === 'open' ?
     `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` :
     `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
     <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
@@ -1724,6 +1748,24 @@ window.loadAdminProfile = async function() {
     }
 };
 
+window.adminSaveName = async function() {
+    const emri = (document.getElementById('admin-emri')?.value || '').trim();
+    const st = document.getElementById('admin-name-status');
+    if (!emri) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Emri nuk mund t\u00eb jet\u00eb bosh.'; }
+        return;
+    }
+    try {
+        const json = await apiCall('users.php?action=update_profile', 'PUT', { emri });
+        if (st) {
+            st.style.color = json.success ? '#16a34a' : '#dc2626';
+            st.textContent = json.success ? 'Emri u ruajt.' : (json.message || 'Gabim.');
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; }
+    }
+};
+
 window.adminSaveBio = async function() {
     const bio = (document.getElementById('admin-bio')?.value || '').trim();
     const st = document.getElementById('admin-bio-status');
@@ -1843,6 +1885,17 @@ window.sendBroadcast = async function() {
    CATEGORIES PANEL
    ═══════════════════════════════════════════════════════════ */
 
+// Color palette for category letter-avatar tiles (cycles by category ID)
+const _CAT_PALETTE = [
+    { bg: '#e0f2fe', text: '#0369a1' },
+    { bg: '#dcfce7', text: '#15803d' },
+    { bg: '#fef9c3', text: '#92400e' },
+    { bg: '#fce7f3', text: '#9d174d' },
+    { bg: '#ede9fe', text: '#6d28d9' },
+    { bg: '#ffedd5', text: '#9a3412' },
+    { bg: '#f0fdf4', text: '#065f46' },
+];
+
 window.loadCategories = async function() {
     const container = document.getElementById('category-list');
     if (!container) return;
@@ -1853,26 +1906,35 @@ window.loadCategories = async function() {
         if (!json.success) { container.innerHTML = `<div class="db-empty">${escapeHtml(json.message || 'Gabim.')}</div>`; return; }
 
         const cats = json.data.categories || [];
+        window._catList = cats; // store for delete modal
+
         if (cats.length === 0) {
-            container.innerHTML = '<div class="db-cat-empty">Nuk ka kategori. Krijoni të parën duke klikuar "Krijo Kategori".</div>';
+            container.innerHTML = '<div class="db-cat-empty">Nuk ka kategori. Krijoni të parën duke klikuar "+ Krijo Kategori".</div>';
             return;
         }
 
-        let html = `<div class="db-cat-grid">`;
+        let html = '<div class="db-cat-grid">';
         cats.forEach(c => {
+            const pal = _CAT_PALETTE[c.id_kategoria % _CAT_PALETTE.length];
+            const ltr = escapeHtml((c.emri || '?')[0].toUpperCase());
+            const cnt = parseInt(c.event_count) || 0;
             html += `<div class="db-cat-card" id="cat-card-${c.id_kategoria}">
-                <span class="db-cat-card__name" id="cat-name-${c.id_kategoria}">${escapeHtml(c.emri)}</span>
+                <div class="db-cat-avatar" style="background:${pal.bg};color:${pal.text};">${ltr}</div>
+                <div class="db-cat-card__body">
+                    <span class="db-cat-card__name" id="cat-name-${c.id_kategoria}">${escapeHtml(c.emri)}</span>
+                    <span class="db-cat-card__count">${cnt} event${cnt === 1 ? '' : 'e'}</span>
+                </div>
                 <div class="db-cat-card__actions">
-                    <button class="db-cat-btn db-cat-btn--edit" title="Riemërto" onclick="renameCategoryPrompt(${c.id_kategoria})">
+                    <button class="db-cat-btn db-cat-btn--edit" title="Riemërto" onclick="renameCategoryInline(${c.id_kategoria})">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                     </button>
-                    <button class="db-cat-btn db-cat-btn--del" title="Fshi" onclick="deleteCategory(${c.id_kategoria}, '${escapeHtml(c.emri).replace(/'/g, "\\'")}')">
+                    <button class="db-cat-btn db-cat-btn--del" title="Fshi" onclick="deleteCategoryModal(${c.id_kategoria})">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="m19 6-.867 13A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.867L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                 </div>
             </div>`;
         });
-        html += `</div><p style="margin-top:10px;font-size:0.82rem;color:var(--db-text-muted);">${cats.length} kategori</p>`;
+        html += `</div><p style="margin-top:12px;font-size:0.82rem;color:var(--db-text-muted);">${cats.length} kategori gjithsej</p>`;
         container.innerHTML = html;
     } catch (e) {
         container.innerHTML = '<div class="db-empty">Gabim rrjeti.</div>';
@@ -1896,7 +1958,6 @@ window.createCategory = async function() {
     const emri = (document.getElementById('new-category-name')?.value || '').trim();
     const st = document.getElementById('cat-create-status');
     if (!emri) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Shkruaj emrin.'; } return; }
-
     try {
         const json = await apiCall('categories.php?action=create', 'POST', { emri });
         if (json.success) {
@@ -1910,42 +1971,177 @@ window.createCategory = async function() {
     }
 };
 
-window.renameCategoryPrompt = function(id) {
+// Inline rename — transforms the name <span> into an <input> right in place
+window.renameCategoryInline = function(id) {
     const nameEl = document.getElementById(`cat-name-${id}`);
-    const currentName = nameEl ? nameEl.textContent : '';
-    const newName = prompt('Emri i ri i kategorisë:', currentName);
-    if (!newName || newName.trim() === currentName.trim()) return;
-    renameCategory(id, newName.trim());
+    if (!nameEl || nameEl.tagName === 'INPUT') return;
+    const currentName = nameEl.textContent.trim();
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'db-cat-inline-input';
+    input.id = `cat-name-${id}`;
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const restore = (name) => {
+        const span = document.createElement('span');
+        span.className = 'db-cat-card__name';
+        span.id = `cat-name-${id}`;
+        span.textContent = name;
+        const cur = document.getElementById(`cat-name-${id}`);
+        if (cur) cur.replaceWith(span);
+    };
+
+    const save = () => {
+        const newName = (input.value || '').trim();
+        if (!newName || newName === currentName) { restore(currentName); return; }
+        restore(newName); // optimistic
+        renameCategory(id, newName, currentName);
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { restore(currentName); }
+    });
+    input.addEventListener('blur', save);
 };
 
-window.renameCategory = async function(id, emri) {
+window.renameCategory = async function(id, emri, fallbackName) {
     try {
         const json = await apiCall(`categories.php?action=update&id=${id}`, 'PUT', { emri });
         if (json.success) {
-            const nameEl = document.getElementById(`cat-name-${id}`);
-            if (nameEl) nameEl.textContent = emri;
+            const az = document.querySelector(`#cat-card-${id} .db-cat-avatar`);
+            if (az) az.textContent = (emri[0] || '?').toUpperCase();
+            if (window._catList) {
+                const item = window._catList.find(c => c.id_kategoria == id);
+                if (item) item.emri = emri;
+            }
         } else {
-            alert(json.message || 'Gabim gjatë riemërtimit.');
+            const nameEl = document.getElementById(`cat-name-${id}`);
+            if (nameEl) nameEl.textContent = fallbackName || emri;
+            dbToast(json.message || 'Gabim gjatë riemërtimit.', 'danger');
         }
-    } catch (e) { alert('Gabim rrjeti.'); }
+    } catch (e) {
+        const nameEl = document.getElementById(`cat-name-${id}`);
+        if (nameEl) nameEl.textContent = fallbackName || emri;
+        dbToast('Gabim rrjeti.', 'danger');
+    }
 };
 
-window.deleteCategory = async function(id, name) {
-    if (!confirm(`Fshi kategorinë "${name}"? Eventet me këtë kategori do të mbeten pa kategori.`)) return;
+let _catDelId = null;
+
+// Delete category — opens a proper modal with optional event reassignment
+window.deleteCategoryModal = function(id) {
+    _catDelId = id;
+    const cats   = window._catList || [];
+    const target = cats.find(c => c.id_kategoria == id);
+    if (!target) return;
+
+    const name   = target.emri || '';
+    const count  = parseInt(target.event_count) || 0;
+    const others = cats.filter(c => c.id_kategoria != id);
+    const otherOpts = others.length > 0
+        ? others.map(c => `<option value="${c.id_kategoria}">${escapeHtml(c.emri)}</option>`).join('')
+        : `<option value="" disabled>Nuk ka kategori të tjera</option>`;
+
+    const reassignBlock = count > 0 ? `
+        <label class="db-radio-option">
+            <input type="radio" name="cat-del-action" value="orphan" checked>
+            <div class="db-radio-option__text">
+                <strong>Lëri eventet pa kategori</strong>
+                <p>Eventet e kësaj kategorie do të shfaqen si "Pa Kategori".</p>
+            </div>
+        </label>
+        <label class="db-radio-option">
+            <input type="radio" name="cat-del-action" value="reassign">
+            <div class="db-radio-option__text">
+                <strong>Zhvendos eventet tek kategori tjetër</strong>
+                <p>Zgjidhni ku do të shkojnë:</p>
+                <select id="cat-del-reassign-target" ${others.length === 0 ? 'disabled' : ''}>
+                    <option value="">-- Zgjidhni kategorinë --</option>
+                    ${otherOpts}
+                </select>
+            </div>
+        </label>` : '';
+
+    const modal = document.createElement('div');
+    modal.className = 'db-overlay';
+    modal.id = 'cat-del-modal';
+    modal.innerHTML = `
+        <div class="db-dialog">
+            <div class="db-dialog__header">
+                <h4>Fshi kategorinë?</h4>
+                <button class="db-dialog__close" onclick="closeCategoryDeleteModal()" aria-label="Mbyll">&times;</button>
+            </div>
+            <div class="db-dialog__body">
+                <div class="db-dialog__warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                    <div class="db-dialog__warning-text">
+                        <strong>"${escapeHtml(name)}"</strong>
+                        <p>${count > 0 ? `Ka <b>${count}</b> event${count === 1 ? '' : 'e'} të lidhura.` : 'Nuk ka evente — fshirja është e sigurt.'}</p>
+                    </div>
+                </div>
+                ${reassignBlock}
+            </div>
+            <div class="db-dialog__footer">
+                <button class="db-btn db-btn--ghost" onclick="closeCategoryDeleteModal()">Anulo</button>
+                <button class="db-btn db-btn--danger" onclick="executeCategoryDelete()">Fshi kategorinë</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeCategoryDeleteModal(); });
+};
+
+window.closeCategoryDeleteModal = function() {
+    const modal = document.getElementById('cat-del-modal');
+    if (modal) modal.remove();
+    _catDelId = null;
+};
+
+window.executeCategoryDelete = async function() {
+    if (!_catDelId) return;
+    const id     = _catDelId;
+    const cats   = window._catList || [];
+    const target = cats.find(c => c.id_kategoria == id);
+    const count  = parseInt(target?.event_count) || 0;
+
+    let url = `categories.php?action=delete&id=${id}`;
+
+    if (count > 0) {
+        const action = document.querySelector('input[name="cat-del-action"]:checked')?.value || 'orphan';
+        if (action === 'reassign') {
+            const reassignTo = document.getElementById('cat-del-reassign-target')?.value;
+            if (!reassignTo) {
+                dbToast('Zgjidhni kategorinë ku do të zhvendosen eventet.', 'danger');
+                return;
+            }
+            url += `&reassign_to=${reassignTo}`;
+        }
+    }
+
+    closeCategoryDeleteModal();
+
     try {
-        const json = await apiCall(`categories.php?action=delete&id=${id}`, 'DELETE');
+        const json = await apiCall(url, 'DELETE');
         if (json.success) {
             const card = document.getElementById(`cat-card-${id}`);
             if (card) {
                 card.style.opacity = '0';
-                card.style.transform = 'scale(0.9)';
+                card.style.transform = 'scale(0.88)';
                 card.style.transition = 'opacity 0.25s, transform 0.25s';
                 setTimeout(() => { card.remove(); }, 260);
             }
+            if (window._catList) window._catList = window._catList.filter(c => c.id_kategoria != id);
+            dbToast(json.message || 'Kategoria u fshi.', 'success');
         } else {
-            alert(json.message || 'Gabim gjatë fshirjes.');
+            dbToast(json.message || 'Gabim gjatë fshirjes.', 'danger');
         }
-    } catch (e) { alert('Gabim rrjeti.'); }
+    } catch (e) {
+        dbToast('Gabim rrjeti.', 'danger');
+    }
 };
 
 

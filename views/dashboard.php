@@ -1,7 +1,7 @@
 ﻿<?php
 // views/dashboard.php — Admin Panel (Admin only)
+require_once __DIR__ . '/../includes/functions.php'; // must come first — sets ini_set() cookie params before session_start()
 session_start();
-require_once __DIR__ . '/../includes/functions.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /TiranaSolidare/views/login.php");
@@ -440,10 +440,10 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <!-- ═══════════════ PANEL: PROFILE (Admin) ═══════════════ -->
 <div class="db-panel" id="panel-profile">
   <div class="db-panel__header">
-    <h3>Profili im</h3>
-    <a href="/TiranaSolidare/views/public_profile.php" target="_blank" class="db-btn db-btn--ghost">
+    <h3>Llogaria ime</h3>
+    <a href="/TiranaSolidare/views/events.php" target="_blank" class="db-btn db-btn--ghost">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
-      Shiko profilin publik
+      Shiko faqen publike
     </a>
   </div>
 
@@ -462,6 +462,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       <p class="ud-header__email"><?= $userEmail ?></p>
       <div class="ud-header__badges">
         <span class="db-badge db-badge--admin"><?= $isSuperAdmin ? 'Super Admin' : e($userRoli) ?></span>
+        <span class="db-badge db-badge--vol" style="font-size:0.75rem;">Bashkia Tiranë</span>
       </div>
       <div id="profile-avatar-status" style="font-size:12px;min-height:14px;margin-top:4px;color:var(--db-primary);"></div>
     </div>
@@ -473,30 +474,13 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     <div class="ud-card">
       <div class="ud-card__header">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <h4>Emri</h4>
+        <h4>Emri i llogarisë</h4>
       </div>
-      <p class="ud-card__desc">Emri shfaqet në panel dhe te njoftimet.</p>
+      <p class="ud-card__desc">Emri i administratorit që shfaqet brenda panelit dhe te njoftimet.</p>
       <div class="ud-card__body">
         <input type="text" id="admin-emri" class="ud-input" placeholder="Emri Mbiemri">
         <button class="db-btn db-btn--primary" onclick="adminSaveName()">Ruaj emrin</button>
         <div id="admin-name-status" style="font-size:13px;min-height:16px"></div>
-      </div>
-    </div>
-
-    <!-- Bio -->
-    <div class="ud-card">
-      <div class="ud-card__header">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        <h4>Bio</h4>
-      </div>
-      <p class="ud-card__desc">Bio shfaqet në profilin tuaj publik.</p>
-      <div class="ud-card__body">
-        <textarea id="admin-bio" class="ud-input" rows="3" maxlength="300" placeholder="Shkruaj diçka rreth vetes…" style="resize:vertical;"></textarea>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-          <button class="db-btn db-btn--primary" onclick="adminSaveBio()">Ruaj bio-n</button>
-          <span id="admin-bio-counter" style="font-size:12px;color:#94a3b8;">0/300</span>
-        </div>
-        <div id="admin-bio-status" style="font-size:13px;min-height:16px;margin-top:4px;"></div>
       </div>
     </div>
 
@@ -506,7 +490,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <h4>Fjalëkalimi</h4>
       </div>
-      <p class="ud-card__desc">Vendos një fjalëkalim të fortë dhe unik.</p>
+      <p class="ud-card__desc">Vendos një fjalëkalim të fortë dhe unik. Ndryshimi do të çkyçë pajisjet e tjera.</p>
       <div class="ud-card__body">
         <input type="password" id="admin-current-pw" class="ud-input" placeholder="Fjalëkalimi aktual" autocomplete="new-password">
         <input type="password" id="admin-new-pw" class="ud-input" placeholder="Fjalëkalimi i ri">
@@ -516,27 +500,13 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       </div>
     </div>
 
-    <!-- Profile Color -->
-    <div class="ud-card">
-      <div class="ud-card__header">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-        <h4>Ngjyra e Profilit</h4>
-      </div>
-      <p class="ud-card__desc">Personalizo ngjyrën e avatarit tënd.</p>
-      <div class="ud-card__body">
-        <div class="db-color-grid" id="profile-color-grid"></div>
-        <button class="db-btn db-btn--primary" style="margin-top:12px;" onclick="adminSaveColor()">Ruaj ngjyrën</button>
-        <div id="admin-color-status" style="font-size:13px;min-height:16px;margin-top:4px;"></div>
-      </div>
-    </div>
-
-    <!-- Notification preferences -->
+    <!-- Email / Notifications -->
     <div class="ud-card">
       <div class="ud-card__header">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         <h4>Preferencat e Njoftimeve</h4>
       </div>
-      <p class="ud-card__desc">Zgjidhni nëse dëshironi njoftime me email.</p>
+      <p class="ud-card__desc">Zgjidhni nëse dëshironi njoftime me email për veprime administrative.</p>
       <div class="ud-card__body">
         <label class="db-toggle-row">
           <span>Njoftime me email</span>
@@ -549,22 +519,19 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
       </div>
     </div>
 
-    <!-- Profile visibility -->
-    <div class="ud-card">
+    <!-- Organization info note -->
+    <div class="ud-card" style="background:linear-gradient(135deg,rgba(0,113,93,0.05) 0%,rgba(0,113,93,0.02) 100%);border-color:rgba(0,113,93,0.2);">
       <div class="ud-card__header">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <h4>Dukshmëria e Profilit</h4>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <h4>Informacion për Organizatën</h4>
       </div>
-      <p class="ud-card__desc">Kur aktivizohet, profili juaj është i dukshëm për publikun.</p>
-      <div class="ud-card__body">
-        <label class="db-toggle-row">
-          <span>Profil publik</span>
-          <label class="db-toggle">
-            <input type="checkbox" id="admin-profile-public" onchange="adminSaveVisibility()">
-            <span class="db-toggle__slider"></span>
-          </label>
-        </label>
-        <div id="admin-visibility-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+      <p class="ud-card__desc" style="font-size:0.88rem;line-height:1.6;">
+        Eventet publikohen si iniciativë e <strong>Bashkisë Tiranë</strong> — organizatës që qëndron pas platformës Tirana Solidare.
+        Profili personal i administratorit nuk është i dukshëm për vullnetarët. Çdo event tregon vetëm emrin e organizatës dhe kategorinë.
+      </p>
+      <div style="margin-top:12px;padding:12px;background:rgba(0,113,93,0.06);border-radius:10px;font-size:0.82rem;color:#00715D;display:flex;gap:8px;align-items:flex-start;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Vullnetarët e shohin platformën si "Tirana Solidare" dhe bashkinë si organizatorin e çdo eventi — jo emrin tuaj personal.</span>
       </div>
     </div>
 

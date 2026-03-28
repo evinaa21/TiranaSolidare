@@ -131,8 +131,17 @@ switch ($action) {
             json_error('Mesazhi është i nevojshëm.', 422, $errors);
         }
 
+        if ($lenErr = validate_length($mesazhi, 1, 1000, 'mesazhi')) {
+            json_error($lenErr, 422);
+        }
+
         $roli  = trim($body['roli'] ?? 'all');    // 'all' | 'volunteer' | 'admin'
         $linku = !empty($body['linku']) ? trim($body['linku']) : null;
+
+        // Validate link to prevent stored XSS via javascript: or data: URIs
+        if ($linku !== null && !str_starts_with($linku, '/TiranaSolidare/')) {
+            json_error('Linku duhet të jetë relativ dhe të fillojë me /TiranaSolidare/.', 422);
+        }
 
         // Only allow known role values to avoid injection
         if (!in_array($roli, ['all', 'volunteer', 'admin', 'super_admin'], true)) {
@@ -151,11 +160,31 @@ switch ($action) {
             json_error('Asnjë përdorues aktiv u gjet për rolin zgjedhur.', 404);
         }
 
-        $ins   = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku, is_read) VALUES (?, ?, ?, ?, 0)');
-        $count = 0;
-        foreach ($userIds as $uid) {
-            $ins->execute([$uid, $mesazhi, 'broadcast', $linku]);
-            $count++;
+        // Bulk INSERT with a transaction instead of N separate INSERTs.
+        // This is both faster and atomic — partial deliveries on timeout are impossible.
+        try {
+            $pdo->beginTransaction();
+            $batchSize = 500;
+            $count     = 0;
+            foreach (array_chunk($userIds, $batchSize) as $chunk) {
+                $placeholders = implode(', ', array_fill(0, count($chunk), '(?, ?, ?, ?, 0)'));
+                $flatParams   = [];
+                foreach ($chunk as $uid) {
+                    $flatParams[] = $uid;
+                    $flatParams[] = $mesazhi;
+                    $flatParams[] = 'broadcast';
+                    $flatParams[] = $linku;
+                }
+                $pdo->prepare(
+                    "INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku, is_read) VALUES $placeholders"
+                )->execute($flatParams);
+                $count += count($chunk);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('broadcast failed: ' . $e->getMessage());
+            json_error('Gabim gjatë dërgimit të njoftimit.', 500);
         }
 
         json_success(['sent' => $count, 'message' => "Njoftimi u dërgua te $count përdorues."]);

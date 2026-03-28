@@ -46,6 +46,10 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
+        if ($lenErr = validate_length($emri, 2, 100, 'emri')) {
+            json_error($lenErr, 422);
+        }
+
         // Check uniqueness
         $check = $pdo->prepare('SELECT id_kategoria FROM Kategoria WHERE emri = ?');
         $check->execute([$emri]);
@@ -78,6 +82,10 @@ switch ($action) {
 
         if (!empty($errors)) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        if ($lenErr = validate_length($emri, 2, 100, 'emri')) {
+            json_error($lenErr, 422);
         }
 
         // Fix L-08: Check existence first, don't rely on rowCount()

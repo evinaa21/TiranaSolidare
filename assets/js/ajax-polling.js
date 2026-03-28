@@ -14,13 +14,15 @@ const POLL_INTERVAL = 15000; // 15 seconds
 
 let notifBadge = null;
 
+let _notifTimer = null;
+
 function initNotificationPolling() {
     notifBadge = document.getElementById('notif-badge');
     if (!notifBadge) return;
 
     // First fetch immediately, then start interval
     fetchUnreadCount();
-    setInterval(fetchUnreadCount, POLL_INTERVAL);
+    _notifTimer = setInterval(fetchUnreadCount, POLL_INTERVAL);
 }
 
 async function fetchUnreadCount() {
@@ -43,12 +45,14 @@ async function fetchUnreadCount() {
 let appListContainer = null;
 let currentAppPage = 1;
 
+let _appTimer = null;
+
 function initApplicationPolling(containerId = 'application-list') {
     appListContainer = document.getElementById(containerId);
     if (!appListContainer) return;
 
     fetchMyApplications();
-    setInterval(fetchMyApplications, POLL_INTERVAL);
+    _appTimer = setInterval(fetchMyApplications, POLL_INTERVAL);
 }
 
 async function fetchMyApplications(page = 1) {
@@ -131,13 +135,21 @@ async function withdrawApplication(id) {
 
 let eventListContainer = null;
 
+let _eventTimer = null;
+
 function initEventPolling(containerId = 'event-list') {
     eventListContainer = document.getElementById(containerId);
     if (!eventListContainer) return;
 
     fetchEvents();
-    setInterval(fetchEvents, 30000); // Every 30 seconds
+    _eventTimer = setInterval(fetchEvents, 30000); // Every 30 seconds
 }
+
+window.addEventListener('beforeunload', () => {
+    clearInterval(_notifTimer);
+    clearInterval(_appTimer);
+    clearInterval(_eventTimer);
+});
 
 async function fetchEvents(page = 1, filters = {}) {
     const params = new URLSearchParams({ action: 'list', page, limit: 12, ...filters });

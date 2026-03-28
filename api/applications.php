@@ -137,7 +137,10 @@ switch ($action) {
         if (is_admin_role($user['roli'])) {
             json_error('Administratorët nuk mund të aplikojnë si vullnetarë.', 403);
         }
-
+        // Rate limit: max 20 event applications per hour per user
+        if (!check_rate_limit('apply_event_' . $user['id'], 20, 3600)) {
+            json_error('Po dërgoni shumë aplikime. Provoni përsëri pas një ore.', 429);
+        }
         $body   = get_json_body();
         $errors = [];
         $eventId = isset($body['id_eventi']) ? (int) $body['id_eventi'] : 0;
@@ -175,26 +178,37 @@ switch ($action) {
             json_error('Ju keni aplikuar tashmë për këtë event.', 409);
         }
 
-        // Determine waitlist status based on capacity
+        // Determine waitlist status and insert atomically — prevents duplicate waitlist flags
+        // under concurrent requests from many users applying at the same time.
         $waitlisted = 0;
-        if ($event['kapaciteti'] !== null && (int) $event['kapaciteti'] > 0) {
-            $countStmt = $pdo->prepare(
-                "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved'"
-            );
-            $countStmt->execute([$eventId]);
-            $acceptedCount = (int) $countStmt->fetchColumn();
-            if ($acceptedCount >= (int) $event['kapaciteti']) {
-                $waitlisted = 1;
+        try {
+            $pdo->beginTransaction();
+
+            if ($event['kapaciteti'] !== null && (int) $event['kapaciteti'] > 0) {
+                // Lock approved rows for this event so no other transaction can sneak an INSERT
+                // between our count check and our own INSERT.
+                $countStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved' FOR UPDATE"
+                );
+                $countStmt->execute([$eventId]);
+                $acceptedCount = (int) $countStmt->fetchColumn();
+                if ($acceptedCount >= (int) $event['kapaciteti']) {
+                    $waitlisted = 1;
+                }
             }
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO Aplikimi (id_perdoruesi, id_eventi, statusi, ne_liste_pritje) VALUES (?, ?, 'pending', ?)"
+            );
+            $stmt->execute([$user['id'], $eventId, $waitlisted]);
+            $appId = (int) $pdo->lastInsertId();
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('applications apply tx: ' . $e->getMessage());
+            json_error('Gabim gjatë dërgimit të aplikimit.', 500);
         }
-
-        // Insert application
-        $stmt = $pdo->prepare(
-            "INSERT INTO Aplikimi (id_perdoruesi, id_eventi, statusi, ne_liste_pritje) VALUES (?, ?, 'pending', ?)"
-        );
-        $stmt->execute([$user['id'], $eventId, $waitlisted]);
-
-        $appId = (int) $pdo->lastInsertId();
 
         // Create notification for admins
         $admins = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE roli IN ('admin','super_admin')");
@@ -250,25 +264,37 @@ switch ($action) {
             json_error('Aplikimi nuk u gjet.', 404);
         }
 
-        // Capacity re-check when approving
-        if ($newStatus === 'approved') {
-            $evCheck = $pdo->prepare('SELECT kapaciteti FROM Eventi WHERE id_eventi = ?');
-            $evCheck->execute([$app['id_eventi']]);
-            $evData = $evCheck->fetch();
-            if ($evData && $evData['kapaciteti'] !== null && (int) $evData['kapaciteti'] > 0) {
-                $countStmt = $pdo->prepare(
-                    "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved' AND id_aplikimi != ?"
-                );
-                $countStmt->execute([$app['id_eventi'], $id]);
-                if ((int) $countStmt->fetchColumn() >= (int) $evData['kapaciteti']) {
-                    json_error('Kapaciteti i eventit është plotësuar. Nuk mund të pranohet.', 422);
+        // Capacity re-check and status update are wrapped in a transaction to prevent
+        // two admins simultaneously approving applications beyond event capacity.
+        try {
+            $pdo->beginTransaction();
+
+            if ($newStatus === 'approved') {
+                // Lock the event row to block concurrent approval attempts
+                $evCheck = $pdo->prepare('SELECT kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
+                $evCheck->execute([$app['id_eventi']]);
+                $evData = $evCheck->fetch();
+                if ($evData && $evData['kapaciteti'] !== null && (int) $evData['kapaciteti'] > 0) {
+                    $countStmt = $pdo->prepare(
+                        "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved' AND id_aplikimi != ?"
+                    );
+                    $countStmt->execute([$app['id_eventi'], $id]);
+                    if ((int) $countStmt->fetchColumn() >= (int) $evData['kapaciteti']) {
+                        $pdo->rollBack();
+                        json_error('Kapaciteti i eventit është plotësuar. Nuk mund të pranohet.', 422);
+                    }
                 }
             }
-        }
 
-        // Update
-        $stmt = $pdo->prepare('UPDATE Aplikimi SET statusi = ? WHERE id_aplikimi = ?');
-        $stmt->execute([$newStatus, $id]);
+            $stmt = $pdo->prepare('UPDATE Aplikimi SET statusi = ? WHERE id_aplikimi = ?');
+            $stmt->execute([$newStatus, $id]);
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('applications update_status tx: ' . $e->getMessage());
+            json_error('Gabim gjatë përditësimit të statusit.', 500);
+        }
 
         // Notify the volunteer
         $statusLabel = $newStatus === 'approved' ? 'pranuar ✓' : ($newStatus === 'rejected' ? 'refuzuar ✗' : 'në pritje');
@@ -289,6 +315,65 @@ switch ($action) {
             );
         }
 
+        // Auto-promote the next waitlisted applicant if an approved slot just opened
+        if ($app['statusi'] === 'approved' && in_array($newStatus, ['rejected', 'pending'], true)) {
+            $nextApp = null;
+            try {
+                $pdo->beginTransaction();
+                // Lock event row to prevent concurrent promotions from double-filling the same slot
+                $evStmt = $pdo->prepare('SELECT kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
+                $evStmt->execute([$app['id_eventi']]);
+                $evRow = $evStmt->fetch();
+
+                $canPromote = true;
+                if ($evRow && $evRow['kapaciteti'] !== null) {
+                    $approvedCnt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved'");
+                    $approvedCnt->execute([$app['id_eventi']]);
+                    if ((int) $approvedCnt->fetchColumn() >= (int) $evRow['kapaciteti']) {
+                        $canPromote = false;
+                    }
+                }
+
+                if ($canPromote) {
+                    $nextStmt = $pdo->prepare(
+                        "SELECT a.id_aplikimi, a.id_perdoruesi, p.emri, p.email
+                         FROM Aplikimi a
+                         JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                         WHERE a.id_eventi = ? AND a.ne_liste_pritje = 1 AND a.statusi = 'pending'
+                         ORDER BY a.aplikuar_me ASC LIMIT 1"
+                    );
+                    $nextStmt->execute([$app['id_eventi']]);
+                    $nextApp = $nextStmt->fetch();
+
+                    if ($nextApp) {
+                        $pdo->prepare("UPDATE Aplikimi SET statusi = 'approved', ne_liste_pritje = 0 WHERE id_aplikimi = ?")
+                            ->execute([$nextApp['id_aplikimi']]);
+                    }
+                }
+                $pdo->commit();
+            } catch (\Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('waitlist promotion failed: ' . $e->getMessage());
+                $nextApp = null;
+            }
+
+            if ($nextApp) {
+                $promoteMsg  = "U promovuat nga lista e pritjes! Aplikimi juaj për eventin \"{$app['eventi_titulli']}\" u pranua.";
+                $promoteLink = "/TiranaSolidare/views/events.php?id={$app['id_eventi']}";
+                $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)')
+                    ->execute([$nextApp['id_perdoruesi'], $promoteMsg, 'aplikim_event', 'event', $app['id_eventi'], $promoteLink]);
+
+                if (filter_var($nextApp['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $nextApp['email'],
+                        $nextApp['emri'],
+                        'U promovuat nga lista e pritjes — Tirana Solidare',
+                        $promoteMsg
+                    );
+                }
+            }
+        }
+
         json_success(['message' => "Statusi u përditësua në '$newStatus'."]);
         break;
 
@@ -302,17 +387,77 @@ switch ($action) {
             json_error('ID-ja e aplikimit është e pavlefshme.', 400);
         }
 
-        // Only own pending applications can be withdrawn
+        // Allow withdrawal of both pending and approved applications
         $check = $pdo->prepare(
-            "SELECT id_aplikimi FROM Aplikimi WHERE id_aplikimi = ? AND id_perdoruesi = ? AND statusi = 'pending'"
+            "SELECT a.id_aplikimi, a.statusi, a.id_eventi, e.titulli AS eventi_titulli
+             FROM Aplikimi a
+             JOIN Eventi e ON e.id_eventi = a.id_eventi
+             WHERE a.id_aplikimi = ? AND a.id_perdoruesi = ? AND a.statusi IN ('pending', 'approved')"
         );
         $check->execute([$id, $user['id']]);
+        $withdrawn = $check->fetch();
 
-        if (!$check->fetch()) {
-            json_error('Aplikimi nuk u gjet ose nuk mund të tërhiqet.', 404);
+        if (!$withdrawn) {
+            json_error('Aplikimi nuk u gjet ose nuk mund të tëriqet.', 404);
         }
 
         $pdo->prepare('DELETE FROM Aplikimi WHERE id_aplikimi = ?')->execute([$id]);
+
+        // If an approved volunteer withdraws, try to promote next waitlisted applicant
+        if ($withdrawn['statusi'] === 'approved') {
+            $nextApp = null;
+            try {
+                $pdo->beginTransaction();
+                $evStmt = $pdo->prepare('SELECT kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
+                $evStmt->execute([$withdrawn['id_eventi']]);
+                $evRow  = $evStmt->fetch();
+
+                $canPromote = true;
+                if ($evRow && $evRow['kapaciteti'] !== null) {
+                    $approvedCnt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved'");
+                    $approvedCnt->execute([$withdrawn['id_eventi']]);
+                    if ((int) $approvedCnt->fetchColumn() >= (int) $evRow['kapaciteti']) {
+                        $canPromote = false;
+                    }
+                }
+
+                if ($canPromote) {
+                    $nextStmt = $pdo->prepare(
+                        "SELECT a.id_aplikimi, a.id_perdoruesi, p.emri, p.email
+                         FROM Aplikimi a
+                         JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                         WHERE a.id_eventi = ? AND a.ne_liste_pritje = 1 AND a.statusi = 'pending'
+                         ORDER BY a.aplikuar_me ASC LIMIT 1"
+                    );
+                    $nextStmt->execute([$withdrawn['id_eventi']]);
+                    $nextApp = $nextStmt->fetch();
+                    if ($nextApp) {
+                        $pdo->prepare("UPDATE Aplikimi SET statusi = 'approved', ne_liste_pritje = 0 WHERE id_aplikimi = ?")
+                            ->execute([$nextApp['id_aplikimi']]);
+                    }
+                }
+                $pdo->commit();
+            } catch (\Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('waitlist promotion on withdraw failed: ' . $e->getMessage());
+                $nextApp = null;
+            }
+
+            if ($nextApp) {
+                $promoteMsg  = "U promovuat nga lista e pritjes! Aplikimi juaj për eventin \"{$withdrawn['eventi_titulli']}\" u pranua.";
+                $promoteLink = "/TiranaSolidare/views/events.php?id={$withdrawn['id_eventi']}";
+                $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)')
+                    ->execute([$nextApp['id_perdoruesi'], $promoteMsg, 'aplikim_event', 'event', $withdrawn['id_eventi'], $promoteLink]);
+                if (filter_var($nextApp['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $nextApp['email'],
+                        $nextApp['emri'],
+                        'U promovuat nga lista e pritjes — Tirana Solidare',
+                        $promoteMsg
+                    );
+                }
+            }
+        }
 
         json_success(['message' => 'Aplikimi u tërhoq me sukses.']);
         break;
@@ -328,16 +473,29 @@ case 'by_user':
     }
 
 try {
+    $pagination = get_pagination();
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_perdoruesi = ?');
+    $countStmt->execute([$targetId]);
+    $total = (int) $countStmt->fetchColumn();
+
     $stmt = $pdo->prepare(
         "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data,
                 e.vendndodhja AS eventi_vendndodhja
          FROM Aplikimi a
          JOIN Eventi e ON e.id_eventi = a.id_eventi
          WHERE a.id_perdoruesi = ?
-         ORDER BY a.aplikuar_me DESC"
+         ORDER BY a.aplikuar_me DESC
+         LIMIT ? OFFSET ?"
     );
-    $stmt->execute([$targetId]);
-    json_success(['applications' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC))]);
+    $stmt->execute([$targetId, $pagination['limit'], $pagination['offset']]);
+    json_success([
+        'applications' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC)),
+        'total'        => $total,
+        'page'         => $pagination['page'],
+        'limit'        => $pagination['limit'],
+        'total_pages'  => (int) ceil($total / $pagination['limit']),
+    ]);
 } catch (\Exception $e) {
     error_log('applications by_user: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     json_error('Gabim gjatë marrjes së aplikimeve.', 500);
@@ -362,7 +520,7 @@ break;
 
         // Fetch application with event info
         $check = $pdo->prepare(
-            "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data
+            "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data, e.statusi AS eventi_statusi
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
              WHERE a.id_aplikimi = ? AND a.statusi = 'approved'"
@@ -372,6 +530,11 @@ break;
 
         if (!$app) {
             json_error('Aplikimi nuk u gjet ose nuk është i pranuar.', 404);
+        }
+
+        // Cannot mark presence for cancelled events
+        if ($app['eventi_statusi'] === 'cancelled') {
+            json_error('Prezenca nuk mund të shënohet për evente të anuluara.', 422);
         }
 
         // Only allow marking presence after event date
@@ -390,6 +553,181 @@ break;
         json_success(['message' => "Prezenca u shënoua si '$presence'."]);
         break;
 
+    // ── BULK APPROVE ALL PENDING ───────────────────
+    case 'bulk_approve':
+        require_method('PUT');
+        $admin   = require_admin();
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+
+        if ($eventId <= 0) {
+            json_error('ID-ja e eventit është e pavlefshme.', 400);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Lock event row, read capacity
+            $evStmt = $pdo->prepare('SELECT titulli, kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
+            $evStmt->execute([$eventId]);
+            $ev = $evStmt->fetch();
+            if (!$ev) {
+                $pdo->rollBack();
+                json_error('Eventi nuk u gjet.', 404);
+            }
+
+            $capacity = ($ev['kapaciteti'] !== null && (int) $ev['kapaciteti'] > 0)
+                ? (int) $ev['kapaciteti']
+                : PHP_INT_MAX;
+
+            // Count already approved
+            $approvedStmt = $pdo->prepare(
+                "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved'"
+            );
+            $approvedStmt->execute([$eventId]);
+            $approvedCount = (int) $approvedStmt->fetchColumn();
+
+            $slots = $capacity - $approvedCount;
+
+            // Fetch pending applications
+            $pendingStmt = $pdo->prepare(
+                "SELECT a.id_aplikimi, a.id_perdoruesi, p.emri AS emri, p.email AS email
+                 FROM Aplikimi a
+                 JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                 WHERE a.id_eventi = ? AND a.statusi = 'pending'
+                 ORDER BY a.aplikuar_me ASC"
+            );
+            $pendingStmt->execute([$eventId]);
+            $pending = $pendingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $approved = 0;
+            $skipped  = 0;
+            $updateStmt = $pdo->prepare("UPDATE Aplikimi SET statusi = 'approved' WHERE id_aplikimi = ?");
+            $notifStmt  = $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $eventLink = "/TiranaSolidare/views/events.php?id={$eventId}";
+
+            foreach ($pending as $app) {
+                if ($approved >= $slots) {
+                    $skipped++;
+                    continue;
+                }
+                $updateStmt->execute([$app['id_aplikimi']]);
+                $msg = "Aplikimi juaj për eventin \"{$ev['titulli']}\" është pranuar ✓.";
+                $notifStmt->execute([
+                    $app['id_perdoruesi'], $msg,
+                    'aplikim_event', 'event', $eventId, $eventLink,
+                ]);
+                if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $app['email'],
+                        $app['emri'] ?? 'Volunteer',
+                        'Njoftim i ri nga Tirana Solidare',
+                        $msg
+                    );
+                }
+                $approved++;
+            }
+
+            $pdo->commit();
+
+            log_admin_action($admin['id'], 'bulk_approve', 'event', $eventId, [
+                'approved' => $approved,
+                'skipped'  => $skipped,
+            ]);
+
+            $message = $approved > 0
+                ? "{$approved} aplikime u pranuan me sukses."
+                : 'Asnjë aplikim nuk u pranua.';
+            if ($skipped > 0) {
+                $message .= " {$skipped} u anashkaluan (kapaciteti u plotësua).";
+            }
+            json_success(['approved' => $approved, 'skipped' => $skipped, 'message' => $message]);
+
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('applications bulk_approve: ' . $e->getMessage());
+            json_error('Gabim gjatë pranimit masiv.', 500);
+        }
+        break;
+
+    // ── BULK REJECT ALL PENDING ────────────────────
+    case 'bulk_reject':
+        require_method('PUT');
+        $admin   = require_admin();
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+
+        if ($eventId <= 0) {
+            json_error('ID-ja e eventit është e pavlefshme.', 400);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $evStmt = $pdo->prepare('SELECT titulli FROM Eventi WHERE id_eventi = ?');
+            $evStmt->execute([$eventId]);
+            $ev = $evStmt->fetch();
+            if (!$ev) {
+                $pdo->rollBack();
+                json_error('Eventi nuk u gjet.', 404);
+            }
+
+            $pendingStmt = $pdo->prepare(
+                "SELECT a.id_aplikimi, a.id_perdoruesi, p.emri AS emri, p.email AS email
+                 FROM Aplikimi a
+                 JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                 WHERE a.id_eventi = ? AND a.statusi = 'pending'
+                 ORDER BY a.aplikuar_me ASC"
+            );
+            $pendingStmt->execute([$eventId]);
+            $pending = $pendingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($pending)) {
+                $pdo->rollBack();
+                json_success(['rejected' => 0, 'message' => 'Nuk ka aplikime në pritje.']);
+                break;
+            }
+
+            $updateStmt = $pdo->prepare("UPDATE Aplikimi SET statusi = 'rejected' WHERE id_aplikimi = ?");
+            $notifStmt  = $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $eventLink  = "/TiranaSolidare/views/events.php?id={$eventId}";
+            $rejected   = 0;
+
+            foreach ($pending as $app) {
+                $updateStmt->execute([$app['id_aplikimi']]);
+                $msg = "Aplikimi juaj për eventin \"{$ev['titulli']}\" është refuzuar.";
+                $notifStmt->execute([
+                    $app['id_perdoruesi'], $msg,
+                    'aplikim_event', 'event', $eventId, $eventLink,
+                ]);
+                if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $app['email'],
+                        $app['emri'] ?? 'Volunteer',
+                        'Njoftim i ri nga Tirana Solidare',
+                        $msg
+                    );
+                }
+                $rejected++;
+            }
+
+            $pdo->commit();
+
+            log_admin_action($admin['id'], 'bulk_reject', 'event', $eventId, [
+                'rejected' => $rejected,
+            ]);
+
+            json_success(['rejected' => $rejected, 'message' => "{$rejected} aplikime u refuzuan."]);
+
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('applications bulk_reject: ' . $e->getMessage());
+            json_error('Gabim gjatë refuzimit masiv.', 500);
+        }
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: list, by_event, apply, update_status, withdraw, mark_presence.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, by_event, apply, update_status, withdraw, mark_presence, bulk_approve, bulk_reject.', 400);
 }

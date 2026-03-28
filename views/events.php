@@ -125,7 +125,7 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
   <?= csrf_meta() ?>
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321c">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260328b">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
 <body class="page-events">
 <?php include __DIR__ . '/../public/components/header.php'; ?>

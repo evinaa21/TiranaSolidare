@@ -253,11 +253,9 @@ function check_rate_limit(string $action, int $maxAttempts = 5, int $windowSecon
 {
     global $pdo;
 
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    // Take only the first IP if X-Forwarded-For contains a chain
-    if (str_contains($ip, ',')) {
-        $ip = trim(explode(',', $ip, 2)[0]);
-    }
+    // Use only REMOTE_ADDR — HTTP_X_FORWARDED_FOR is attacker-controlled and cannot be trusted
+    // without a verified proxy whitelist, so we ignore it entirely.
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
     // Count recent attempts within the time window
     $stmt = $pdo->prepare(
@@ -418,6 +416,18 @@ function process_email_queue(int $batchSize = 10): int
 
     $sent = 0;
     foreach ($emails as $row) {
+        // Atomically claim this row using a conditional UPDATE (compare-and-swap).
+        // If another cron instance already claimed it (race), rowCount() == 0 → skip.
+        // This prevents double-sending without holding a DB transaction open during SMTP.
+        // NOTE: requires status ENUM to include 'processing' — see migrate_security.php.
+        $claim = $pdo->prepare(
+            "UPDATE email_queue SET status = 'processing' WHERE id = ? AND status = 'pending'"
+        );
+        $claim->execute([$row['id']]);
+        if ($claim->rowCount() === 0) {
+            continue;
+        }
+
         try {
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             $mail->isSMTP();
@@ -631,12 +641,47 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
 }
 
 /**
+ * Check user-submitted text for profanity/slurs.
+ *
+ * Returns a translated error string if a match is found, or null if the text is clean.
+ * Matching is word-boundary aware and case-insensitive.
+ * Update $BANNED_WORDS as needed — keep the list in the source, no DB table needed.
+ */
+function check_profanity(string ...$texts): ?string
+{
+    // Albanian and common English slurs / profanity
+    static $BANNED_WORDS = [
+        // Albanian
+        'pidh', 'kar', 'qifte', 'qifsha', 'qift', 'byth', 'bythë',
+        'mut', 'mutit', 'mutja', 'cope', 'copë', 'hajvan', 'kurv',
+        'kurvë', 'kurvat', 'lavire', 'dollosh', 'gomar', 'derra',
+        'idiot', 'budall', 'budalla', 'kretën', 'kretin', 'rrot',
+        'rrota', 'trap', 'trapi',
+        // English
+        'fuck', 'shit', 'asshole', 'bitch', 'cunt', 'bastard',
+        'dickhead', 'motherfucker', 'faggot', 'nigger', 'retard',
+        'whore', 'slut', 'prick', 'cock', 'pussy', 'twat',
+    ];
+
+    foreach ($texts as $text) {
+        if ($text === '') continue;
+        foreach ($BANNED_WORDS as $word) {
+            // Word-boundary regex prevents false positives on innocent substrings (e.g. 'kar' in 'karkasë')
+            if (preg_match('/\b' . preg_quote($word, '/') . '\b/iu', $text)) {
+                return 'Teksti përmban fjalë të papërshtatshme. Ju lutem rishikoni dhe provoni përsëri.';
+            }
+        }
+    }
+    return null;
+}
+
+/**
  * Validate that a URL is a safe image URL (https:// only, no JS/data schemes).
  */
 function validate_image_url(?string $url): bool
 {
     if (empty($url)) return true; // Optional field
-    if (!preg_match('#^https?://#i', $url)) {
+    if (!preg_match('#^https://#i', $url)) {
         return false;
     }
     if (preg_match('#^(javascript|data|vbscript):#i', $url)) {

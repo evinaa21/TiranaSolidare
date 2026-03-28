@@ -82,7 +82,8 @@ switch ($action) {
         )->fetchAll(PDO::FETCH_ASSOC);
         
         // Include functions for normalizer
-        require_once __DIR__ . '/../includes/functions.php';
+        // NOTE: functions.php is already loaded transitively via helpers.php
+        // (the require_once here is a no-op but left for clarity).
 
         json_success([
             'users'              => $userStats,
@@ -227,6 +228,11 @@ case 'monthly':
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
+        $validReportTypes = ['Përmbledhje Mujore', 'Vullnetarë Aktivë'];
+        if (!in_array($tipiRaportit, $validReportTypes, true)) {
+            json_error('Tipi i raportit nuk është i vlefshëm. Zgjidhni: ' . implode(', ', $validReportTypes), 422);
+        }
+
         // Auto-generate report content based on type
         $content = '';
 
@@ -304,6 +310,7 @@ case 'monthly':
              WHERE p.roli = 'volunteer'
                AND p.statusi_llogarise = 'active'
                AND p.verified = 1
+               AND p.profile_public = 1
              ORDER BY score DESC, p.emri ASC
              LIMIT {$limit}"
         );

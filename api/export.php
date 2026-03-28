@@ -24,11 +24,17 @@ $output = fopen('php://output', 'w');
 // UTF-8 BOM for Excel
 fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
+// Prevent CSV formula injection (Excel/LibreOffice execute = + - @ \t \r prefixed cells)
+function csv_safe(?string $v): string {
+    if ($v === null) return '';
+    return preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+}
+
 if ($type === 'users') {
     fputcsv($output, ['ID', 'Emri', 'Email', 'Roli', 'Statusi', 'Regjistruar Më']);
     $stmt = $pdo->query("SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me FROM Perdoruesi ORDER BY krijuar_me DESC");
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_perdoruesi'], $row['emri'], $row['email'], $row['roli'], $row['statusi_llogarise'], $row['krijuar_me']]);
+        fputcsv($output, [$row['id_perdoruesi'], csv_safe($row['emri']), csv_safe($row['email']), $row['roli'], $row['statusi_llogarise'], $row['krijuar_me']]);
     }
 }
 
@@ -38,10 +44,11 @@ if ($type === 'events') {
         "SELECT e.id_eventi, e.titulli, k.emri AS kategoria, e.data, e.vendndodhja, e.statusi, e.krijuar_me
          FROM Eventi e
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
+         WHERE e.is_archived = 0
          ORDER BY e.data DESC"
     );
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_eventi'], $row['titulli'], $row['kategoria'] ?? '—', $row['data'], $row['vendndodhja'], $row['statusi'] ?? 'active', $row['krijuar_me']]);
+        fputcsv($output, [$row['id_eventi'], csv_safe($row['titulli']), csv_safe($row['kategoria'] ?? '—'), $row['data'], csv_safe($row['vendndodhja']), $row['statusi'] ?? 'active', $row['krijuar_me']]);
     }
 }
 
@@ -55,7 +62,7 @@ if ($type === 'applications') {
          ORDER BY a.aplikuar_me DESC"
     );
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_aplikimi'], $row['emri'], $row['email'], $row['eventi'], $row['statusi'], $row['aplikuar_me']]);
+        fputcsv($output, [$row['id_aplikimi'], csv_safe($row['emri']), csv_safe($row['email']), csv_safe($row['eventi']), $row['statusi'], $row['aplikuar_me']]);
     }
 }
 

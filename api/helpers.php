@@ -140,7 +140,7 @@ function require_auth(): array
     $now = time();
     if (!isset($_SESSION['_auth_verified_at']) || ($now - $_SESSION['_auth_verified_at']) > 60) {
         global $pdo;
-        $stmt = $pdo->prepare('SELECT roli, statusi_llogarise FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT roli, statusi_llogarise, password_changed_at FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $stmt->execute([(int) $_SESSION['user_id']]);
         $dbUser = $stmt->fetch();
 
@@ -160,6 +160,21 @@ function require_auth(): array
             session_unset();
             session_destroy();
             json_error('Llogaria juaj është çaktivizuar.', 403);
+        }
+
+        // Multi-device session invalidation: if password changed after session was created,
+        // force the user to log in again.
+        $dbPwChanged = $dbUser['password_changed_at'] ?? null;
+        if ($dbPwChanged !== null) {
+            if (!isset($_SESSION['_pw_changed_at'])) {
+                // First API call — record the DB value as our baseline
+                $_SESSION['_pw_changed_at'] = $dbPwChanged;
+            } elseif ($_SESSION['_pw_changed_at'] !== $dbPwChanged) {
+                // Credentials changed since this session was issued — invalidate
+                session_unset();
+                session_destroy();
+                json_error('Fjalëkalimi u ndryshua. Ju lutemi kyçuni përsëri.', 401);
+            }
         }
 
         // Sync role from DB into session (handles multiple string cases)

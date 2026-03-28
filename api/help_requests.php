@@ -26,7 +26,10 @@ switch ($action) {
         if (is_admin_role($user['roli'])) {
             json_error('Administratorët nuk mund të aplikojnë për kërkesa ndihme.', 403);
         }
-
+        // Rate limit: max 20 help-request applications per hour per user
+        if (!check_rate_limit('apply_help_' . $user['id'], 20, 3600)) {
+            json_error('Po dërgoni shumë aplikime. Provoni përsëri pas një ore.', 429);
+        }
         $body = get_json_body();
         $requestId = isset($body['id_kerkese_ndihme']) ? (int) $body['id_kerkese_ndihme'] : 0;
 
@@ -211,6 +214,11 @@ switch ($action) {
             json_error('Subjekti nuk mund të kalojë 180 karaktere.', 422);
         }
 
+        // Rate limit per-user: 10 contact emails per hour
+        if (!check_rate_limit('contact_applicant_' . $user['id'], 10, 3600)) {
+            json_error('Keni dërguar shumë mesazhe. Provoni përsëri më vonë.', 429);
+        }
+
         try {
             $requestStmt = $pdo->prepare(
                 'SELECT kn.id_perdoruesi, kn.titulli, p.email AS owner_email
@@ -229,8 +237,8 @@ switch ($action) {
             }
 
             $appCheck = $pdo->prepare(
-                'SELECT id_aplikimi_kerkese FROM Aplikimi_Kerkese
-                 WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ? LIMIT 1'
+                "SELECT id_aplikimi_kerkese FROM Aplikimi_Kerkese
+                 WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ? AND statusi IN ('pending', 'approved') LIMIT 1"
             );
             $appCheck->execute([$requestId, $applicantId]);
             if (!$appCheck->fetch()) {
@@ -293,7 +301,7 @@ switch ($action) {
         try {
             $appStmt = $pdo->prepare(
                 'SELECT ak.id_aplikimi_kerkese, ak.id_kerkese_ndihme, ak.id_perdoruesi, ak.statusi,
-                        kn.id_perdoruesi AS pronari_id, kn.titulli,
+                        kn.id_perdoruesi AS pronari_id, kn.titulli, kn.statusi AS kerkesa_statusi,
                         p.emri AS aplikuesi_emri, p.email AS aplikuesi_email
                  FROM Aplikimi_Kerkese ak
                  JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
@@ -305,6 +313,10 @@ switch ($action) {
 
             if (!$app) {
                 json_error('Aplikimi nuk u gjet.', 404);
+            }
+
+            if ($app['kerkesa_statusi'] !== 'open') {
+                json_error('Nuk mund të ndryshoni statusin e aplikimit për një kërkese të mbyllur.', 422);
             }
 
             if ((int) $app['pronari_id'] !== (int) $user['id'] && !is_admin_role($user['roli'])) {
@@ -439,7 +451,7 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
-            json_success($request);
+            json_success(ts_normalize_row($request));
         } catch (\Exception $e) {
             error_log('help_requests get: ' . $e->getMessage());
             json_error('Gabim gjatë marrjes të kërkesës.', 500);
@@ -450,6 +462,12 @@ switch ($action) {
     case 'create':
         require_method('POST');
         $user   = require_auth();
+
+        // Rate limit: max 5 new help requests per hour per IP
+        if (!check_rate_limit('create_help_request', 5, 3600)) {
+            json_error('Po krijoni shumë kërkesa. Provoni përsëri pas një ore.', 429);
+        }
+
         $body   = get_json_body();
         $errors = [];
 
@@ -476,6 +494,11 @@ switch ($action) {
         }
         if ($pershkrimi !== '' && ($lenErr = validate_length($pershkrimi, 0, 5000, 'pershkrimi'))) {
             json_error($lenErr, 422);
+        }
+
+        // Content/profanity filter
+        if ($profErr = check_profanity($titulli, $pershkrimi)) {
+            json_error($profErr, 422);
         }
 
         // Validate image URL if provided
@@ -608,6 +631,10 @@ switch ($action) {
                 json_error('Nuk keni leje.', 403);
             }
 
+            if ($existing['statusi'] === 'closed') {
+                json_error('Kërkesa është tashmë e mbyllur.', 400);
+            }
+
             $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'closed' WHERE id_kerkese_ndihme = ?")
                 ->execute([$id]);
 
@@ -627,6 +654,29 @@ switch ($action) {
                         $recipient['emri'] ?? 'Volunteer',
                         'Njoftim i ri nga Tirana Solidare',
                         $message
+                    );
+                }
+            }
+
+            // Notify pending applicants that the request is now closed
+            $pendingApps = $pdo->prepare(
+                "SELECT ak.id_perdoruesi, p.emri, p.email
+                 FROM Aplikimi_Kerkese ak
+                 JOIN Perdoruesi p ON p.id_perdoruesi = ak.id_perdoruesi
+                 WHERE ak.id_kerkese_ndihme = ? AND ak.statusi = 'pending'"
+            );
+            $pendingApps->execute([$id]);
+            $closeMsg  = "Kërkesa \"{$existing['titulli']}\" u mbyll. Aplikimi juaj nuk është më aktiv.";
+            $closeLink = "/TiranaSolidare/views/help_requests.php?id={$id}";
+            $pendingNotif = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+            foreach ($pendingApps as $applicant) {
+                $pendingNotif->execute([$applicant['id_perdoruesi'], $closeMsg, 'aplikim_kerkese', 'help_request', $id, $closeLink]);
+                if (filter_var($applicant['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $applicant['email'],
+                        $applicant['emri'],
+                        'Kërkesa u mbyll — Tirana Solidare',
+                        $closeMsg
                     );
                 }
             }
@@ -685,8 +735,18 @@ switch ($action) {
             json_error('ID e kërkesës e pavlefshme.', 400);
         }
 
+        // One flag per user per request (30-day cooldown prevents duplicate counts)
+        $flagKey = 'flag_' . $user['id'] . '_' . $id;
+        if (!check_rate_limit($flagKey, 1, 2592000)) {
+            json_error('E keni raportuar tashmë këtë kërkesë.', 429);
+        }
+
         try {
-            $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = COALESCE(flags, 0) + 1 WHERE id_kerkese_ndihme = ?')->execute([$id]);
+            $flagStmt = $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = COALESCE(flags, 0) + 1 WHERE id_kerkese_ndihme = ?');
+            $flagStmt->execute([$id]);
+            if ($flagStmt->rowCount() === 0) {
+                json_error('Kërkesa nuk u gjet.', 404);
+            }
             json_success(['message' => 'Kërkesa u raportua me sukses.']);
         } catch (\Exception $e) {
             error_log('help_requests flag: ' . $e->getMessage());
@@ -734,6 +794,9 @@ case 'delete':
         if ($existing['id_perdoruesi'] != $user['id'] && !is_admin_role($user['roli'])) {
             json_error('Nuk keni leje.', 403);
         }
+
+        // Delete all applications to this request first (FK constraint safety)
+        $pdo->prepare('DELETE FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme = ?')->execute([$id]);
 
         $stmt = $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_kerkese_ndihme = ?');
         $stmt->execute([$id]);

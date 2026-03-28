@@ -45,6 +45,21 @@ switch ($action) {
             json_error($result, 400);
         }
 
+        // Delete the old profile picture file from disk if it was an internal upload
+        $oldPicStmt = $pdo->prepare('SELECT profile_picture FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $oldPicStmt->execute([$user['id']]);
+        $oldPic = $oldPicStmt->fetchColumn();
+        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+            $oldFilename = basename($oldPic);
+            // Validate filename to prevent path traversal
+            if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
+                $oldPath = __DIR__ . '/../uploads/images/profiles/' . $oldFilename;
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+        }
+
         $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = ? WHERE id_perdoruesi = ?');
         $updateStmt->execute([$result['url'], $user['id']]);
 
@@ -81,8 +96,9 @@ switch ($action) {
         if ($profilePicture !== null && mb_strlen($profilePicture) > 500) {
             json_error('URL e fotos nuk mund të kalojë 500 karaktere.', 422);
         }
-        if ($profilePicture !== null && $profilePicture !== '' && !filter_var($profilePicture, FILTER_VALIDATE_URL)) {
-            if (strpos($profilePicture, '/TiranaSolidare/uploads/images/profiles/') !== 0) {
+        if ($profilePicture !== null && $profilePicture !== '') {
+            $isInternalPath = strpos($profilePicture, '/TiranaSolidare/uploads/images/profiles/') === 0;
+            if (!$isInternalPath && !validate_image_url($profilePicture)) {
                 json_error('Foto e profilit nuk është e vlefshme.', 422);
             }
         }
@@ -100,12 +116,7 @@ switch ($action) {
         // Keep session values in sync for UI consistency
         $_SESSION['emri'] = $emri;
         $_SESSION['profile_color'] = $profileColor;
-        $sessionProfilePicture = $profilePicture ?: '';
-        $_SESSION['profile_picture'] = $sessionProfilePicture;
-        $_SESSION['avatar'] = $sessionProfilePicture;
-        $_SESSION['photo'] = $sessionProfilePicture;
-        $_SESSION['foto'] = $sessionProfilePicture;
-        $_SESSION['profile_image'] = $sessionProfilePicture;
+        $_SESSION['profile_picture'] = $profilePicture ?: '';
 
         json_success(['message' => 'Profili u përditësua me sukses.']);
         break;
@@ -224,15 +235,26 @@ $params[] = $user['id'];
         require_method('DELETE');
         $user = require_auth();
 
+        // Fetch existing picture before NULLing the DB record
+        $oldPicStmt = $pdo->prepare('SELECT profile_picture FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $oldPicStmt->execute([$user['id']]);
+        $oldPic = $oldPicStmt->fetchColumn();
+
         $stmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = NULL WHERE id_perdoruesi = ?');
         $stmt->execute([$user['id']]);
 
-        // Keep avatar-related session values in sync with DB state.
+        // Remove the file from disk if it was an internal upload
+        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+            $oldFilename = basename($oldPic);
+            if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
+                $oldPath = __DIR__ . '/../uploads/images/profiles/' . $oldFilename;
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+        }
+
         $_SESSION['profile_picture'] = '';
-        $_SESSION['avatar'] = '';
-        $_SESSION['photo'] = '';
-        $_SESSION['foto'] = '';
-        $_SESSION['profile_image'] = '';
 
         json_success(['message' => 'Fotoja e profilit u fshi me sukses.']);
         break;
@@ -270,8 +292,8 @@ $params[] = $user['id'];
             json_error('Nuk mund të bllokoni një administrator tjetër.', 403);
         }
 
-        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'blocked' WHERE id_perdoruesi = ?");
-        $stmt->execute([$id]);
+        $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'blocked', arsye_bllokimi = ? WHERE id_perdoruesi = ?");
+        $stmt->execute([$blockReason !== '' ? $blockReason : null, $id]);
 
         $targetInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $targetInfo->execute([$id]);
@@ -331,6 +353,27 @@ $params[] = $user['id'];
         $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'active' WHERE id_perdoruesi = ?");
         $stmt->execute([$id]);
 
+        // Fetch user info for notification
+        $unblockInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $unblockInfo->execute([$id]);
+        $unblockTarget = $unblockInfo->fetch();
+
+        // In-app notification
+        $panelUrl = '/TiranaSolidare/views/volunteer_panel.php';
+        $unblockMsg = 'Llogaria juaj është zhbllokuar. Mund të hyëni përsëri në platformë.';
+        $notifInsert = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
+        $notifInsert->execute([$id, $unblockMsg, 'admin_veprim', 'user', $id, $panelUrl]);
+
+        // Email notification
+        if ($unblockTarget && filter_var($unblockTarget['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $unblockTarget['email'],
+                $unblockTarget['emri'] ?? 'Volunteer',
+                'Llogaria juaj u zhbllokua — Tirana Solidare',
+                $unblockMsg
+            );
+        }
+
         log_admin_action($admin['id'], 'unblock_user', 'user', $id, []);
 
         json_success(['message' => 'Përdoruesi u zhbllokua.']);
@@ -371,6 +414,29 @@ $params[] = $user['id'];
 
         $stmt = $pdo->prepare('UPDATE Perdoruesi SET roli = ? WHERE id_perdoruesi = ?');
         $stmt->execute([$newRole, $id]);
+
+        // Notify the affected user about their role change
+        $roleLabel = $newRole === 'admin' ? 'Administrator' : 'Vullnetar';
+        $roleMsg   = "Roli juaj në platformë u ndryshua në '{$roleLabel}' nga një Super Administrator.";
+        $panelLink = $newRole === 'admin'
+            ? '/TiranaSolidare/views/dashboard.php'
+            : '/TiranaSolidare/views/volunteer_panel.php';
+        $notifInsert = $pdo->prepare(
+            'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $notifInsert->execute([$id, $roleMsg, 'admin_veprim', 'user', $id, $panelLink]);
+
+        $roleEmailInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $roleEmailInfo->execute([$id]);
+        $roleEmailUser = $roleEmailInfo->fetch();
+        if ($roleEmailUser && filter_var($roleEmailUser['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $roleEmailUser['email'],
+                $roleEmailUser['emri'] ?? 'Volunteer',
+                'Roli juaj u ndryshua — Tirana Solidare',
+                $roleMsg
+            );
+        }
 
         log_admin_action($admin['id'], 'change_role', 'user', $id, [
             'roli_ri' => $newRole,
@@ -462,7 +528,7 @@ $params[] = $user['id'];
         $stmt = $pdo->prepare(
             "SELECT id_perdoruesi, emri, roli, bio, profile_picture, profile_public, profile_color, krijuar_me
              FROM Perdoruesi
-             WHERE id_perdoruesi = ? AND statusi_llogarise = 'active'"
+             WHERE id_perdoruesi = ? AND statusi_llogarise = 'active' AND verified = 1"
         );
         $stmt->execute([$id]);
         $profile = $stmt->fetch();

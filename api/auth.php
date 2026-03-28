@@ -66,7 +66,7 @@ switch ($action) {
         // Set session (including email)
         $_SESSION['user_id'] = $user['id_perdoruesi'];
         $_SESSION['emri']    = $user['emri'];
-        $_SESSION['roli']    = $user['roli'];
+        $_SESSION['roli']    = ts_normalize_value($user['roli']);
         $_SESSION['email']   = $user['email'];
         $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
 
@@ -170,10 +170,16 @@ switch ($action) {
         json_success(['message' => 'U shkëputët me sukses.']);
         break;
 
-         // ── CHANGE PASSWORD ──────────────────────────
+    // ── CHANGE PASSWORD ──────────────────────────
     case 'change_password':
         require_method('PUT');
         $user   = require_auth();
+
+        // Rate limit per-user: 5 attempts per 15 minutes (prevents brute-forcing own password)
+        if (!check_rate_limit('change_password_' . $user['id'], 5, 900)) {
+            json_error('Shumë tentativa. Provoni përsëri pas 15 minutash.', 429);
+        }
+
         $body   = get_json_body();
         $errors = [];
 
@@ -207,8 +213,25 @@ switch ($action) {
 
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
-        $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ? WHERE id_perdoruesi = ?');
+        // Update password and record timestamp so stale sessions on other devices are invalidated
+        $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ?, password_changed_at = NOW() WHERE id_perdoruesi = ?');
         $update->execute([$newHash, $user['id']]);
+
+        // Regenerate the current session ID so the old cookie is no longer valid
+        session_regenerate_id(true);
+
+        // Security email: alert user that their password was changed
+        $userEmailStmt = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $userEmailStmt->execute([$user['id']]);
+        $userRecord = $userEmailStmt->fetch();
+        if ($userRecord && filter_var($userRecord['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $userRecord['email'],
+                $userRecord['emri'],
+                'Fjalëkalimi juaj u ndryshua — Tirana Solidare',
+                'Fjalëkalimi i llogarisë suaj në Tirana Solidare u ndryshua me sukses. Nëse nuk e keni bërë ju,.kontaktoni menjëherë administratorin ose ndryshoni fjalëkalimin.'
+            );
+        }
 
         json_success(['message' => 'Fjalëkalimi u përditësua me sukses.']);
         break;
@@ -217,6 +240,12 @@ switch ($action) {
     case 'change_email':
         require_method('PUT');
         $user = require_auth();
+
+        // Rate limit per-user: 5 attempts per 15 minutes
+        if (!check_rate_limit('change_email_' . $user['id'], 5, 900)) {
+            json_error('Shumë tentativa. Provoni përsëri pas 15 minutash.', 429);
+        }
+
         $body = get_json_body();
         $errors = [];
 
@@ -258,12 +287,40 @@ switch ($action) {
             json_error('Ky email është i përdorur nga një llogari tjetër.', 409);
         }
 
-        $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET email = ? WHERE id_perdoruesi = ?');
-        $updateStmt->execute([$newEmail, $user['id']]);
+        // Atomically update email + set verified=0 + store token, then send confirmation
+        try {
+            $pdo->beginTransaction();
 
-        $_SESSION['email'] = $newEmail;
+            $plainToken = bin2hex(random_bytes(32));
+            $tokenHash  = hash('sha256', $plainToken);
+            $expiresAt  = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+            $verifyUrl  = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($newEmail);
 
-        json_success(['message' => 'Email-i u përditësua me sukses.', 'email' => $newEmail]);
+            $updateStmt = $pdo->prepare(
+                'UPDATE Perdoruesi SET email = ?, verified = 0, verification_token_hash = ?, verification_token_expires = ? WHERE id_perdoruesi = ?'
+            );
+            $updateStmt->execute([$newEmail, $tokenHash, $expiresAt, $user['id']]);
+
+            if (!send_verification_email($newEmail, $_SESSION['emri'] ?? 'Volunteer', $verifyUrl)) {
+                $pdo->rollBack();
+                json_error('Konfirmimi i email-it nuk u dërgua. Provoni përsëri.', 500);
+            }
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('change_email failed: ' . $e->getMessage());
+            json_error('Gabim gjatë ndryshimit të email-it.', 500);
+        }
+
+        // Destroy the current session — user must log in again after verifying the new address
+        session_unset();
+        session_destroy();
+
+        json_success([
+            'message'              => 'Email-i u përditësua. Konfirmoni adresën e re para hyrjes.',
+            'requires_verification' => true,
+        ]);
         break;
 
     // ── ME (current user) ──────────────────────────
@@ -319,6 +376,12 @@ switch ($action) {
             $pdo->prepare('DELETE FROM Aplikimi WHERE id_perdoruesi = ?')->execute([$user['id']]);
             $pdo->prepare('DELETE FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?')->execute([$user['id']]);
 
+            // Delete OTHER users' applications to this user's help requests (FK safety)
+            $pdo->prepare(
+                'DELETE FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme IN
+                 (SELECT id_kerkese_ndihme FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?)'
+            )->execute([$user['id']]);
+
             // Delete user's help requests
             $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?')->execute([$user['id']]);
 
@@ -342,6 +405,46 @@ switch ($action) {
         }
         break;
 
+    // ── RESEND VERIFICATION EMAIL ────────────────
+    case 'resend_verification':
+        require_method('POST');
+        $body  = get_json_body();
+        $email = trim((string) ($body['email'] ?? ''));
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_error('Formati i email-it nuk është i vlefshëm.', 422);
+        }
+
+        // Rate limit: 3 per hour per IP
+        if (!check_rate_limit('resend_verification', 3, 3600)) {
+            json_error('Shumë tentativa. Provoni përsëri pas disa minutash.', 429);
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT id_perdoruesi, emri, verified, statusi_llogarise FROM Perdoruesi WHERE email = ? LIMIT 1"
+        );
+        $stmt->execute([$email]);
+        $uvUser = $stmt->fetch();
+
+        if ($uvUser && (int) $uvUser['verified'] === 0 && $uvUser['statusi_llogarise'] === 'active') {
+            $plainToken = bin2hex(random_bytes(32));
+            $tokenHash  = hash('sha256', $plainToken);
+            $expiresAt  = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+            $verifyUrl  = app_base_url()
+                . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken)
+                . '&email=' . urlencode($email);
+
+            $pdo->prepare(
+                "UPDATE Perdoruesi SET verification_token_hash = ?, verification_token_expires = ? WHERE id_perdoruesi = ?"
+            )->execute([$tokenHash, $expiresAt, $uvUser['id_perdoruesi']]);
+
+            send_verification_email($email, $uvUser['emri'], $verifyUrl);
+        }
+
+        // Always return success — prevents email enumeration
+        json_success(['message' => 'Nëse ky email është i paverifikuar, do të marrësh një link konfirmimi të ri.']);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, change_email, me, delete_account.', 400);
+        json_error('Veprim i panjohur. Përdorni: login, register, logout, change_password, change_email, me, delete_account, resend_verification.', 400);
 }

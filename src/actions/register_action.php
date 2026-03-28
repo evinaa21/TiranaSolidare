@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Rate limiting: max 3 registrations per 30 minutes
-    if (!check_rate_limit('register_form', 3, 1800)) {
+    if (!check_rate_limit('register', 3, 1800)) {
         header("Location: /TiranaSolidare/views/register.php?error=rate_limited" . $redirectParam);
         exit();
     }

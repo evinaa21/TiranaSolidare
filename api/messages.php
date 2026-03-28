@@ -50,7 +50,7 @@ switch ($action) {
         );
         $uid = $user['id'];
         $stmt->execute([$uid, $uid, $uid, $uid, $uid, $uid, $uid, $uid]);
-        $conversations = $stmt->fetchAll();
+        $conversations = ts_normalize_rows($stmt->fetchAll());
 
         // Total unread count
         $unreadStmt = $pdo->prepare(
@@ -113,7 +113,7 @@ switch ($action) {
         $total = (int) $countStmt->fetchColumn();
 
         json_success([
-            'messages'   => array_reverse($messages), // oldest first for display
+            'messages'   => array_reverse(ts_normalize_rows($messages)), // oldest first for display
             'other_user' => $other,
             'total'      => $total,
             'page'       => $pagination['page'],
@@ -147,14 +147,14 @@ switch ($action) {
             json_error('Mesazhi nuk mund të kalojë 2000 karaktere.', 422);
         }
 
-        // Rate limit: 30 messages per 5 minutes
-        if (!check_rate_limit('send_message', 30, 300)) {
+        // Rate limit: 30 messages per 5 minutes per user
+        if (!check_rate_limit('send_message_' . $user['id'], 30, 300)) {
             json_error('Po dërgoni shumë mesazhe. Provoni përsëri pas pak.', 429);
         }
 
         // Verify receiver exists and is active
         $receiverCheck = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, statusi_llogarise, roli FROM Perdoruesi WHERE id_perdoruesi = ?'
+            'SELECT id_perdoruesi, emri, email, statusi_llogarise, roli FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $receiverCheck->execute([$receiverId]);
         $receiver = $receiverCheck->fetch();
@@ -188,6 +188,17 @@ switch ($action) {
                 'mesazh',
                 $notifLink
             ]);
+
+            // Email notification — send_notification_email respects the user's email_notifications preference
+            if (filter_var($receiver['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                $panelUrl = app_base_url() . $notifLink;
+                send_notification_email(
+                    $receiver['email'],
+                    $receiver['emri'],
+                    "{$user['emri']} ju dërgoi një mesazh — Tirana Solidare",
+                    "{$user['emri']} ju dërgoi një mesazh të ri në Tirana Solidare. Klikoni link-un për ta lexuar: {$panelUrl}"
+                );
+            }
 
             json_success([
                 'id_mesazhi' => $msgId,

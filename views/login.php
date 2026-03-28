@@ -87,6 +87,7 @@ $successMessages = [
         </div>
         <button type="submit" class="btn_primary auth-submit">Hyr</button>
         <p class="auth-meta">Keni harruar fjalëkalimin? <a href="/TiranaSolidare/views/forgot_password.php">Rikuperoje</a></p>
+        <p class="auth-meta">Nuk keni marrë email-in e konfirmimit? <a href="/TiranaSolidare/views/resend_verification.php">Ridërgoje</a></p>
       </form>
 
       <div class="auth-sidecard">

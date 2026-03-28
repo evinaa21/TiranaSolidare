@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Rate limiting: max 5 login attempts per 15 minutes
-    if (!check_rate_limit('login_form', 5, 900)) {
+    if (!check_rate_limit('login', 5, 900)) {
         header("Location: /TiranaSolidare/views/login.php?error=rate_limited");
         exit();
     }
@@ -59,12 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['roli'] = ts_normalize_value($user['roli'] ?? 'volunteer');
         $_SESSION['email'] = $user['email'];
         $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
-        $sessionProfilePicture = (string) ($user['profile_picture'] ?? '');
-        $_SESSION['profile_picture'] = $sessionProfilePicture;
-        $_SESSION['avatar'] = $sessionProfilePicture;
-        $_SESSION['photo'] = $sessionProfilePicture;
-        $_SESSION['foto'] = $sessionProfilePicture;
-        $_SESSION['profile_image'] = $sessionProfilePicture;
+        $_SESSION['profile_picture'] = (string) ($user['profile_picture'] ?? '');
 
         // Safe redirect validation (H-02)
         $normalizedRole = ts_normalize_value($user['roli'] ?? 'volunteer');
