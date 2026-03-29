@@ -1127,6 +1127,47 @@ function ts_parse_public_profile_id(?string $handle): int
 }
 
 /**
+ * Send a Web Push notification to all active subscriptions for a given user.
+ * Silently no-ops when VAPID keys are not configured or web_push.php is unavailable.
+ */
+function send_push_to_user(int $userId, string $title, string $body, string $url = ''): void
+{
+    $vapidPublic  = getenv('VAPID_PUBLIC_KEY');
+    $vapidPrivate = getenv('VAPID_PRIVATE_KEY');
+    $vapidSubject = getenv('VAPID_SUBJECT') ?: 'mailto:admin@tiranasolidare.al';
+
+    if (!$vapidPublic || !$vapidPrivate) {
+        return;
+    }
+
+    $webPushFile = __DIR__ . '/web_push.php';
+    if (!file_exists($webPushFile)) {
+        return;
+    }
+    require_once $webPushFile;
+
+    global $pdo;
+    $stmt = $pdo->prepare(
+        'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?'
+    );
+    $stmt->execute([$userId]);
+    $subscriptions = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+    $payload = ['title' => $title, 'body' => $body, 'url' => $url];
+
+    foreach ($subscriptions as $sub) {
+        try {
+            send_web_push($sub, $payload, $vapidPublic, $vapidPrivate, $vapidSubject);
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'subscription_expired') {
+                $pdo->prepare('DELETE FROM push_subscriptions WHERE id = ?')
+                    ->execute([$sub['id']]);
+            }
+        }
+    }
+}
+
+/**
  * Build a readable public profile URL with name slug and ID.
  */
 function ts_public_profile_url(int $userId, ?string $displayName = null): string

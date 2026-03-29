@@ -516,6 +516,16 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           </label>
         </label>
         <div id="admin-notif-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
+        <label class="db-toggle-row" style="align-items:flex-start;gap:12px">
+          <div>
+            <strong style="display:block;margin-bottom:4px;font-size:0.9rem;">Njoftime në telefon / browser</strong>
+            <span style="font-size:0.82rem;color:#64748b;">Merrni njoftime direkte në pajisjen tuaj.</span>
+          </div>
+          <button id="admin-push-btn" type="button" class="btn_primary" style="flex-shrink:0;white-space:nowrap;font-size:0.82rem;padding:6px 14px" disabled>Duke u ngarkuar…</button>
+        </label>
+        <div id="admin-push-status" style="font-size:13px;min-height:16px;margin-top:4px;"></div>
       </div>
     </div>
 
@@ -709,6 +719,84 @@ async function deleteAccount() {
 }
 
 document.addEventListener('DOMContentLoaded', adminLoadProfile);
+document.addEventListener('DOMContentLoaded', initAdminPushSubscription);
+
+// ── Admin Web Push Subscription ───────────────────────────────────────────────
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+  return output;
+}
+
+async function initAdminPushSubscription() {
+  const btn    = document.getElementById('admin-push-btn');
+  const status = document.getElementById('admin-push-status');
+  if (!btn) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    btn.textContent = 'Nuk mbështetet';
+    return;
+  }
+
+  const reg = await navigator.serviceWorker.ready;
+
+  async function refreshBtn() {
+    const sub = await reg.pushManager.getSubscription();
+    btn.textContent = sub ? 'Çaktivizo njoftimet' : 'Aktivizo njoftimet';
+    btn.dataset.state = sub ? 'subscribed' : 'unsubscribed';
+    btn.disabled = false;
+  }
+  await refreshBtn();
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const show = (msg, ok = true) => {
+      status.textContent = msg;
+      status.style.color = ok ? '#16a34a' : '#dc2626';
+      setTimeout(() => { status.textContent = ''; }, 4000);
+    };
+    try {
+      if (btn.dataset.state === 'subscribed') {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch('/TiranaSolidare/api/push.php?action=unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': adminCsrf },
+            credentials: 'same-origin',
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+          await sub.unsubscribe();
+        }
+        show('Njoftimet u çaktivizuan.');
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          show('Leja u refuzua. Aktivizoni njoftimet nga cilësimet e browser-it.', false);
+          btn.disabled = false;
+          return;
+        }
+        const keyRes  = await fetch('/TiranaSolidare/api/push.php?action=vapid_public_key', { credentials: 'same-origin' });
+        const keyJson = await keyRes.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(keyJson.data.public_key),
+        });
+        await fetch('/TiranaSolidare/api/push.php?action=subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': adminCsrf },
+          credentials: 'same-origin',
+          body: JSON.stringify(sub.toJSON()),
+        });
+        show('Njoftimet u aktivizuan!');
+      }
+    } catch (err) {
+      show('Gabim: ' + (err.message || err), false);
+    }
+    await refreshBtn();
+  });
+}
 </script>
 </body>
 </html>

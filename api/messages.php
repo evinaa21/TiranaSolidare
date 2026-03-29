@@ -174,18 +174,21 @@ switch ($action) {
             $stmt->execute([$user['id'], $receiverId, $message]);
             $msgId = (int) $pdo->lastInsertId();
 
-            // Create notification for receiver (route to correct panel)
+            // Create notification for receiver — deep-link includes sender ID so clicking
+            // the notification opens that specific conversation thread directly.
             $notifMsg = "{$user['emri']} ju dërgoi një mesazh.";
             $notifLink = (is_admin_role($receiver['roli']))
-                ? '/TiranaSolidare/views/dashboard.php#messages'
-                : '/TiranaSolidare/views/volunteer_panel.php?tab=messages';
+                ? '/TiranaSolidare/views/dashboard.php?with=' . $user['id'] . '#messages'
+                : '/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=' . $user['id'];
             $notifStmt = $pdo->prepare(
-                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku) VALUES (?, ?, ?, ?)'
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
             );
             $notifStmt->execute([
                 $receiverId,
                 $notifMsg,
                 'mesazh',
+                'user',
+                $user['id'],   // sender — so notification UI can link to the right thread
                 $notifLink
             ]);
 
@@ -199,6 +202,14 @@ switch ($action) {
                     "{$user['emri']} ju dërgoi një mesazh të ri në Tirana Solidare. Klikoni link-un për ta lexuar: {$panelUrl}"
                 );
             }
+
+            // Web Push notification — silently no-ops when VAPID keys not configured
+            send_push_to_user(
+                $receiverId,
+                "Mesazh i ri nga {$user['emri']}",
+                $body,
+                app_base_url() . $notifLink
+            );
 
             json_success([
                 'id_mesazhi' => $msgId,

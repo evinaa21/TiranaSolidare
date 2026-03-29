@@ -157,6 +157,14 @@ switch ($action) {
             json_error('Kapaciteti duhet të jetë të paktën 1.', 422);
         }
 
+        // Validate geographic coordinates are within real-world bounds
+        if ($latitude !== null && ($latitude < -90.0 || $latitude > 90.0)) {
+            json_error('Gjerësia gjeografike (latitude) duhet të jetë ndërmjet -90 dhe 90.', 422);
+        }
+        if ($longitude !== null && ($longitude < -180.0 || $longitude > 180.0)) {
+            json_error('Gjatësia gjeografike (longitude) duhet të jetë ndërmjet -180 dhe 180.', 422);
+        }
+
         // Validate event date is in the future (L-02)
         if ($data_eventi && strtotime($data_eventi) <= time()) {
             json_error('Data e eventit duhet të jetë në të ardhmen.', 422);
@@ -249,6 +257,20 @@ switch ($action) {
         // Validate banner URL if provided
         if (isset($body['banner']) && $body['banner'] && !validate_image_url($body['banner'])) {
             json_error('URL-ja e banner-it nuk është e vlefshme.', 422);
+        }
+
+        // Validate geographic coordinates are within real-world bounds
+        if (isset($body['latitude']) && $body['latitude'] !== null) {
+            $latVal = (float) $body['latitude'];
+            if ($latVal < -90.0 || $latVal > 90.0) {
+                json_error('Gjerësia gjeografike (latitude) duhet të jetë ndërmjet -90 dhe 90.', 422);
+            }
+        }
+        if (isset($body['longitude']) && $body['longitude'] !== null) {
+            $lngVal = (float) $body['longitude'];
+            if ($lngVal < -180.0 || $lngVal > 180.0) {
+                json_error('Gjatësia gjeografike (longitude) duhet të jetë ndërmjet -180 dhe 180.', 422);
+            }
         }
 
         // Guard against setting capacity below current approved count

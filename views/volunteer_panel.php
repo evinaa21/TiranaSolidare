@@ -433,6 +433,17 @@ $badgeIcons = [
               <button type="submit" class="btn_primary">Ruaj preferencat</button>
             </form>
             <div id="vp-notifications-status" class="vp-status" style="display:none"></div>
+
+            <!-- Push Notification Subscription -->
+            <hr style="margin:24px 0;border:none;border-top:1px solid #e2e8f0;">
+            <div class="vp-field" style="display:flex;align-items:center;flex-direction:row;justify-content:space-between;gap:12px">
+              <div>
+                <strong style="display:block;margin-bottom:4px;">Njoftime në telefon / browser</strong>
+                <p class="vp-muted" style="margin:0;">Merr njoftime direkte në pajisjen tuaj edhe kur nuk jeni të kyçur në faqe.</p>
+              </div>
+              <button id="vp-push-btn" class="btn_primary" type="button" style="white-space:nowrap;flex-shrink:0" disabled>Duke u ngarkuar…</button>
+            </div>
+            <div id="vp-push-status" style="margin-top:8px;font-size:0.85rem;color:#64748b;display:none"></div>
           </div>
         </div>
       </section>
@@ -1065,7 +1076,93 @@ document.addEventListener('DOMContentLoaded', () => {
   loadVPNotifications();
   updateNotifBadge();
   setInterval(updateNotifBadge, 15000);
+  initPushSubscription();
 });
+
+// ── Web Push Subscription ─────────────────────────────────────────────────────
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+  return output;
+}
+
+async function initPushSubscription() {
+  const btn    = document.getElementById('vp-push-btn');
+  const status = document.getElementById('vp-push-status');
+  if (!btn) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    btn.textContent = 'Nuk mbështetet nga ky browser';
+    return;
+  }
+
+  const reg = await navigator.serviceWorker.ready;
+
+  async function refreshBtn() {
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      btn.textContent = 'Çaktivizo njoftimet';
+      btn.dataset.state = 'subscribed';
+    } else {
+      btn.textContent = 'Aktivizo njoftimet';
+      btn.dataset.state = 'unsubscribed';
+    }
+    btn.disabled = false;
+  }
+  await refreshBtn();
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const showStatus = (msg, ok = true) => {
+      status.textContent = msg;
+      status.style.color = ok ? '#16a34a' : '#dc2626';
+      status.style.display = 'block';
+      setTimeout(() => { status.style.display = 'none'; }, 4000);
+    };
+
+    try {
+      if (btn.dataset.state === 'subscribed') {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch(API + '/push.php?action=unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'same-origin',
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+          await sub.unsubscribe();
+        }
+        showStatus('Njoftimet u çaktivizuan.');
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          showStatus('Leja u refuzua. Aktivizoni njoftimet nga cilësimet e browser-it.', false);
+          btn.disabled = false;
+          return;
+        }
+        const keyRes  = await fetch(API + '/push.php?action=vapid_public_key', { credentials: 'same-origin' });
+        const keyJson = await keyRes.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(keyJson.data.public_key),
+        });
+        const subObj = sub.toJSON();
+        await fetch(API + '/push.php?action=subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          credentials: 'same-origin',
+          body: JSON.stringify(subObj),
+        });
+        showStatus('Njoftimet u aktivizuan!');
+      }
+    } catch (err) {
+      showStatus('Gabim: ' + (err.message || err), false);
+    }
+    await refreshBtn();
+  });
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/TiranaSolidare/assets/js/map-component.js"></script>
@@ -1483,24 +1580,28 @@ if (avatarDeleteBtn) {
       const json = await vpApiCall('messages.php?action=conversations');
       if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
 
-      if (!json.data.length) {
+      // API returns { conversations: [...], total_unread: N }
+      const convos = (json.data && json.data.conversations) ? json.data.conversations : [];
+
+      if (!convos.length) {
         container.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;"><p>Nuk keni biseda ende.</p><p style="font-size:0.85rem;">Klikoni "Mesazh i ri" për të filluar.</p></div>';
         return;
       }
 
       let html = '<div class="msg-conversation-list">';
-      json.data.forEach(c => {
+      convos.forEach(c => {
         const unread = c.unread_count > 0 ? '<span class="vp-tab-badge" style="display:inline-flex;margin-left:auto;">' + c.unread_count + '</span>' : '';
-        const init = (c.emri || 'P').charAt(0).toUpperCase();
+        const init = (c.other_emri || 'P').charAt(0).toUpperCase();
         const preview = c.last_message ? esc(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
-        html += '<div class="msg-convo-item' + (c.unread_count > 0 ? ' msg-convo-item--unread' : '') + '" onclick="vpOpenThread(' + c.user_id + ',\'' + esc(c.emri).replace(/'/g, "\\'") + '\')">'
+        html += '<div class="msg-convo-item' + (c.unread_count > 0 ? ' msg-convo-item--unread' : '') + '" onclick="vpOpenThread(' + c.other_id + ',\'' + esc(c.other_emri).replace(/'/g, "\\'") + '\')">'
           + '<div style="width:40px;height:40px;border-radius:50%;background:var(--db-primary,#00715D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + esc(init) + '</div>'
-          + '<div class="msg-convo-info"><div class="msg-convo-name">' + esc(c.emri) + ' ' + unread + '</div><div class="msg-convo-preview">' + preview + '</div></div>'
-          + '<div class="msg-convo-time">' + fmtDate(c.last_message_time) + '</div></div>';
+          + '<div class="msg-convo-info"><div class="msg-convo-name">' + esc(c.other_emri) + ' ' + unread + '</div><div class="msg-convo-preview">' + preview + '</div></div>'
+          + '<div class="msg-convo-time">' + fmtDate(c.last_time) + '</div></div>';
       });
       html += '</div>';
       container.innerHTML = html;
       vpLoadUnreadBadge();
+      return convos; // expose for deep-link caller
     } catch (e) { container.innerHTML = '<div class="vp-loading">Gabim rrjeti.</div>'; }
   };
 
@@ -1614,9 +1715,21 @@ if (avatarDeleteBtn) {
     } catch (e) {}
   };
 
-  // Auto-load on page ready
-  document.addEventListener('DOMContentLoaded', function() {
-    vpLoadConversations();
+  // Auto-load on page ready — if ?with=<userId> is in the URL (from notification deep-link),
+  // open that thread directly after loading the conversation list.
+  document.addEventListener('DOMContentLoaded', async function() {
+    const openWithId = <?= (int) ($_GET['with'] ?? 0) ?>;
+    if (openWithId > 0) {
+      try {
+        const convos = await vpLoadConversations() || [];
+        const conv = convos.find(c => c.other_id == openWithId);
+        vpOpenThread(openWithId, conv ? conv.other_emri : 'Bisedë');
+      } catch (e) {
+        vpOpenThread(openWithId, 'Bisedë');
+      }
+    } else {
+      vpLoadConversations();
+    }
   });
 })();
 </script>

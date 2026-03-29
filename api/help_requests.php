@@ -214,9 +214,10 @@ switch ($action) {
             json_error('Subjekti nuk mund të kalojë 180 karaktere.', 422);
         }
 
-        // Rate limit per-user: 10 contact emails per hour
-        if (!check_rate_limit('contact_applicant_' . $user['id'], 10, 3600)) {
-            json_error('Keni dërguar shumë mesazhe. Provoni përsëri më vonë.', 429);
+        // Rate limit: 10 contact emails per hour per (sender, applicant) pair.
+        // Keyed per applicant so one requester cannot flood the same helper repeatedly.
+        if (!check_rate_limit('contact_applicant_' . $user['id'] . '_' . $applicantId, 10, 3600)) {
+            json_error('Keni dërguar shumë mesazhe për këtë aplikues. Provoni përsëri pas një ore.', 429);
         }
 
         try {

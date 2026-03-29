@@ -41,10 +41,18 @@ function _loadPanelData(panelId) {
         case 'reports':
             loadReportsPanel();
             break;
-        case 'messages':
-            loadConversations();
+        case 'messages': {
+            // Open a specific thread if the URL has ?with=<userId> (from notification deep-link)
+            const _withId = parseInt(new URLSearchParams(location.search).get('with') || '0', 10);
+            loadConversations().then(convos => {
+                if (_withId > 0) {
+                    const match = (convos || []).find(c => c.other_id === _withId);
+                    openThread(_withId, match ? match.other_emri : 'Bisedë');
+                }
+            });
             loadUnreadBadge();
             break;
+        }
         case 'notifications':
             loadNotifications();
             break;
@@ -1451,6 +1459,7 @@ async function loadConversations() {
         });
         html += '</div>';
         container.innerHTML = html;
+        return convos; // expose for deep-link caller
     } catch (e) {
         container.innerHTML = '<div class="db-loading">Gabim rrjeti.</div>';
     }

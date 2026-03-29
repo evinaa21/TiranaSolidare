@@ -35,3 +35,43 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// ── Web Push ─────────────────────────────────────────────────────────────────
+
+self.addEventListener('push', event => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'Tirana Solidare', body: event.data.text() };
+  }
+
+  const title   = payload.title || 'Tirana Solidare';
+  const options = {
+    body: payload.body || '',
+    icon: '/TiranaSolidare/public/assets/images/icon-192.png',
+    badge: '/TiranaSolidare/public/assets/images/icon-192.png',
+    data: { url: payload.url || '/TiranaSolidare/public/' },
+    requireInteraction: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = event.notification.data?.url || '/TiranaSolidare/public/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes('/TiranaSolidare/') && 'focus' in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(target);
+    })
+  );
+});
