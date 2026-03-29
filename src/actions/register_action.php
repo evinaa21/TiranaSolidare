@@ -72,7 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
 
-        $verifyUrl = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+        $verifyUrl = app_base_url() . '/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
 
         try {
             $pdo->beginTransaction();

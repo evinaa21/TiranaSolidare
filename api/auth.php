@@ -127,7 +127,7 @@ switch ($action) {
         $plainToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
-        $verifyUrl = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+        $verifyUrl = app_base_url() . '/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
 
         try {
             $pdo->beginTransaction();
@@ -294,7 +294,7 @@ switch ($action) {
             $plainToken = bin2hex(random_bytes(32));
             $tokenHash  = hash('sha256', $plainToken);
             $expiresAt  = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
-            $verifyUrl  = app_base_url() . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($newEmail);
+            $verifyUrl  = app_base_url() . '/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($newEmail);
 
             $updateStmt = $pdo->prepare(
                 'UPDATE Perdoruesi SET email = ?, verified = 0, verification_token_hash = ?, verification_token_expires = ? WHERE id_perdoruesi = ?'
@@ -384,6 +384,11 @@ switch ($action) {
 
             // Delete user's help requests
             $pdo->prepare('DELETE FROM Kerkesa_per_Ndihme WHERE id_perdoruesi = ?')->execute([$user['id']]);
+
+            // Orphan events created by this user rather than deleting them (they may have
+            // other volunteers approved/applied). Setting id_perdoruesi = NULL is safe
+            // because the column is nullable in the schema.
+            $pdo->prepare('UPDATE Eventi SET id_perdoruesi = NULL WHERE id_perdoruesi = ?')->execute([$user['id']]);
 
             // Delete user's messages
             $pdo->prepare('DELETE FROM Mesazhi WHERE derguesi_id = ? OR marruesi_id = ?')->execute([$user['id'], $user['id']]);

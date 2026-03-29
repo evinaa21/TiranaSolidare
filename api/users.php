@@ -299,7 +299,7 @@ $params[] = $user['id'];
         $targetInfo->execute([$id]);
         $target = $targetInfo->fetch();
 
-        $blockedPageUrl = app_base_url() . '/TiranaSolidare/views/blocked.php';
+        $blockedPageUrl = app_base_url() . '/views/blocked.php';
         if ($blockReason !== '') {
             $blockMessage = "Llogaria juaj është bllokuar nga një administrator.\n\n"
                 . "Arsyeja e bllokimit: {$blockReason}\n\n"

@@ -2679,6 +2679,7 @@ body.page-requests .rq-sidebar-trust__icon {
   text-decoration: none;
   box-shadow: var(--rq-shadow-sm);
   outline: none;
+  appearance: none;
   -webkit-appearance: none;
 }
 

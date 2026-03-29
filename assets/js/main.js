@@ -14,6 +14,22 @@ function getCsrfToken() {
     return meta ? meta.content : '';
 }
 
+// Keep logout form CSRF token in sync with the rotating session token.
+// The hidden field is rendered at page-load time; any subsequent API mutation
+// rotates the session token, so we update the field just before submission.
+document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (form && form.action && form.action.indexOf('logout.php') !== -1) {
+            var field = form.querySelector('input[name="_csrf_token"]');
+            var meta  = document.querySelector('meta[name="csrf-token"]');
+            if (field && meta && meta.content) {
+                field.value = meta.content;
+            }
+        }
+    });
+});
+
 // ── Generic API caller ──────────────────────────────
 
 /**

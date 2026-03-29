@@ -50,7 +50,7 @@ try {
     }
 
     $newHash = password_hash($password, PASSWORD_DEFAULT);
-    $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ?, password_reset_token_hash = NULL, password_reset_token_expires = NULL WHERE id_perdoruesi = ?');
+    $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ?, password_changed_at = NOW(), password_reset_token_hash = NULL, password_reset_token_expires = NULL WHERE id_perdoruesi = ?');
     $update->execute([$newHash, (int) $user['id_perdoruesi']]);
 
     // Invalidate all existing sessions for this user

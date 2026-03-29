@@ -127,6 +127,11 @@ switch ($action) {
         break;
 
     // ── CREATE EVENT ───────────────────────────────
+    // ASSUMPTION: Events are created by admins only. There is no organisation
+    // role in the current schema (roles: volunteer, admin, super_admin).
+    // If an organisation/partner role is introduced in future, add a flag /
+    // approval step analogous to help_requests.php before enabling org-posted
+    // events, so admins retain moderation control.
     case 'create':
         require_method('POST');
         $admin = require_admin();
@@ -277,10 +282,10 @@ switch ($action) {
             $updEvt->execute([$id]);
             $updData = $updEvt->fetch();
 
-            $changeNames = implode(', ', array_map(fn($f) => match($f) {
+            $changeNames = implode(', ', array_unique(array_map(fn($f) => match($f) {
                 'data' => 'data/ora', 'vendndodhja' => 'vendndodhja',
                 'latitude', 'longitude' => 'vendndodhja', default => $f
-            }, array_unique($changedFields)));
+            }, $changedFields)));
 
             $updateNotifMsg  = "Detajet e eventit \"{$updData['titulli']}\" u ndryshuan ({$changeNames}). Kontrolloni informacionin e ri.";
             $updateNotifLink = "/TiranaSolidare/views/events.php?id={$id}";

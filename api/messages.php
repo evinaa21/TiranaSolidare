@@ -23,33 +23,33 @@ switch ($action) {
         release_session();
 
         // Get list of users with whom the current user has exchanged messages,
-        // along with the last message and unread count
+        // along with the last message and unread count.
+        // Uses MAX(id_mesazhi) + JOIN to avoid relying on MySQL's lenient GROUP BY
+        // which breaks under ONLY_FULL_GROUP_BY (default in MySQL 5.7.5+).
         $stmt = $pdo->prepare(
-            "SELECT 
+            "SELECT
                 c.other_id,
                 p.emri AS other_emri,
                 p.profile_color AS other_color,
-                c.last_message,
+                m_last.mesazhi AS last_message,
                 c.last_time,
                 c.unread_count
              FROM (
-                SELECT 
+                SELECT
                     CASE WHEN derguesi_id = ? THEN marruesi_id ELSE derguesi_id END AS other_id,
+                    MAX(id_mesazhi) AS last_msg_id,
                     MAX(krijuar_me) AS last_time,
-                    SUM(CASE WHEN marruesi_id = ? AND is_read = 0 THEN 1 ELSE 0 END) AS unread_count,
-                    (SELECT mesazhi FROM Mesazhi m2 
-                     WHERE ((m2.derguesi_id = ? AND m2.marruesi_id = CASE WHEN Mesazhi.derguesi_id = ? THEN Mesazhi.marruesi_id ELSE Mesazhi.derguesi_id END) 
-                         OR (m2.marruesi_id = ? AND m2.derguesi_id = CASE WHEN Mesazhi.derguesi_id = ? THEN Mesazhi.marruesi_id ELSE Mesazhi.derguesi_id END))
-                     ORDER BY m2.krijuar_me DESC LIMIT 1) AS last_message
+                    SUM(CASE WHEN marruesi_id = ? AND is_read = 0 THEN 1 ELSE 0 END) AS unread_count
                 FROM Mesazhi
                 WHERE derguesi_id = ? OR marruesi_id = ?
                 GROUP BY other_id
              ) c
              JOIN Perdoruesi p ON p.id_perdoruesi = c.other_id
+             JOIN Mesazhi m_last ON m_last.id_mesazhi = c.last_msg_id
              ORDER BY c.last_time DESC"
         );
         $uid = $user['id'];
-        $stmt->execute([$uid, $uid, $uid, $uid, $uid, $uid, $uid, $uid]);
+        $stmt->execute([$uid, $uid, $uid, $uid]);
         $conversations = ts_normalize_rows($stmt->fetchAll());
 
         // Total unread count

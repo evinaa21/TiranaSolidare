@@ -381,6 +381,7 @@ switch ($action) {
     case 'withdraw':
         require_method('DELETE');
         $user = require_auth();
+
         $id   = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
@@ -399,6 +400,14 @@ switch ($action) {
 
         if (!$withdrawn) {
             json_error('Aplikimi nuk u gjet ose nuk mund të tëriqet.', 404);
+        }
+
+        // Rate limit: 10 withdrawals per hour per user per event.
+        // Key includes event ID so a user enrolled in many events isn't blocked
+        // by a single global bucket — each event gets its own 10/hr allowance.
+        // Prevents apply→withdraw spam that floods admin notifications and abuses waitlist logic.
+        if (!check_rate_limit('withdraw_event_' . $user['id'] . '_' . (int)$withdrawn['id_eventi'], 10, 3600)) {
+            json_error('Po tërhiqni shumë aplikime për këtë event. Provoni përsëri pas një ore.', 429);
         }
 
         $pdo->prepare('DELETE FROM Aplikimi WHERE id_aplikimi = ?')->execute([$id]);

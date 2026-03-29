@@ -37,7 +37,7 @@ try {
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+1 hour'))->format('Y-m-d H:i:s');
 
-        $resetUrl = app_base_url() . '/TiranaSolidare/views/reset_password.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+        $resetUrl = app_base_url() . '/views/reset_password.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
         $update = $pdo->prepare('UPDATE Perdoruesi SET password_reset_token_hash = ?, password_reset_token_expires = ? WHERE id_perdoruesi = ?');
         $update->execute([$tokenHash, $expiresAt, (int) $user['id_perdoruesi']]);
 

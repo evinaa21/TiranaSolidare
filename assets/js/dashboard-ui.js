@@ -391,17 +391,17 @@ window.viewEventApps = async function (eventId) {
 
             let actions = '';
             if (app.statusi === 'pending') {
-                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved')">Prano</button>
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected')">Refuzo</button>`;
+                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>
+                    <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
             } else if (app.statusi === 'approved' && isPast) {
                 actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'present', ${eventId})">Prezent</button>
                     <button class="db-btn db-btn--danger db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'absent', ${eventId})">Munguar</button>`;
             } else if (app.statusi === 'approved') {
-                actions = `<button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected')">Refuzo</button>`;
+                actions = `<button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
             } else if (app.statusi === 'present' || app.statusi === 'absent') {
                 actions = '<span style="color:#94a3b8;font-size:0.8rem;">Prezenca e shënuar</span>';
             } else {
-                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved')">Prano</button>`;
+                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>`;
             }
 
             body += `<tr>
@@ -416,6 +416,15 @@ window.viewEventApps = async function (eventId) {
 
     showUserActivityModal('Duke ngarkuar…');
     updateUserActivityModal('Aplikimet për Eventin', body);
+};
+
+// Override main.js updateAppStatus to refresh the modal with the correct eventId
+window.updateAppStatus = async function (appId, status, eventId) {
+    const json = await apiCall(`applications.php?action=update_status&id=${appId}`, 'PUT', { statusi: status });
+    dbToast(json.message || json.data?.message || 'U krëe.', json.success ? 'success' : 'danger');
+    if (json.success && eventId) {
+        viewEventApps(eventId);
+    }
 };
 
 window.markPresence = async function (appId, status, eventId) {

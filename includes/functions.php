@@ -370,6 +370,62 @@ function app_base_url(): string
 }
 
 /**
+ * Send an email immediately via PHPMailer (synchronous).
+ * Use for user-triggered flows (registration, password reset) where delivery must be instant.
+ */
+function send_email_direct(string $toEmail, string $toName, string $subject, string $bodyHtml, string $bodyText = ''): bool
+{
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        error_log('send_email_direct: autoload not found');
+        return false;
+    }
+    require_once $autoload;
+
+    $mailConfigPath = __DIR__ . '/../config/mail.php';
+    if (!file_exists($mailConfigPath)) {
+        error_log('send_email_direct: mail config not found');
+        return false;
+    }
+    $cfg = require $mailConfigPath;
+    if (!is_array($cfg)) {
+        error_log('send_email_direct: invalid mail config');
+        return false;
+    }
+
+    try {
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = (string) ($cfg['host'] ?? '');
+        $mail->SMTPAuth   = true;
+        $mail->Username   = (string) ($cfg['username'] ?? '');
+        $mail->Password   = (string) ($cfg['password'] ?? '');
+        $mail->Port       = (int) ($cfg['port'] ?? 587);
+        $mail->CharSet    = 'UTF-8';
+        $secure = (string) ($cfg['encryption'] ?? 'tls');
+        $mail->SMTPSecure = $secure === 'ssl'
+            ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+            : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->setFrom(
+            (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
+            (string) ($cfg['from_name']  ?? 'Tirana Solidare')
+        );
+        $mail->addAddress($toEmail, $toName);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $bodyHtml;
+        if ($bodyText !== '') {
+            $mail->AltBody = $bodyText;
+        }
+        $mail->send();
+        return true;
+    } catch (Throwable $e) {
+        error_log('send_email_direct failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Queue an email for delivery. Inserts into the email_queue table.
  * Actual sending is handled by process_email_queue().
  */
@@ -471,7 +527,7 @@ function process_email_queue(int $batchSize = 10): int
 }
 
 /**
- * Send account verification email via PHPMailer (queued).
+ * Send account verification email via PHPMailer (immediate, synchronous).
  */
 function send_verification_email(string $toEmail, string $toName, string $verificationUrl): bool
 {
@@ -521,11 +577,11 @@ function send_verification_email(string $toEmail, string $toName, string $verifi
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\nKonfirmo email-in tënd duke hapur këtë link:\n{$verificationUrl}\n\nKy link skadon pas 24 orësh.";
 
-    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
- * Send password reset email (queued).
+ * Send password reset email (immediate, synchronous).
  */
 function send_password_reset_email(string $toEmail, string $toName, string $resetUrl): bool
 {
@@ -575,11 +631,11 @@ function send_password_reset_email(string $toEmail, string $toName, string $rese
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\nPër të rivendosur fjalëkalimin, hapni: {$resetUrl}\n\nKy link skadon pas 1 ore.";
 
-    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
- * Send a generic user notification email (queued).
+ * Send a generic user notification email (direct, immediate send).
  */
 function send_notification_email(string $toEmail, string $toName, string $subject, string $message): bool
 {
@@ -637,7 +693,7 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\n{$message}\n\nPër të çaktivizuar njoftimet me email, vizitoni cilësimet e llogarisë.\n\nTirana Solidare";
 
-    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**
