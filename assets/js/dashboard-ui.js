@@ -1751,12 +1751,12 @@ window.loadAdminProfile = async function() {
 
         initColorGrid(d.profile_color || 'emerald');
 
-        // Avatar
+        // Avatar — profile_picture is already a root-relative path starting with /TiranaSolidare/
         const pic = d.profile_picture;
         const imgEl = document.getElementById('profile-avatar-img');
         const initEl = document.getElementById('profile-avatar-initials');
         if (imgEl && initEl && pic) {
-            imgEl.src = '/TiranaSolidare/' + pic;
+            imgEl.src = pic;
             imgEl.style.display = 'block';
             initEl.style.display = 'none';
             imgEl.onerror = () => { imgEl.style.display = 'none'; initEl.style.display = ''; };
@@ -1837,11 +1837,12 @@ window.adminUploadPicture = async function(input) {
         });
         const json = await res.json();
         if (json.success) {
-            const path = json.data?.profile_picture || json.data?.path;
+            // API returns data.url — already a root-relative path starting with /TiranaSolidare/
+            const path = json.data?.url;
             const imgEl = document.getElementById('profile-avatar-img');
             const initEl = document.getElementById('profile-avatar-initials');
             if (imgEl && path) {
-                imgEl.src = '/TiranaSolidare/' + path + '?t=' + Date.now();
+                imgEl.src = path + '?t=' + Date.now();
                 imgEl.style.display = 'block';
                 if (initEl) initEl.style.display = 'none';
             }

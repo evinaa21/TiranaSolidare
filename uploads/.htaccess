@@ -5,8 +5,8 @@
     Require all denied
 </FilesMatch>
 
-# Restrict to images only
-<FilesMatch "!\.(jpg|jpeg|png|gif|webp)$">
+# Restrict to images only (deny anything that is NOT a standard image extension)
+<FilesMatch "^(?!.+\.(jpg|jpeg|png|gif|webp)$)">
     Require all denied
 </FilesMatch>
 
