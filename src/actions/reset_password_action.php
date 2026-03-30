@@ -40,18 +40,30 @@ if ($passwordError = validate_password_strength($password)) {
 
 try {
     $tokenHash = hash('sha256', $token);
-    $stmt = $pdo->prepare('SELECT id_perdoruesi, password_reset_token_expires FROM Perdoruesi WHERE email = ? AND password_reset_token_hash = ? LIMIT 1');
-    $stmt->execute([$email, $tokenHash]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user || empty($user['password_reset_token_expires']) || strtotime($user['password_reset_token_expires']) < time()) {
+    // Atomic UPDATE: only succeeds if token matches AND has not expired.
+    // This eliminates the TOCTOU race — two concurrent requests with the same
+    // token can both hit this UPDATE, but only the first will match (rowCount > 0);
+    // the second sees rowCount = 0 because the first already nulled the token.
+    $newHash = password_hash($password, PASSWORD_DEFAULT);
+    $update = $pdo->prepare(
+        'UPDATE Perdoruesi
+         SET fjalekalimi = ?, password_changed_at = NOW(),
+             password_reset_token_hash = NULL, password_reset_token_expires = NULL
+         WHERE email = ? AND password_reset_token_hash = ? AND password_reset_token_expires > NOW()'
+    );
+    $update->execute([$newHash, $email, $tokenHash]);
+
+    if ($update->rowCount() === 0) {
+        // Token was invalid, expired, or already consumed by a concurrent request
         header('Location: /TiranaSolidare/views/reset_password.php?error=invalid_token');
         exit();
     }
 
-    $newHash = password_hash($password, PASSWORD_DEFAULT);
-    $update = $pdo->prepare('UPDATE Perdoruesi SET fjalekalimi = ?, password_changed_at = NOW(), password_reset_token_hash = NULL, password_reset_token_expires = NULL WHERE id_perdoruesi = ?');
-    $update->execute([$newHash, (int) $user['id_perdoruesi']]);
+    // Derive user ID for session cleanup
+    $user = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE email = ? LIMIT 1');
+    $user->execute([$email]);
+    $user = $user->fetch(PDO::FETCH_ASSOC);
 
     // Invalidate all existing sessions for this user
     session_unset();

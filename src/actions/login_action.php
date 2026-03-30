@@ -52,6 +52,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Regenerate session to prevent session fixation (H-10)
         session_regenerate_id(true);
+        // Rotate CSRF token so the pre-login token cannot be reused post-login
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
         // SUCCESS: Set session variables
         $_SESSION['user_id'] = $user['id_perdoruesi'];

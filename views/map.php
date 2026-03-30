@@ -13,7 +13,7 @@ $stmtEvents = $pdo->query(
             k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL
+     WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND e.is_archived = 0
      ORDER BY e.data DESC"
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
@@ -25,7 +25,7 @@ $stmtRequests = $pdo->query(
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
-     WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL
+     WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL AND kn.statusi = 'open'
      ORDER BY kn.krijuar_me DESC"
 );
 $requests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));

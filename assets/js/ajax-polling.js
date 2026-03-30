@@ -27,7 +27,7 @@ function initNotificationPolling() {
 
 async function fetchUnreadCount() {
     try {
-        const res = await fetch(`${API_BASE}/notifications.php?action=unread_count`);
+        const res = await fetch(`${API_BASE}/notifications.php?action=unread_count`, { credentials: 'same-origin' });
         const json = await res.json();
 
         if (json.success && notifBadge) {
@@ -58,7 +58,7 @@ function initApplicationPolling(containerId = 'application-list') {
 async function fetchMyApplications(page = 1) {
     currentAppPage = page;
     try {
-        const res = await fetch(`${API_BASE}/applications.php?action=list&page=${page}&limit=10`);
+        const res = await fetch(`${API_BASE}/applications.php?action=list&page=${page}&limit=10`, { credentials: 'same-origin' });
         const json = await res.json();
 
         if (json.success && appListContainer) {
@@ -145,17 +145,19 @@ function initEventPolling(containerId = 'event-list') {
     _eventTimer = setInterval(fetchEvents, 30000); // Every 30 seconds
 }
 
-window.addEventListener('beforeunload', () => {
+function _clearPollingTimers() {
     clearInterval(_notifTimer);
     clearInterval(_appTimer);
     clearInterval(_eventTimer);
-});
+}
+window.addEventListener('beforeunload', _clearPollingTimers);
+window.addEventListener('pagehide', _clearPollingTimers);
 
 async function fetchEvents(page = 1, filters = {}) {
     const params = new URLSearchParams({ action: 'list', page, limit: 12, ...filters });
 
     try {
-        const res = await fetch(`${API_BASE}/events.php?${params}`);
+        const res = await fetch(`${API_BASE}/events.php?${params}`, { credentials: 'same-origin' });
         const json = await res.json();
 
         if (json.success && eventListContainer) {
