@@ -63,6 +63,7 @@ switch ($action) {
         $updateStmt = $pdo->prepare('UPDATE Perdoruesi SET profile_picture = ? WHERE id_perdoruesi = ?');
         $updateStmt->execute([$result['url'], $user['id']]);
 
+        $_SESSION['profile_picture'] = $result['url'];
         json_success($result);
         break;
 

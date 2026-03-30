@@ -43,6 +43,9 @@ switch ($action) {
         if (!$endpoint || !$p256dh || !$auth) {
             json_error('Subscription data e paplotë.', 422);
         }
+        if (!filter_var($endpoint, FILTER_VALIDATE_URL) || !str_starts_with($endpoint, 'https://')) {
+            json_error('Endpoint nuk është i vlefshëm.', 422);
+        }
 
         // Limit to 10 subscriptions per user to prevent runaway registrations
         $countStmt = $pdo->prepare('SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ?');

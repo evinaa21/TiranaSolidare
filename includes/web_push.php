@@ -237,6 +237,10 @@ function send_web_push(
 ): bool {
     $endpoint = $subscription['endpoint'];
     $parsed   = parse_url($endpoint);
+    if (!is_array($parsed) || empty($parsed['scheme']) || empty($parsed['host'])) {
+        error_log("web_push: invalid endpoint URL: {$endpoint}");
+        return false;
+    }
     $audience = $parsed['scheme'] . '://' . $parsed['host'];
 
     $payload   = json_encode($notification, JSON_UNESCAPED_UNICODE);

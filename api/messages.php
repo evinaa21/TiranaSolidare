@@ -207,7 +207,7 @@ switch ($action) {
             send_push_to_user(
                 $receiverId,
                 "Mesazh i ri nga {$user['emri']}",
-                $body,
+                $message,
                 app_base_url() . $notifLink
             );
 

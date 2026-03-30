@@ -68,7 +68,8 @@ switch ($action) {
         $_SESSION['emri']    = $user['emri'];
         $_SESSION['roli']    = ts_normalize_value($user['roli']);
         $_SESSION['email']   = $user['email'];
-        $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
+        $_SESSION['profile_color']   = $user['profile_color'] ?? 'emerald';
+        $_SESSION['profile_picture'] = (string) ($user['profile_picture'] ?? '');
 
         json_success([
             'id'    => (int) $user['id_perdoruesi'],

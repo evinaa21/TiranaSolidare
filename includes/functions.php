@@ -366,7 +366,7 @@ function app_base_url(): string
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['SERVER_PORT'] ?? '') == '443');
     $scheme = $https ? 'https' : 'http';
-    return $scheme . '://localhost';
+    return $scheme . '://localhost/TiranaSolidare';
 }
 
 /**

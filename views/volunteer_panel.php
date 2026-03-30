@@ -844,7 +844,7 @@ if (pwForm) {
     const new_password = document.getElementById('vp-new-pw').value;
     const confirm_password = document.getElementById('vp-confirm-pw').value;
     if (new_password !== confirm_password) { vpStatus('vp-pw-status', 'error', 'Fjalëkalimet nuk përputhen.'); return; }
-    if (new_password.length < 6) { vpStatus('vp-pw-status', 'error', 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.'); return; }
+    if (new_password.length < 8) { vpStatus('vp-pw-status', 'error', 'Fjalëkalimi duhet të ketë të paktën 8 karaktere.'); return; }
     try {
       const res = await fetch(API + '/auth.php?action=change_password', {
         method: 'PUT',
@@ -1007,7 +1007,7 @@ async function updateNotifBadge() {
   try {
     const res = await fetch(API + '/notifications.php?action=unread_count');
     const json = await res.json();
-    const badge = document.getElementById('vp-tab-badge');
+    const badge = document.getElementById('notif-tab-badge');
     const headerBadge = document.getElementById('notif-badge');
     if (json.success) {
       const count = json.data.unread;
@@ -1606,6 +1606,7 @@ if (avatarDeleteBtn) {
   };
 
   window.vpOpenThread = async function(userId, userName) {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     currentThread = userId;
     const container = document.getElementById('vp-msg-content');
     const title = document.getElementById('vp-msg-title');
