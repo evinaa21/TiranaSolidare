@@ -297,34 +297,81 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
   <!-- ═══════════════ PANEL: REPORTS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-reports">
-    <div class="db-panel__header">
-      <h3>Raportet & Statistikat</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="/TiranaSolidare/api/export.php?type=events" target="_blank" class="db-btn db-btn--ghost">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          CSV Evente
-        </a>
-        <a href="/TiranaSolidare/api/export.php?type=applications" target="_blank" class="db-btn db-btn--ghost">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          CSV Aplikime
-        </a>
-        <button class="db-btn db-btn--primary" onclick="generateReport()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          Gjenero raport
-        </button>
-        <a href="/TiranaSolidare/api/export.php?type=report_html" target="_blank" class="db-btn db-btn--accent">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+
+    <!-- Header bar -->
+    <div class="db-panel__header" style="align-items:flex-start;flex-wrap:wrap;gap:16px;">
+      <div>
+        <h3 style="margin-bottom:4px;">Raportet &amp; Statistikat</h3>
+        <p class="db-panel__subtitle">Vizualizime mujore, eksporte dhe raporte të ruajtura.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:6px;padding:6px 10px;background:#f8fafc;border:1px solid #e4e8ee;border-radius:10px;align-items:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <span style="font-size:0.76rem;font-weight:600;color:#64748b;">Eksporto:</span>
+          <a href="/TiranaSolidare/api/export.php?type=events" target="_blank" class="db-btn db-btn--ghost db-btn--sm" style="padding:5px 12px;font-size:0.78rem;">Evente CSV</a>
+          <a href="/TiranaSolidare/api/export.php?type=applications" target="_blank" class="db-btn db-btn--ghost db-btn--sm" style="padding:5px 12px;font-size:0.78rem;">Aplikime CSV</a>
+          <a href="/TiranaSolidare/api/export.php?type=users" target="_blank" class="db-btn db-btn--ghost db-btn--sm" style="padding:5px 12px;font-size:0.78rem;">Përdorues CSV</a>
+        </div>
+        <a href="/TiranaSolidare/api/export.php?type=report_html" target="_blank" class="db-btn db-btn--accent" style="gap:7px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
           Raport PDF
         </a>
+        <button class="db-btn db-btn--primary" onclick="openGenerateReportModal()" style="gap:7px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Gjenero Raport
+        </button>
       </div>
     </div>
+
+    <!-- KPI strip (filled by JS) -->
+    <div id="reports-kpi-strip"></div>
+
+    <!-- Charts grid -->
     <div class="reports-grid" id="reports-charts">
-      <div class="db-loading" style="grid-column:1/-1;">Duke ngarkuar grafikët…</div>
+      <div class="db-loading" style="grid-column:1/-1;padding:60px;text-align:center;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 12px;"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        Duke ngarkuar grafikët…
+      </div>
     </div>
-    <div style="margin-top:24px;">
-      <h4 style="margin-bottom:12px;">Raportet e gjeneruara</h4>
+
+    <!-- Saved reports -->
+    <div style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h4 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Raportet e Gjeneruara</h4>
+        <button class="db-btn db-btn--ghost db-btn--sm" onclick="loadReportsList()" style="font-size:0.76rem;padding:5px 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          Rifresko
+        </button>
+      </div>
       <div id="reports-list">
         <div class="db-loading">Duke ngarkuar…</div>
+      </div>
+    </div>
+
+    <!-- Generate report modal -->
+    <div id="rpt-gen-modal-backdrop" class="rpt-gen-modal-backdrop" style="display:none;" onclick="if(event.target===this)closeGenerateReportModal()">
+      <div class="rpt-gen-modal">
+        <div class="rpt-gen-modal__hdr">
+          <h4>Gjenero Raport të Ri</h4>
+          <p>Zgjidhni tipin e raportit për ta ruajtur në sistem.</p>
+        </div>
+        <div class="rpt-gen-modal__body">
+          <button class="rpt-type-btn" onclick="submitGenerateReport('Përmbledhje Mujore')">
+            <div class="rpt-type-btn__icon" style="background:#e8faf6;">📊</div>
+            <div><div class="rpt-type-btn__label">Përmbledhje Mujore</div><div class="rpt-type-btn__desc">Statistika të aplikimeve dhe eventeve të muajit</div></div>
+          </button>
+          <button class="rpt-type-btn" onclick="submitGenerateReport('Vullnetarë Aktivë')">
+            <div class="rpt-type-btn__icon" style="background:#fef3c7;">👥</div>
+            <div><div class="rpt-type-btn__label">Vullnetarë Aktivë</div><div class="rpt-type-btn__desc">Lista e vullnetarëve me aplikime të pranuara</div></div>
+          </button>
+          <button class="rpt-type-btn" onclick="submitGenerateReport('Analiza e Eventeve')">
+            <div class="rpt-type-btn__icon" style="background:#dbeafe;">📅</div>
+            <div><div class="rpt-type-btn__label">Analiza e Eventeve</div><div class="rpt-type-btn__desc">Performanca dhe statistikat e eventeve</div></div>
+          </button>
+        </div>
+        <div class="rpt-gen-modal__footer">
+          <button class="db-btn db-btn--ghost db-btn--sm" onclick="closeGenerateReportModal()">Anulo</button>
+        </div>
       </div>
     </div>
   </div>

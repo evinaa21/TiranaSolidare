@@ -224,77 +224,145 @@ window.loadDashboardStats = async function () {
             </div>
         </div>`;
 
-    // Sub-stats grid
+    // Sub-stats grid — premium redesign
     if (subContainer) {
-        const blockedAlert = (d.users.bllokuar_count || 0) > 0
-            ? `<li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('users',document.querySelector('[data-panel=users]'))">
-                <span class="db-progress-item__label" style="color:#dc2626;">⚠ Llogari të bllokuara</span>
-                <span class="db-badge db-badge--blocked">${d.users.bllokuar_count}</span>
-               </li>` : '';
+        // Inject styles once
+        if (!document.getElementById('db-ov-sty')) {
+            const sty = document.createElement('style');
+            sty.id = 'db-ov-sty';
+            sty.textContent = `
+.db-ov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:20px 36px 0;}
+@media(max-width:1100px){.db-ov-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:640px){.db-ov-grid{grid-template-columns:1fr;padding:16px 20px 0;}}
+.db-ov-card{background:#fff;border:1px solid #f0f4f8;border-radius:18px;padding:22px 24px;box-shadow:0 1px 4px rgba(0,0,0,0.04),0 4px 20px rgba(0,0,0,0.03);transition:box-shadow .22s,transform .22s;}
+.db-ov-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.07),0 8px 28px rgba(0,113,93,0.07);}
+.db-ov-card--wide{grid-column:1/-1;}
+.db-ov-card__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.db-ov-card__title{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#6b7280;}
+.db-ov-card__link{font-size:0.76rem;color:#00715D;text-decoration:none;font-weight:600;}
+.db-ov-funnel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.db-ov-fitem{text-align:center;padding:14px 8px;border-radius:14px;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.db-ov-fitem:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+.db-ov-fitem__val{font-size:1.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+.db-ov-fitem__lbl{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:5px;opacity:.8;}
+.db-ov-pbar{height:7px;background:#f0f4f8;border-radius:999px;overflow:hidden;margin-top:12px;}
+.db-ov-pbar__fill{height:100%;border-radius:999px;transition:width 1s cubic-bezier(.22,1,.36,1);}
+.db-ov-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f8fafc;cursor:pointer;}
+.db-ov-row:last-child{border-bottom:none;}
+.db-ov-row__lbl{font-size:0.83rem;color:#374151;display:flex;align-items:center;gap:8px;}
+.db-ov-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.db-ov-row__val{font-size:0.9rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.db-ov-cat{display:flex;flex-direction:column;gap:11px;}
+.db-ov-cat-item__head{display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:5px;}
+.db-ov-cat-item__name{font-weight:600;color:#374151;}
+.db-ov-cat-item__cnt{font-weight:700;color:#00715D;font-variant-numeric:tabular-nums;}
+.db-ov-catbar{height:5px;background:#f1f5f9;border-radius:999px;overflow:hidden;}
+.db-ov-catbar__fill{height:100%;background:linear-gradient(90deg,#00715D,#26a898);border-radius:999px;}
+.db-ov-rtbl{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.db-ov-rtbl th{font-size:0.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;padding:0 10px 10px;text-align:left;}
+.db-ov-rtbl td{padding:9px 10px;border-top:1px solid #f1f5f9;vertical-align:middle;}
+.db-ov-rtbl tr:first-child td{border-top:none;}
+.db-ov-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#00715D,#26a898);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.74rem;font-weight:700;flex-shrink:0;}
+            `;
+            document.head.appendChild(sty);
+        }
+
+        const totalApps = (d.applications.ne_pritje || 0) + (d.applications.pranuar || 0) + (d.applications.refuzuar || 0);
+        const approvedPct = totalApps > 0 ? Math.round((d.applications.pranuar || 0) / totalApps * 100) : 0;
+        const maxCat = Math.max(...(d.top_categories || []).map(c => parseInt(c.event_count) || 0), 1);
+
+        const statusColors = { approved: '#10b981', pending: '#f59e0b', rejected: '#ef4444' };
+        const statusBg = { approved: '#dcfce7', pending: '#fef3c7', rejected: '#fee2e2' };
 
         const recentAppsHtml = (d.recent_applications || []).length === 0
-            ? '<p style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:16px 0;">Nuk ka aplikime ende.</p>'
-            : `<table class="db-table" style="font-size:0.83rem;">
+            ? '<p style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:20px 0;">Nuk ka aplikime ende.</p>'
+            : `<table class="db-ov-rtbl">
                 <thead><tr><th>Vullnetari</th><th>Eventi</th><th>Statusi</th><th>Data</th></tr></thead>
-                <tbody>${(d.recent_applications || []).map(a => `
-                    <tr>
-                        <td>${escapeHtml(a.vullnetari_emri || '')}</td>
-                        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(a.eventi_titulli||'')}">${escapeHtml(a.eventi_titulli || '')}</td>
-                        <td><span class="db-badge db-badge--${(a.statusi||'').toLowerCase()}">${statusLabel(a.statusi)}</span></td>
-                        <td style="color:#64748b;white-space:nowrap;">${(a.aplikuar_me||'').substring(0,10)}</td>
-                    </tr>`).join('')}
+                <tbody>${(d.recent_applications || []).map(a => {
+                    const sl = (a.statusi || '').toLowerCase();
+                    const ini = (a.vullnetari_emri || '?').charAt(0).toUpperCase();
+                    return `<tr>
+                        <td><div style="display:flex;align-items:center;gap:8px;"><div class="db-ov-avatar">${escapeHtml(ini)}</div><strong>${escapeHtml(a.vullnetari_emri || '')}</strong></div></td>
+                        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;" title="${escapeHtml(a.eventi_titulli||'')}">${escapeHtml(a.eventi_titulli || '')}</td>
+                        <td><span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.69rem;font-weight:700;background:${statusBg[sl]||'#f3f4f6'};color:${statusColors[sl]||'#6b7280'};">${statusLabel(a.statusi)}</span></td>
+                        <td style="color:#94a3b8;white-space:nowrap;font-size:0.79rem;">${(a.aplikuar_me||'').substring(0,10)}</td>
+                    </tr>`;
+                }).join('')}
                 </tbody></table>`;
 
-        subContainer.innerHTML = `
-            <div class="db-overview-card">
-                <h4>Aplikime sipas Statusit</h4>
-                <ul class="db-progress-list">
-                    <li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
-                        <span class="db-progress-item__label">🕐 Në pritje</span>
-                        <span class="db-badge db-badge--pending">${d.applications.ne_pritje || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">✓ Pranuar</span>
-                        <span class="db-badge db-badge--active">${d.applications.pranuar || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">✗ Refuzuar</span>
-                        <span class="db-badge db-badge--blocked">${d.applications.refuzuar || 0}</span>
-                    </li>
-                </ul>
+        subContainer.innerHTML = `<div class="db-ov-grid">
+
+                <div class="db-ov-funnel">
+                    <div class="db-ov-fitem" style="background:#fef3c7;" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
+                        <div class="db-ov-fitem__val" style="color:#92400e;">${d.applications.ne_pritje || 0}</div>
+                        <div class="db-ov-fitem__lbl" style="color:#a16207;">Pritje</div>
+                    </div>
+                    <div class="db-ov-fitem" style="background:#dcfce7;">
+                        <div class="db-ov-fitem__val" style="color:#14532d;">${d.applications.pranuar || 0}</div>
+                        <div class="db-ov-fitem__lbl" style="color:#166534;">Pranuar</div>
+                    </div>
+                    <div class="db-ov-fitem" style="background:#fee2e2;">
+                        <div class="db-ov-fitem__val" style="color:#7f1d1d;">${d.applications.refuzuar || 0}</div>
+                        <div class="db-ov-fitem__lbl" style="color:#991b1b;">Refuzuar</div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:0.76rem;color:#6b7280;margin-bottom:5px;display:flex;justify-content:space-between;"><span>Norma e pranimit</span><strong style="color:#10b981;">${approvedPct}%</strong></div>
+                    <div class="db-ov-pbar"><div class="db-ov-pbar__fill" style="width:${approvedPct}%;background:linear-gradient(90deg,#10b981,#059669);"></div></div>
+                </div>
             </div>
-            <div class="db-overview-card">
-                <h4>Situata e Platformës</h4>
-                <ul class="db-progress-list">
-                    <li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('events',document.querySelector('[data-panel=events]'))">
-                        <span class="db-progress-item__label">📅 Evente të ardhshme</span>
-                        <span class="db-badge db-badge--active">${d.events.evente_te_ardhshme || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">👥 Vullnetarë</span>
-                        <span class="db-badge db-badge--pending">${d.users.vullnetar_count || 0}</span>
-                    </li>
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">💬 Kërkesa aktive</span>
-                        <span class="db-badge db-badge--active">${d.help_requests.kerkese_open || 0}</span>
-                    </li>
-                    ${blockedAlert}
-                </ul>
+
+            <div class="db-ov-card">
+                <div class="db-ov-card__head"><span class="db-ov-card__title">Gjendja e Platformës</span></div>
+                <div class="db-ov-row" onclick="switchPanel('events',document.querySelector('[data-panel=events]'))">
+                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#3b82f6;"></div>Evente të ardhshme</span>
+                    <span class="db-ov-row__val" style="color:#3b82f6;">${d.events.evente_te_ardhshme || 0}</span>
+                </div>
+                <div class="db-ov-row" onclick="switchPanel('users',document.querySelector('[data-panel=users]'))">
+                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#00715D;"></div>Vullnetarë aktivë</span>
+                    <span class="db-ov-row__val" style="color:#00715D;">${d.users.vullnetar_count || 0}</span>
+                </div>
+                <div class="db-ov-row" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
+                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#f59e0b;"></div>Kërkesa të hapura</span>
+                    <span class="db-ov-row__val" style="color:#f59e0b;">${d.help_requests.kerkese_open || 0}</span>
+                </div>
+                ${(d.users.bllokuar_count || 0) > 0
+                    ? `<div class="db-ov-row" onclick="switchPanel('users',document.querySelector('[data-panel=users]'))">
+                        <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#ef4444;"></div><span style="color:#ef4444;">⚠ Llogari të bllokuara</span></span>
+                        <span class="db-ov-row__val" style="color:#ef4444;">${d.users.bllokuar_count}</span>
+                       </div>`
+                    : `<div class="db-ov-row" style="cursor:default;">
+                        <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#10b981;"></div>Asnjë problem i detektuar</span>
+                        <span style="font-size:0.85rem;color:#10b981;">✓</span>
+                       </div>`}
             </div>
-            <div class="db-overview-card">
-                <h4>Top Kategoritë</h4>
-                <ul class="db-category-list">
-                    ${(d.top_categories || []).map(c => `
-                        <li class="db-category-item">
-                            <span class="db-category-item__name">${escapeHtml(c.emri)}</span>
-                            <span class="db-category-item__count">${c.event_count}</span>
-                        </li>`).join('')}
-                </ul>
+
+            <div class="db-ov-card">
+                <div class="db-ov-card__head"><span class="db-ov-card__title">Top Kategoritë</span></div>
+                <div class="db-ov-cat">
+                    ${(d.top_categories || []).slice(0, 5).map(c => {
+                        const pct = Math.round((parseInt(c.event_count) || 0) / maxCat * 100);
+                        return `<div>
+                            <div class="db-ov-cat-item__head">
+                                <span class="db-ov-cat-item__name">${escapeHtml(c.emri)}</span>
+                                <span class="db-ov-cat-item__cnt">${c.event_count}</span>
+                            </div>
+                            <div class="db-ov-catbar"><div class="db-ov-catbar__fill" style="width:${pct}%;"></div></div>
+                        </div>`;
+                    }).join('')}
+                    ${(d.top_categories || []).length === 0 ? '<p style="color:#94a3b8;font-size:0.84rem;">Nuk ka kategori ende.</p>' : ''}
+                </div>
             </div>
-            <div class="db-overview-card" style="grid-column:1/-1;">
-                <h4>Aplikimet e Fundit</h4>
+
+            <div class="db-ov-card db-ov-card--wide">
+                <div class="db-ov-card__head">
+                    <span class="db-ov-card__title">Aplikimet e Fundit</span>
+                    <a class="db-ov-card__link" href="#" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'));return false;">Shiko të gjitha →</a>
+                </div>
                 <div style="overflow-x:auto;">${recentAppsHtml}</div>
-            </div>`;
+            </div>
+
+        </div>`;
     }
 };
 
@@ -1285,7 +1353,7 @@ async function loadReportsPanel() {
 
         const { monthly_apps, monthly_requests, monthly_events, apps_by_category } = json.data;
 
-        // Get the last 6 months as Albanian month labels
+        // Albanian month names
         const monthNames = ['Jan', 'Shk', 'Mar', 'Pri', 'Maj', 'Qer', 'Kor', 'Gus', 'Sht', 'Tet', 'Nën', 'Dhj'];
         const allMonths = new Set();
         [monthly_apps, monthly_requests, monthly_events].forEach(arr =>
@@ -1304,82 +1372,164 @@ async function loadReportsPanel() {
             });
         }
 
+        const appsVals   = getValues(monthly_apps);
+        const eventsVals = getValues(monthly_events);
+        const reqVals    = getValues(monthly_requests);
+
+        // KPI values from last month in each dataset
+        const lastApps   = appsVals[appsVals.length - 1]     || 0;
+        const lastEvents = eventsVals[eventsVals.length - 1] || 0;
+        const lastReqs   = reqVals[reqVals.length - 1]       || 0;
+        const totalCat   = apps_by_category.reduce((s, c) => s + parseInt(c.total || 0), 0);
+
+        // Fill KPI strip
+        const kpiStrip = document.getElementById('reports-kpi-strip');
+        if (kpiStrip) {
+            kpiStrip.innerHTML = `
+                <div class="reports-kpi-item">
+                    <div class="reports-kpi-item__val">${lastApps}</div>
+                    <div class="reports-kpi-item__lbl">Aplikime</div>
+                    <div class="reports-kpi-item__sub">Muaji i fundit</div>
+                </div>
+                <div class="reports-kpi-item">
+                    <div class="reports-kpi-item__val">${lastEvents}</div>
+                    <div class="reports-kpi-item__lbl">Evente</div>
+                    <div class="reports-kpi-item__sub">Muaji i fundit</div>
+                </div>
+                <div class="reports-kpi-item">
+                    <div class="reports-kpi-item__val">${lastReqs}</div>
+                    <div class="reports-kpi-item__lbl">Kërkesa</div>
+                    <div class="reports-kpi-item__sub">Muaji i fundit</div>
+                </div>
+                <div class="reports-kpi-item">
+                    <div class="reports-kpi-item__val">${apps_by_category.length}</div>
+                    <div class="reports-kpi-item__lbl">Kategori aktive</div>
+                    <div class="reports-kpi-item__sub">${totalCat} aplikime gjithsej</div>
+                </div>
+            `;
+        }
+
+        // Premium card structure
         container.innerHTML = `
             <div class="report-card">
-                <h4>Aplikime mujore</h4>
-                <canvas id="chart-monthly-apps"></canvas>
+                <div class="report-card__hdr">
+                    <h4>Aplikime Mujore</h4>
+                    <span class="report-card__total">${lastApps} ky muaj</span>
+                </div>
+                <div class="report-card__body">
+                    <canvas id="chart-monthly-apps" height="200"></canvas>
+                </div>
             </div>
             <div class="report-card">
-                <h4>Evente mujore</h4>
-                <canvas id="chart-monthly-events"></canvas>
+                <div class="report-card__hdr">
+                    <h4>Evente Mujore</h4>
+                    <span class="report-card__total">${lastEvents} ky muaj</span>
+                </div>
+                <div class="report-card__body">
+                    <canvas id="chart-monthly-events" height="200"></canvas>
+                </div>
             </div>
             <div class="report-card">
-                <h4>Kërkesa mujore</h4>
-                <canvas id="chart-monthly-requests"></canvas>
+                <div class="report-card__hdr">
+                    <h4>Kërkesa Mujore</h4>
+                    <span class="report-card__total">${lastReqs} ky muaj</span>
+                </div>
+                <div class="report-card__body">
+                    <canvas id="chart-monthly-requests" height="200"></canvas>
+                </div>
             </div>
             <div class="report-card">
-                <h4>Aplikime sipas kategorisë</h4>
-                <canvas id="chart-category"></canvas>
+                <div class="report-card__hdr">
+                    <h4>Aplikime sipas Kategorisë</h4>
+                    <span class="report-card__total">${apps_by_category.length} kategori</span>
+                </div>
+                <div class="report-card__body">
+                    <canvas id="chart-category" height="200"></canvas>
+                </div>
             </div>
         `;
 
-        const chartOpts = {
+        // Shared base options
+        const baseOpts = {
             responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: false } },
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 10,
+                    cornerRadius: 8,
+                    titleFont: { size: 11 },
+                    bodyFont: { size: 13, weight: '700' }
+                }
+            },
             scales: {
-                y: { beginAtZero: true, ticks: { precision: 0 } },
-                x: { grid: { display: false } }
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, font: { size: 11 }, color: '#94a3b8' },
+                    grid: { color: '#f1f5f9' },
+                    border: { display: false }
+                },
+                x: {
+                    ticks: { font: { size: 11 }, color: '#94a3b8' },
+                    grid: { display: false },
+                    border: { display: false }
+                }
             }
         };
 
-        new Chart(document.getElementById('chart-monthly-apps'), {
+        // Applications bar chart — teal gradient
+        const appsCtx  = document.getElementById('chart-monthly-apps').getContext('2d');
+        const appsGrad = appsCtx.createLinearGradient(0, 0, 0, 220);
+        appsGrad.addColorStop(0, 'rgba(0,113,93,0.90)');
+        appsGrad.addColorStop(1, 'rgba(0,113,93,0.22)');
+        new Chart(appsCtx, {
             type: 'bar',
-            data: {
-                labels,
-                datasets: [{ label: 'Aplikime', data: getValues(monthly_apps), backgroundColor: 'rgba(0,113,93,0.7)', borderRadius: 6 }]
-            },
-            options: chartOpts
+            data: { labels, datasets: [{ label: 'Aplikime', data: appsVals, backgroundColor: appsGrad, borderRadius: 7, borderSkipped: false }] },
+            options: { ...baseOpts }
         });
 
-        new Chart(document.getElementById('chart-monthly-events'), {
+        // Events line chart — warm gradient fill
+        const evCtx  = document.getElementById('chart-monthly-events').getContext('2d');
+        const evGrad = evCtx.createLinearGradient(0, 0, 0, 220);
+        evGrad.addColorStop(0, 'rgba(225,114,84,0.40)');
+        evGrad.addColorStop(1, 'rgba(225,114,84,0.02)');
+        new Chart(evCtx, {
             type: 'line',
-            data: {
-                labels,
-                datasets: [{ label: 'Evente', data: getValues(monthly_events), borderColor: '#E17254', backgroundColor: 'rgba(225,114,84,0.1)', fill: true, tension: 0.4 }]
-            },
-            options: chartOpts
+            data: { labels, datasets: [{ label: 'Evente', data: eventsVals, borderColor: '#E17254', backgroundColor: evGrad, fill: true, tension: 0.45, pointBackgroundColor: '#E17254', pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5 }] },
+            options: { ...baseOpts }
         });
 
-        new Chart(document.getElementById('chart-monthly-requests'), {
+        // Requests bar chart — blue gradient
+        const reqCtx  = document.getElementById('chart-monthly-requests').getContext('2d');
+        const reqGrad = reqCtx.createLinearGradient(0, 0, 0, 220);
+        reqGrad.addColorStop(0, 'rgba(59,130,246,0.90)');
+        reqGrad.addColorStop(1, 'rgba(59,130,246,0.22)');
+        new Chart(reqCtx, {
             type: 'bar',
-            data: {
-                labels,
-                datasets: [{ label: 'Kërkesa', data: getValues(monthly_requests), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 }]
-            },
-            options: chartOpts
+            data: { labels, datasets: [{ label: 'Kërkesa', data: reqVals, backgroundColor: reqGrad, borderRadius: 7, borderSkipped: false }] },
+            options: { ...baseOpts }
         });
 
         // Category doughnut
         const catLabels = apps_by_category.map(c => c.emri || 'Pa kategori');
         const catValues = apps_by_category.map(c => parseInt(c.total));
-        const catColors = ['#00715D', '#E17254', '#3b82f6', '#f59e0b', '#8b5cf6'];
-
+        const catColors = ['#00715D', '#E17254', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
         new Chart(document.getElementById('chart-category'), {
             type: 'doughnut',
-            data: {
-                labels: catLabels,
-                datasets: [{ data: catValues, backgroundColor: catColors.slice(0, catLabels.length) }]
-            },
+            data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: catColors.slice(0, catLabels.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
             options: {
                 responsive: true,
-                plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 12 } } } }
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 14, font: { size: 11 }, color: '#374151', usePointStyle: true } },
+                    tooltip: { backgroundColor: '#1e293b', padding: 10, cornerRadius: 8 }
+                }
             }
         });
 
         _reportsChartsLoaded = true;
-
-        // Also load the saved reports list
         loadReportsList();
     } catch (e) {
         container.innerHTML = '<div class="db-loading">Gabim rrjeti.</div>';
@@ -1435,26 +1585,33 @@ window.viewReport = function(id, btn) {
 };
 
 async function generateReport() {
-    const type = prompt('Zgjidhni tipin e raportit:\n1. Përmbledhje Mujore\n2. Vullnetarë Aktivë\n3. Tjetër (shkruani tipin)');
-    if (!type) return;
+    openGenerateReportModal();
+}
 
-    let tipi;
-    if (type === '1') tipi = 'Përmbledhje Mujore';
-    else if (type === '2') tipi = 'Vullnetarë Aktivë';
-    else tipi = type;
+window.openGenerateReportModal = function() {
+    const backdrop = document.getElementById('rpt-gen-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'flex';
+};
 
+window.closeGenerateReportModal = function() {
+    const backdrop = document.getElementById('rpt-gen-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'none';
+};
+
+window.submitGenerateReport = async function(tipi) {
+    closeGenerateReportModal();
     try {
         const json = await apiCall('stats.php?action=generate', 'POST', { tipi_raportit: tipi });
         if (json.success) {
             showToast('Raporti u gjenerua me sukses!', 'success');
             loadReportsList();
         } else {
-            showToast(json.message || 'Gabim.', 'error');
+            showToast(json.message || 'Gabim gjatë gjenerimit.', 'error');
         }
     } catch (e) {
         showToast('Gabim rrjeti.', 'error');
     }
-}
+};
 
 
 // ═══════════════════════════════════════════════════════
