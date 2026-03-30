@@ -21,7 +21,7 @@
       <ul>
         <li>Legal</li>
         <li><a href="/TiranaSolidare/views/privacy.php">Politika e Privatësisë</a></li>
-        <li><a href="/TiranaSolidare/views/blocked.php">Rregullat e Përdorimit</a></li>
+        <li><a href="/TiranaSolidare/views/terms.php">Rregullat e Përdorimit</a></li>
         <li><a href="mailto:info@tiranasolidare.al">Kontakto</a></li>
       </ul>
       <ul>

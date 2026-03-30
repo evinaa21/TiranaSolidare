@@ -473,7 +473,35 @@ $badgeIcons = [
             <div id="vp-pw-status" class="vp-status" style="display:none"></div>
           </div>
         </div>
+
+        <!-- Danger Zone: Delete Account -->
+        <div class="vp-card" style="border:1px solid #fca5a5;margin-top:1.5rem;">
+          <div class="vp-card__header" style="background-color:#fff1f2;">
+            <h3 style="color:#dc2626;">Fshi llogarinë</h3>
+            <p style="color:#991b1b;">Kjo veprim është i pakthyeshëm. Të gjitha të dhënat tuaja (profili, aplikimet, mesazhet) do të fshihen përgjithmonë.</p>
+          </div>
+          <div class="vp-card__body">
+            <button type="button" id="vp-delete-account-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;">Fshi llogarinë tënde</button>
+          </div>
+        </div>
       </section>
+
+      <!-- Delete Account Confirmation Modal -->
+      <div id="vp-delete-account-modal" role="dialog" aria-modal="true" aria-labelledby="vp-delete-modal-title" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;padding:2rem;max-width:440px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.3);">
+          <h3 id="vp-delete-modal-title" style="color:#dc2626;margin:0 0 .75rem;">Konfirmo fshirjen e llogarisë</h3>
+          <p style="color:#374151;margin:0 0 1.25rem;line-height:1.6;">Kjo veprim është <strong>i pakthyeshëm</strong>. Profili, aplikimet, mesazhet dhe të gjitha të dhënat tuaja do të fshihen përgjithmonë. Futni fjalëkalimin tuaj aktual për të konfirmuar.</p>
+          <div class="vp-field" style="margin-bottom:1rem;">
+            <label for="vp-delete-pw" style="font-weight:600;display:block;margin-bottom:.375rem;">Fjalëkalimi aktual</label>
+            <input type="password" id="vp-delete-pw" class="vp-input" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <div id="vp-delete-status" style="min-height:1.2em;font-size:.875rem;color:#dc2626;margin-bottom:.75rem;"></div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <button id="vp-delete-confirm-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;flex:1;">Fshi llogarinë</button>
+            <button id="vp-delete-cancel-btn" class="btn_secondary" style="flex:1;" type="button">Anulo</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -894,6 +922,48 @@ if (emailForm) {
       vpStatus('vp-email-status', 'success', 'Email-i u përditësua me sukses.');
     } catch (err) {
       vpStatus('vp-email-status', 'error', err.message);
+    }
+  });
+}
+
+// ── Delete account ──
+const deleteAccountBtn = document.getElementById('vp-delete-account-btn');
+const deleteAccountModal = document.getElementById('vp-delete-account-modal');
+if (deleteAccountBtn && deleteAccountModal) {
+  deleteAccountBtn.addEventListener('click', () => {
+    document.getElementById('vp-delete-pw').value = '';
+    document.getElementById('vp-delete-status').textContent = '';
+    deleteAccountModal.style.display = 'flex';
+  });
+  document.getElementById('vp-delete-cancel-btn')?.addEventListener('click', () => {
+    deleteAccountModal.style.display = 'none';
+  });
+  deleteAccountModal.addEventListener('click', (e) => {
+    if (e.target === deleteAccountModal) deleteAccountModal.style.display = 'none';
+  });
+  document.getElementById('vp-delete-confirm-btn')?.addEventListener('click', async () => {
+    const current_password = document.getElementById('vp-delete-pw').value;
+    const statusEl = document.getElementById('vp-delete-status');
+    const confirmBtn = document.getElementById('vp-delete-confirm-btn');
+    if (!current_password) { statusEl.textContent = 'Futni fjalëkalimin tuaj.'; return; }
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Duke fshirë…';
+    try {
+      const res = await fetch(API + '/users.php?action=delete_account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'same-origin',
+        body: JSON.stringify({ current_password }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+      deleteAccountModal.style.display = 'none';
+      alert('Llogaria juaj u fshi me sukses. Do të ridrejtoheni.');
+      window.location.href = '/TiranaSolidare/public/';
+    } catch (err) {
+      statusEl.textContent = err.message;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Fshi llogarinë';
     }
   });
 }

@@ -15,6 +15,7 @@
  * PUT    ?action=change_role&id=<id>      – Change user role (Admin)
  * PUT    ?action=deactivate&id=<id>       – Soft-delete / deactivate (Admin)
  * PUT    ?action=reactivate&id=<id>       – Undo deactivation (Admin)
+ * DELETE ?action=delete_account           – Delete own account / GDPR erasure (Auth)
  * ---------------------------------------------------
  */
 require_once __DIR__ . '/helpers.php';
@@ -585,6 +586,65 @@ $params[] = $user['id'];
         json_success($profile);
         break;
 
+    // ── DELETE OWN ACCOUNT (GDPR Right to Erasure) ────────
+    case 'delete_account':
+        require_method('DELETE');
+        $user = require_auth();
+        $body = get_json_body();
+
+        $password = trim((string) ($body['current_password'] ?? ''));
+        if ($password === '') {
+            json_error('Konfirmoni fjalëkalimin tuaj.', 422);
+        }
+
+        // Fetch current password hash and profile picture
+        $stmt = $pdo->prepare('SELECT fjalekalimi, profile_picture FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $stmt->execute([$user['id']]);
+        $account = $stmt->fetch();
+
+        if (!$account) {
+            json_error('Llogaria nuk u gjet.', 404);
+        }
+
+        if (!password_verify($password, $account['fjalekalimi'])) {
+            json_error('Fjalëkalimi i pasaktë.', 401);
+        }
+
+        // Anonymize the user record (GDPR right to erasure)
+        $anonymisedEmail = 'deleted_' . $user['id'] . '_' . time() . '@deleted.invalid';
+        $stmt = $pdo->prepare(
+            "UPDATE Perdoruesi
+             SET emri = '[Fshirë]',
+                 email = ?,
+                 fjalekalimi = '',
+                 bio = NULL,
+                 profile_picture = NULL,
+                 statusi_llogarise = 'deactivated',
+                 verified = 0,
+                 deaktivizuar_me = NOW()
+             WHERE id_perdoruesi = ?"
+        );
+        $stmt->execute([$anonymisedEmail, $user['id']]);
+
+        // Delete profile picture file from disk
+        $oldPic = $account['profile_picture'];
+        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+            $oldFilename = basename($oldPic);
+            if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
+                $oldPath = __DIR__ . '/../uploads/images/profiles/' . $oldFilename;
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+        }
+
+        // Destroy the session
+        session_unset();
+        session_destroy();
+
+        json_success(['message' => 'Llogaria juaj u fshi me sukses. Të dhënat tuaja u anonimizuan.']);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: upload_profile_picture, update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile.', 400);
+        json_error('Veprim i panjohur. Përdorni: upload_profile_picture, update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile, delete_account.', 400);
 }
