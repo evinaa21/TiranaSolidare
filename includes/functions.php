@@ -577,7 +577,24 @@ function send_verification_email(string $toEmail, string $toName, string $verifi
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\nKonfirmo email-in tënd duke hapur këtë link:\n{$verificationUrl}\n\nKy link skadon pas 24 orësh.";
 
-    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    // Queue for audit trail and cron fallback if SMTP fails immediately
+    global $pdo;
+    $queueId = 0;
+    try {
+        if (queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText) && $pdo) {
+            $queueId = (int) $pdo->lastInsertId();
+        }
+    } catch (Throwable $e) { /* non-critical */ }
+
+    $sent = send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+
+    if ($sent && $queueId > 0) {
+        try {
+            $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$queueId]);
+        } catch (Throwable $e) { /* non-critical */ }
+    }
+
+    return $sent;
 }
 
 /**
@@ -631,11 +648,28 @@ function send_password_reset_email(string $toEmail, string $toName, string $rese
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\nPër të rivendosur fjalëkalimin, hapni: {$resetUrl}\n\nKy link skadon pas 1 ore.";
 
-    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    // Queue for audit trail and cron fallback if SMTP fails immediately
+    global $pdo;
+    $queueId = 0;
+    try {
+        if (queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText) && $pdo) {
+            $queueId = (int) $pdo->lastInsertId();
+        }
+    } catch (Throwable $e) { /* non-critical */ }
+
+    $sent = send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+
+    if ($sent && $queueId > 0) {
+        try {
+            $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$queueId]);
+        } catch (Throwable $e) { /* non-critical */ }
+    }
+
+    return $sent;
 }
 
 /**
- * Send a generic user notification email (direct, immediate send).
+ * Send a generic user notification email (queued for background delivery).
  */
 function send_notification_email(string $toEmail, string $toName, string $subject, string $message): bool
 {
@@ -693,7 +727,7 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
         </div>";
     $bodyText = "Përshëndetje {$toName},\n\n{$message}\n\nPër të çaktivizuar njoftimet me email, vizitoni cilësimet e llogarisë.\n\nTirana Solidare";
 
-    return send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
 }
 
 /**

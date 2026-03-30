@@ -121,7 +121,7 @@ PHP;
     {
         $output = [];
         $code = 0;
-        exec('php -l "' . PROJECT_ROOT . '/api/helpers.php" 2>&1', $output, $code);
+        exec(PHP_BINARY . ' -l "' . PROJECT_ROOT . '/api/helpers.php" 2>&1', $output, $code);
         $this->assertSame(0, $code, "Syntax error in api/helpers.php: " . implode("\n", $output));
     }
 
@@ -133,7 +133,7 @@ PHP;
         foreach ($files as $file) {
             $output = [];
             $code = 0;
-            exec("php -l \"{$file}\" 2>&1", $output, $code);
+            exec(PHP_BINARY . ' -l "' . $file . '" 2>&1', $output, $code);
             $this->assertSame(0, $code, "Syntax error in " . basename($file) . ": " . implode("\n", $output));
         }
     }
@@ -146,7 +146,7 @@ PHP;
         foreach ($files as $file) {
             $output = [];
             $code = 0;
-            exec("php -l \"{$file}\" 2>&1", $output, $code);
+            exec(PHP_BINARY . ' -l "' . $file . '" 2>&1', $output, $code);
             $this->assertSame(0, $code, "Syntax error in " . basename($file) . ": " . implode("\n", $output));
         }
     }
@@ -159,7 +159,7 @@ PHP;
         foreach ($files as $file) {
             $output = [];
             $code = 0;
-            exec("php -l \"{$file}\" 2>&1", $output, $code);
+            exec(PHP_BINARY . ' -l "' . $file . '" 2>&1', $output, $code);
             $this->assertSame(0, $code, "Syntax error in " . basename($file) . ": " . implode("\n", $output));
         }
     }
@@ -172,7 +172,7 @@ PHP;
         foreach ($files as $file) {
             $output = [];
             $code = 0;
-            exec("php -l \"{$file}\" 2>&1", $output, $code);
+            exec(PHP_BINARY . ' -l "' . $file . '" 2>&1', $output, $code);
             $this->assertSame(0, $code, "Syntax error in " . basename($file) . ": " . implode("\n", $output));
         }
     }
@@ -182,7 +182,7 @@ PHP;
     {
         $output = [];
         $code = 0;
-        exec('php -l "' . PROJECT_ROOT . '/includes/functions.php" 2>&1', $output, $code);
+        exec(PHP_BINARY . ' -l "' . PROJECT_ROOT . '/includes/functions.php" 2>&1', $output, $code);
         $this->assertSame(0, $code, "Syntax error: " . implode("\n", $output));
     }
 }

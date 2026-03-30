@@ -164,7 +164,8 @@ class ValidationTest extends TestCase
     /** @test */
     public function image_url_accepts_http(): void
     {
-        $this->assertTrue(validate_image_url('http://example.com/image.png'));
+        // Only https:// is accepted; plain http is rejected for security.
+        $this->assertFalse(validate_image_url('http://example.com/image.png'));
     }
 
     /** @test */
