@@ -106,6 +106,7 @@ $headerColorTheme = $headerColorResolved['theme'];
 
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/TiranaSolidare/public/sw.js');
+  // Root-level sw.js has scope /TiranaSolidare/ so it covers both /public/ and /views/
+  navigator.serviceWorker.register('/TiranaSolidare/sw.js');
 }
 </script>

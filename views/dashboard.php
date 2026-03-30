@@ -33,6 +33,11 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css?v=<?= filemtime(__DIR__.'/../public/assets/styles/dashboard.css') ?>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=<?= filemtime(__DIR__.'/../assets/css/map.css') ?>">
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/TiranaSolidare/sw.js');
+  }
+  </script>
   <!-- Emergency panel visibility override – cannot be cached -->
   <style>
     .db-panel { display: none !important; }
