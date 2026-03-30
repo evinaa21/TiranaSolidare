@@ -33,6 +33,16 @@ if (!$profile) {
     exit();
 }
 
+// Admins don't have public profiles
+if (in_array(ts_normalize_value($profile['roli'] ?? ''), ['admin', 'super_admin'], true)) {
+    if ($isOwner) {
+        header('Location: /TiranaSolidare/views/dashboard.php');
+    } else {
+        header('Location: /TiranaSolidare/views/404.php');
+    }
+    exit();
+}
+
 $canonicalProfileUrl = ts_public_profile_url((int) $profile['id_perdoruesi'], (string) ($profile['emri'] ?? ''));
 if ($publicHandle === '' && isset($_GET['id'])) {
     header('Location: ' . $canonicalProfileUrl, true, 302);

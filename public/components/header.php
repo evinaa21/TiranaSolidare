@@ -48,14 +48,24 @@ $headerColorTheme = $headerColorResolved['theme'];
     <span></span>
     <?php if ($isLoggedIn): ?>
         <?php if (!$isAdminUser): ?>
-        <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications"
-           class="header-notif-bell"
-           aria-label="Njoftimet"
-           title="Njoftimet"
-           style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;text-decoration:none;color:inherit;transition:background .2s;">
+        <div class="header-notif-wrap" id="header-notif-wrap">
+          <button type="button" class="header-notif-bell" id="header-notif-btn"
+                  aria-label="Njoftimet" title="Njoftimet"
+                  onclick="toggleNotifDropdown(event)">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             <span id="notif-badge"></span>
-        </a>
+          </button>
+          <div class="header-notif-dropdown" id="header-notif-dropdown" hidden>
+            <div class="header-notif-dropdown__head">
+              <span>Njoftimet</span>
+              <button type="button" onclick="headerMarkAllRead()">Shëno të gjitha</button>
+            </div>
+            <div id="header-notif-list">
+              <div class="header-notif-empty">Duke ngarkuar…</div>
+            </div>
+            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications" class="header-notif-viewall">Shiko të gjitha &rarr;</a>
+          </div>
+        </div>
         <?php endif; ?>
         <div class="header-user-menu" id="header-user-menu">
           <button type="button" class="header-user-avatar" style="--avatar-accent: <?= htmlspecialchars($headerColorTheme['mid']) ?>;" aria-haspopup="true" aria-expanded="false" aria-controls="header-user-dropdown" onclick="toggleUserMenu(event)">
@@ -112,6 +122,69 @@ $headerColorTheme = $headerColorResolved['theme'];
     </button>
   </div>
 </header>
+
+<style>
+.header-notif-wrap{position:relative;display:inline-flex;}
+.header-notif-bell{background:none;border:none;cursor:pointer;position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;color:inherit;transition:background .2s;padding:0;}
+.header-notif-bell:hover{background:rgba(0,0,0,0.07);}
+.header-notif-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:320px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.13);z-index:10000;overflow:hidden;border:1px solid rgba(0,0,0,0.07);}
+.header-notif-dropdown__head{display:flex;justify-content:space-between;align-items:center;padding:13px 16px 11px;border-bottom:1px solid #f1f5f9;font-weight:600;font-size:0.88rem;}
+.header-notif-dropdown__head button{background:none;border:none;cursor:pointer;font-size:0.75rem;color:#64748b;padding:4px 8px;border-radius:6px;transition:background .2s;}
+.header-notif-dropdown__head button:hover{background:#f1f5f9;}
+.header-notif-item{display:flex;gap:10px;padding:11px 16px;border-bottom:1px solid #f8fafc;font-size:0.82rem;text-decoration:none;color:inherit;transition:background .15s;}
+.header-notif-item:hover{background:#f8fafc;}
+.header-notif-item--unread{background:#f0fdf9;}
+.header-notif-item__dot{width:7px;height:7px;border-radius:99px;background:#00715D;flex-shrink:0;margin-top:5px;}
+.header-notif-item--read .header-notif-item__dot{background:#cbd5e1;}
+.header-notif-item__text{flex:1;line-height:1.45;}
+.header-notif-item__time{font-size:0.71rem;color:#94a3b8;margin-top:2px;}
+.header-notif-empty{padding:24px;text-align:center;color:#94a3b8;font-size:0.84rem;}
+.header-notif-viewall{display:block;text-align:center;padding:11px;font-size:0.82rem;font-weight:600;color:#00715D;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .15s;}
+.header-notif-viewall:hover{background:#f0fdf9;}
+</style>
+<script>
+function toggleNotifDropdown(e){
+  e.stopPropagation();
+  var d=document.getElementById('header-notif-dropdown');
+  if(!d)return;
+  var opening=d.hidden;
+  d.hidden=!opening;
+  if(opening)headerLoadNotifications();
+}
+document.addEventListener('click',function(e){
+  var wrap=document.getElementById('header-notif-wrap');
+  if(wrap&&!wrap.contains(e.target)){var d=document.getElementById('header-notif-dropdown');if(d)d.hidden=true;}
+});
+function _notifTimeAgo(s){var diff=Math.floor((Date.now()-new Date(s))/1000);if(diff<60)return'tani';if(diff<3600)return Math.floor(diff/60)+'m';if(diff<86400)return Math.floor(diff/3600)+'o';return Math.floor(diff/86400)+'d';}
+async function headerLoadNotifications(){
+  var list=document.getElementById('header-notif-list');if(!list)return;
+  list.innerHTML='<div class="header-notif-empty">Duke ngarkuar\u2026</div>';
+  try{
+    var res=await fetch('/TiranaSolidare/api/notifications.php?action=list&limit=6',{credentials:'same-origin'});
+    var json=await res.json();
+    if(!json.success||(json.data.notifications||[]).length===0){list.innerHTML='<div class="header-notif-empty">Nuk ka njoftime.</div>';return;}
+    list.innerHTML=json.data.notifications.map(function(n){
+      var link=n.linku?('/TiranaSolidare'+n.linku):'#';
+      var txt=(n.mesazhi||'').substring(0,90)+((n.mesazhi||'').length>90?'\u2026':'');
+      return'<a href="'+link+'" class="header-notif-item '+(n.is_read?'header-notif-item--read':'header-notif-item--unread')+'" onclick="headerMarkNotifRead('+n.id_njoftimi+')">'
+        +'<div class="header-notif-item__dot"></div>'
+        +'<div class="header-notif-item__text">'+txt+'<div class="header-notif-item__time">'+_notifTimeAgo(n.krijuar_me)+'</div></div>'
+        +'</a>';
+    }).join('');
+  }catch(e){list.innerHTML='<div class="header-notif-empty" style="color:#ef4444;">Gabim gjat\u00eb ngarkimit.</div>';}
+}
+async function headerMarkNotifRead(id){
+  try{var csrf=document.querySelector('meta[name="csrf-token"]');await fetch('/TiranaSolidare/api/notifications.php?action=mark_read&id='+id,{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});}catch(e){}
+}
+async function headerMarkAllRead(){
+  try{
+    var csrf=document.querySelector('meta[name="csrf-token"]');
+    await fetch('/TiranaSolidare/api/notifications.php?action=mark_all_read',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});
+    headerLoadNotifications();
+    var b=document.getElementById('notif-badge');if(b)b.style.display='none';
+  }catch(e){}
+}
+</script>
 
 <script>
 if ('serviceWorker' in navigator) {

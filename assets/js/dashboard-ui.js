@@ -226,22 +226,59 @@ window.loadDashboardStats = async function () {
 
     // Sub-stats grid
     if (subContainer) {
+        const blockedAlert = (d.users.bllokuar_count || 0) > 0
+            ? `<li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('users',document.querySelector('[data-panel=users]'))">
+                <span class="db-progress-item__label" style="color:#dc2626;">⚠ Llogari të bllokuara</span>
+                <span class="db-badge db-badge--blocked">${d.users.bllokuar_count}</span>
+               </li>` : '';
+
+        const recentAppsHtml = (d.recent_applications || []).length === 0
+            ? '<p style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:16px 0;">Nuk ka aplikime ende.</p>'
+            : `<table class="db-table" style="font-size:0.83rem;">
+                <thead><tr><th>Vullnetari</th><th>Eventi</th><th>Statusi</th><th>Data</th></tr></thead>
+                <tbody>${(d.recent_applications || []).map(a => `
+                    <tr>
+                        <td>${escapeHtml(a.vullnetari_emri || '')}</td>
+                        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(a.eventi_titulli||'')}">${escapeHtml(a.eventi_titulli || '')}</td>
+                        <td><span class="db-badge db-badge--${(a.statusi||'').toLowerCase()}">${statusLabel(a.statusi)}</span></td>
+                        <td style="color:#64748b;white-space:nowrap;">${(a.aplikuar_me||'').substring(0,10)}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+
         subContainer.innerHTML = `
             <div class="db-overview-card">
                 <h4>Aplikime sipas Statusit</h4>
                 <ul class="db-progress-list">
-                    <li class="db-progress-item">
-                        <span class="db-progress-item__label">Në pritje</span>
+                    <li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
+                        <span class="db-progress-item__label">🕐 Në pritje</span>
                         <span class="db-badge db-badge--pending">${d.applications.ne_pritje || 0}</span>
                     </li>
                     <li class="db-progress-item">
-                        <span class="db-progress-item__label">Pranuar</span>
+                        <span class="db-progress-item__label">✓ Pranuar</span>
                         <span class="db-badge db-badge--active">${d.applications.pranuar || 0}</span>
                     </li>
                     <li class="db-progress-item">
-                        <span class="db-progress-item__label">Refuzuar</span>
+                        <span class="db-progress-item__label">✗ Refuzuar</span>
                         <span class="db-badge db-badge--blocked">${d.applications.refuzuar || 0}</span>
                     </li>
+                </ul>
+            </div>
+            <div class="db-overview-card">
+                <h4>Situata e Platformës</h4>
+                <ul class="db-progress-list">
+                    <li class="db-progress-item" style="cursor:pointer;" onclick="switchPanel('events',document.querySelector('[data-panel=events]'))">
+                        <span class="db-progress-item__label">📅 Evente të ardhshme</span>
+                        <span class="db-badge db-badge--active">${d.events.evente_te_ardhshme || 0}</span>
+                    </li>
+                    <li class="db-progress-item">
+                        <span class="db-progress-item__label">👥 Vullnetarë</span>
+                        <span class="db-badge db-badge--pending">${d.users.vullnetar_count || 0}</span>
+                    </li>
+                    <li class="db-progress-item">
+                        <span class="db-progress-item__label">💬 Kërkesa aktive</span>
+                        <span class="db-badge db-badge--active">${d.help_requests.kerkese_open || 0}</span>
+                    </li>
+                    ${blockedAlert}
                 </ul>
             </div>
             <div class="db-overview-card">
@@ -253,6 +290,10 @@ window.loadDashboardStats = async function () {
                             <span class="db-category-item__count">${c.event_count}</span>
                         </li>`).join('')}
                 </ul>
+            </div>
+            <div class="db-overview-card" style="grid-column:1/-1;">
+                <h4>Aplikimet e Fundit</h4>
+                <div style="overflow-x:auto;">${recentAppsHtml}</div>
             </div>`;
     }
 };
@@ -1444,7 +1485,7 @@ async function loadConversations() {
 
         let html = '<div class="msg-conversation-list">';
         convos.forEach(c => {
-            const unread = c.unread_count > 0 ? `<span class="db-nav-badge" style="display:inline-flex;margin-left:auto;">${c.unread_count}</span>` : '';
+            const unread = c.unread_count > 0 ? `<span class="db-nav-badge" style="display:inline-flex;margin-left:auto;width:8px;height:8px;padding:0;font-size:0;min-width:0;border-radius:99px;"></span>` : '';
             const initial = (c.other_emri || 'P').charAt(0).toUpperCase();
             const preview = c.last_message ? escapeHtml(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
             const timeAgo = formatDate(c.last_time);
@@ -1642,7 +1683,7 @@ async function loadUnreadBadge() {
         const total = (json.data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
         const badge = document.getElementById('msg-badge');
         if (badge) {
-            if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
+            if (total > 0) { badge.textContent = ''; badge.style.display = 'inline-flex'; }
             else { badge.style.display = 'none'; }
         }
     } catch (e) {}

@@ -297,6 +297,11 @@ $params[] = $user['id'];
         $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'blocked', arsye_bllokimi = ? WHERE id_perdoruesi = ?");
         $stmt->execute([$blockReason !== '' ? $blockReason : null, $id]);
 
+        // Close all open help requests by the blocked user
+        $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'closed' WHERE id_perdoruesi = ? AND statusi = 'open'")->execute([$id]);
+        // Reject pending event applications by the blocked user
+        $pdo->prepare("UPDATE Aplikimi SET statusi = 'rejected' WHERE id_perdoruesi = ? AND statusi = 'pending'")->execute([$id]);
+
         $targetInfo = $pdo->prepare('SELECT emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $targetInfo->execute([$id]);
         $target = $targetInfo->fetch();

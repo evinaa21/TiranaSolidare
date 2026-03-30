@@ -70,7 +70,8 @@ switch ($action) {
         $total = (int) $countStmt->fetchColumn();
 
         // Fetch page
-        $sql = "SELECT e.*, k.emri AS kategoria_emri, p.emri AS krijuesi_emri
+        $sql = "SELECT e.*, k.emri AS kategoria_emri,
+                CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiran\u00ebs' ELSE p.emri END AS krijuesi_emri
                 FROM Eventi e
                 LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
                 LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
@@ -107,7 +108,8 @@ switch ($action) {
         }
 
         $stmt = $pdo->prepare(
-            "SELECT e.*, k.emri AS kategoria_emri, p.emri AS krijuesi_emri,
+            "SELECT e.*, k.emri AS kategoria_emri,
+                    CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiran\u00ebs' ELSE p.emri END AS krijuesi_emri,
                     (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
                     (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
              FROM Eventi e

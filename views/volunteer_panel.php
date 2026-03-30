@@ -1081,8 +1081,8 @@ async function updateNotifBadge() {
     const headerBadge = document.getElementById('notif-badge');
     if (json.success) {
       const count = json.data.unread;
-      if (badge) { badge.textContent = count > 0 ? count : ''; badge.style.display = count > 0 ? 'inline-block' : 'none'; }
-      if (headerBadge) { headerBadge.textContent = count > 0 ? count : ''; headerBadge.style.display = count > 0 ? 'flex' : 'none'; }
+      if (badge) { badge.textContent = ''; badge.style.display = count > 0 ? 'inline-block' : 'none'; }
+      if (headerBadge) { headerBadge.textContent = ''; headerBadge.style.display = count > 0 ? 'flex' : 'none'; }
     }
   } catch (e) {}
 }

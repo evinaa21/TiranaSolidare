@@ -189,9 +189,10 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
             <label>Titulli</label>
             <input type="text" name="titulli" required placeholder="Emri i eventit">
           </div>
-          <div class="db-form__group">
+          <div class="db-form__group" style="position:relative;">
             <label>Vendndodhja</label>
-            <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Vendi">
+            <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Shkruaj vendndodhjen&hellip;" autocomplete="off">
+            <div id="event-location-suggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:9999;display:none;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
           </div>
           <div class="db-form__group">
             <label>Data</label>
@@ -209,8 +210,16 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
           <textarea name="pershkrimi" rows="2" placeholder="Përshkrim i shkurtër..."></textarea>
         </div>
         <div class="db-form__group">
-          <label>Banner </label>
-          <input type="text" name="banner" placeholder="https://images.unsplash.com/...">
+          <label>Banner</label>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label class="db-btn db-btn--ghost" style="cursor:pointer;font-size:0.85rem;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              Ngarko imazh
+              <input type="file" id="event-banner-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="previewEventBanner(this)">
+            </label>
+            <span id="event-banner-filename" style="font-size:0.82rem;color:#64748b;"></span>
+          </div>
+          <img id="event-banner-preview" src="" alt="" style="display:none;max-height:90px;border-radius:8px;margin-top:8px;object-fit:cover;max-width:220px;">
         </div>
         <div class="db-form__group">
           <div class="ts-map-wrapper">
@@ -605,40 +614,69 @@ document.addEventListener('DOMContentLoaded', function() {
     const vendInput = document.getElementById('event-vendndodhja');
     if (vendInput) {
       let geocodeTimeout = null;
-      let skipNextGeocode = false;
+      const suggestBox = document.getElementById('event-location-suggestions');
+
+      function hideSuggestions() { if (suggestBox) suggestBox.style.display = 'none'; }
+
       vendInput.addEventListener('input', function() {
-        if (skipNextGeocode) { skipNextGeocode = false; return; }
         clearTimeout(geocodeTimeout);
         const q = this.value.trim();
-        if (q.length < 3) return;
+        if (q.length < 3) { hideSuggestions(); return; }
         geocodeTimeout = setTimeout(async () => {
-          if (!eventMapPicker) return;
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Albania')}&limit=5`,
               { headers: { 'Accept-Language': 'sq,en' } }
             );
             const data = await res.json();
-            if (data.length > 0) {
-              const lat = parseFloat(data[0].lat);
-              const lng = parseFloat(data[0].lon);
-              eventMapPicker.setPosition(lat, lng);
-              const coordDisplay = document.getElementById('event-coord-display');
-              const coordText = document.getElementById('event-coord-text');
-              if (coordDisplay && coordText) {
-                coordDisplay.style.display = 'flex';
-                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-              }
+            if (!data.length) { hideSuggestions(); return; }
+            if (suggestBox) {
+              suggestBox.innerHTML = data.map((item, i) => {
+                const label = item.display_name.replace(/, Albania$/, '');
+                return `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:0.84rem;color:#334155;transition:background .15s;" 
+                  onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''" 
+                  onclick="selectEventLocation(${parseFloat(item.lat)},${parseFloat(item.lon)},${JSON.stringify(label)})">${label}</div>`;
+              }).join('');
+              suggestBox.style.display = 'block';
             }
-          } catch (e) {}
-        }, 600);
+          } catch (e) { hideSuggestions(); }
+        }, 450);
       });
-      vendInput._skipNextGeocode = () => { skipNextGeocode = true; };
+
+      vendInput.addEventListener('blur', function() { setTimeout(hideSuggestions, 200); });
+
+      window.selectEventLocation = function(lat, lng, label) {
+        vendInput.value = label;
+        hideSuggestions();
+        if (!eventMapPicker) return;
+        eventMapPicker.setPosition(lat, lng);
+        const coordDisplay = document.getElementById('event-coord-display');
+        const coordText = document.getElementById('event-coord-text');
+        if (coordDisplay && coordText) {
+          coordDisplay.style.display = 'flex';
+          coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+        }
+        // Fill hidden lat/lng inputs
+        const latIn = document.getElementById('event-lat-input');
+        const lngIn = document.getElementById('event-lng-input');
+        if (latIn) latIn.value = lat;
+        if (lngIn) lngIn.value = lng;
+      };
+
+      vendInput._skipNextGeocode = () => {}; // kept for API compat
     }
   }
 });
 </script>
 <script>
+function previewEventBanner(input) {
+  const prev = document.getElementById('event-banner-preview');
+  const fname = document.getElementById('event-banner-filename');
+  if (input.files && input.files[0]) {
+    if (prev) { prev.src = URL.createObjectURL(input.files[0]); prev.style.display = 'block'; }
+    if (fname) fname.textContent = input.files[0].name;
+  }
+}
 const adminCsrf_meta = document.querySelector('meta[name="csrf-token"]');
 function getAdminCSRF() { return adminCsrf_meta?.content || ''; }
 function refreshCSRF(json) { if (json && json.csrf_token && adminCsrf_meta) adminCsrf_meta.content = json.csrf_token; return json; }

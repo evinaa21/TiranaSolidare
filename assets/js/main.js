@@ -246,6 +246,31 @@ function initCreateEventForm() {
         const fd = new FormData(form);
         const body = Object.fromEntries(fd);
 
+        // Upload banner file first if one was selected
+        const bannerFile = document.getElementById('event-banner-file');
+        if (bannerFile && bannerFile.files.length > 0) {
+            const uploadFd = new FormData();
+            uploadFd.append('image', bannerFile.files[0]);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            try {
+                const upRes = await fetch('/TiranaSolidare/api/upload.php', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    credentials: 'same-origin',
+                    body: uploadFd
+                });
+                const upJson = await upRes.json();
+                if (!upJson.success) {
+                    showToast('Gabim gjatë ngarkimit të bannerit: ' + (upJson.message || 'Gabim.'), 'danger');
+                    return;
+                }
+                body.banner = upJson.data.url;
+            } catch (err) {
+                showToast('Gabim rrjeti gjatë ngarkimit të bannerit.', 'danger');
+                return;
+            }
+        }
+
         // Convert lat/lng to numbers if present
         if (body.latitude) body.latitude = parseFloat(body.latitude);
         else delete body.latitude;
@@ -257,6 +282,11 @@ function initCreateEventForm() {
         if (json.success) {
             showToast('Eventi u krijua!', 'success');
             form.reset();
+            // Clear banner preview
+            const bannerPreview = document.getElementById('event-banner-preview');
+            if (bannerPreview) { bannerPreview.style.display = 'none'; bannerPreview.src = ''; }
+            const bannerFname = document.getElementById('event-banner-filename');
+            if (bannerFname) bannerFname.textContent = '';
             // Clear map coordinate display
             const coordDisplay = document.getElementById('event-coord-display');
             if (coordDisplay) coordDisplay.style.display = 'none';

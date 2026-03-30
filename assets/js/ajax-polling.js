@@ -32,7 +32,7 @@ async function fetchUnreadCount() {
 
         if (json.success && notifBadge) {
             const count = json.data.unread;
-            notifBadge.textContent = count > 0 ? count : '';
+            notifBadge.textContent = '';
             notifBadge.style.display = count > 0 ? 'flex' : 'none';
         }
     } catch (err) {
