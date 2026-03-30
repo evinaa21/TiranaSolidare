@@ -18,7 +18,7 @@ if (in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin
 
 $userId    = $_SESSION['user_id'];
 $userEmri  = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
-$userRoli  = htmlspecialchars($_SESSION['roli'] ?? 'volunteer');
+$userRoli  = status_label($_SESSION['roli'] ?? 'volunteer');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');
 $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
@@ -241,7 +241,7 @@ $badgeIcons = [
             <span id="vp-profile-email"><?= htmlspecialchars($user['email'] ?? '—') ?></span>
             <div class="vp-profile-badges">
               <span class="vp-badge vp-badge--role"><?= $userRoli ?></span>
-              <span class="vp-badge vp-badge--status"><?= htmlspecialchars($user['statusi_llogarise'] ?? '—') ?></span>
+              <span class="vp-badge vp-badge--status"><?= htmlspecialchars(status_label($user['statusi_llogarise'] ?? '')) ?></span>
             </div>
           </div>
         </div>
@@ -1820,6 +1820,7 @@ window.showQRCode = function(appId, eventTitle) {
     document.getElementById('qrModalTitle').textContent = eventTitle;
     const qrContainer = document.getElementById('qrModalCode');
     qrContainer.innerHTML = '';
+    document.getElementById('qrModal').style.display = 'flex';
     new QRCode(qrContainer, {
         text: 'TS-APP-' + appId,
         width: 200,
@@ -1828,7 +1829,6 @@ window.showQRCode = function(appId, eventTitle) {
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
     });
-    document.getElementById('qrModal').style.display = 'flex';
 };
 </script>
 <?php endif; ?>

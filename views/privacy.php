@@ -11,7 +11,8 @@ require_once __DIR__ . '/../includes/functions.php';
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
   <style>
-    .privacy-container { max-width: 820px; margin: 2rem auto; padding: 2rem; }
+    main { padding-top: 96px; }
+    .privacy-container { max-width: 820px; margin: 0 auto; padding: 0 2rem 2rem; }
     .privacy-container h1 { font-size: 2rem; margin-bottom: 0.5rem; color: var(--clr-primary, #00715D); }
     .privacy-container h2 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.5rem; color: var(--clr-primary, #00715D); }
     .privacy-container p, .privacy-container li { line-height: 1.7; color: #444; }

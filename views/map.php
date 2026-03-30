@@ -33,6 +33,10 @@ $requests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));
 // Fetch categories for event filters
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
+// Total open help request counts (regardless of coordinates, for trust bar)
+$totalOpenRequests = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open' AND tipi = 'request'")->fetchColumn();
+$totalOpenOffers   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open' AND tipi = 'offer'")->fetchColumn();
+
 // Build markers JSON
 $markers = [];
 foreach ($events as $ev) {
@@ -101,12 +105,12 @@ foreach ($requests as $req) {
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></strong><span>Kërkoj Ndihmë</span></div>
+        <div><strong><?= $totalOpenRequests ?></strong><span>Kërkoj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <div><strong><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></strong><span>Ofroj Ndihmë</span></div>
+        <div><strong><?= $totalOpenOffers ?></strong><span>Ofroj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">

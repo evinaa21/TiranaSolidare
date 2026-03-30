@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/status_labels.php';
 
 $publicHandle = trim((string) ($_GET['u'] ?? ''));
 $userId = ts_parse_public_profile_id($publicHandle);
@@ -397,7 +398,7 @@ $profileColorTheme = $colorResolved['theme'];
                 <h1><?= htmlspecialchars($profile['emri']) ?></h1>
                 <span class="pp-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-                    <?= htmlspecialchars($profile['roli']) ?>
+                    <?= htmlspecialchars(status_label($profile['roli'])) ?>
                 </span>
             </div>
         </div>
@@ -419,7 +420,7 @@ $profileColorTheme = $colorResolved['theme'];
                 <h1><?= htmlspecialchars($profile['emri']) ?></h1>
                 <span class="pp-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-                    <?= htmlspecialchars($profile['roli']) ?>
+                    <?= htmlspecialchars(status_label($profile['roli'])) ?>
                 </span>
             </div>
             <div class="pp-meta">
@@ -428,6 +429,16 @@ $profileColorTheme = $colorResolved['theme'];
                     Anëtar që nga <?= $memberSince ?>
                 </span>
             </div>
+            <?php if ($isLoggedIn && !$isOwner): ?>
+            <div style="margin-top:14px;">
+                <a href="/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=<?= (int) $profile['id_perdoruesi'] ?>"
+                   class="btn_primary"
+                   style="display:inline-flex;align-items:center;gap:8px;font-size:0.88rem;padding:9px 18px;text-decoration:none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Dërgo mesazh
+                </a>
+            </div>
+            <?php endif; ?>
             <?php if (!empty($profile['bio'])): ?>
                 <p class="pp-bio"><?= nl2br(htmlspecialchars($profile['bio'])) ?></p>
             <?php endif; ?>
@@ -522,7 +533,7 @@ $profileColorTheme = $colorResolved['theme'];
                         <tr>
                             <td><a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $req['id_kerkese_ndihme'] ?>"><?= htmlspecialchars($req['titulli']) ?></a></td>
                             <td><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></td>
-                            <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars($req['statusi']) ?></span></td>
+                            <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span></td>
                             <td><?= date('d/m/Y', strtotime($req['krijuar_me'])) ?></td>
                         </tr>
                     <?php endforeach; ?>
