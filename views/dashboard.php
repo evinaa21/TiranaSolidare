@@ -16,6 +16,9 @@ $userEmri = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
 $userRoli = htmlspecialchars($_SESSION['roli'] ?? 'volunteer');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');
 $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
+$adminColorResolved = ts_resolve_profile_color($_SESSION['profile_color'] ?? 'emerald');
+$adminProfileTheme = $adminColorResolved['theme'];
+$adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']]['label'] ?? 'Emerald';
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -39,7 +42,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     .db-panel.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
   </style>
 </head>
-<body class="db-body">
+<body class="db-body" style="--db-profile-from: <?= htmlspecialchars($adminProfileTheme['from']) ?>; --db-profile-mid: <?= htmlspecialchars($adminProfileTheme['mid']) ?>; --db-profile-to: <?= htmlspecialchars($adminProfileTheme['to']) ?>;">
 
 <!-- ═══════════════════════════════════════════════════════════
      SIDEBAR NAVIGATION
@@ -100,7 +103,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
     <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
       <span class="db-nav-icon-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
         <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
       </span>
       <span>Njoftimet</span>
@@ -114,7 +117,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 
   <!-- Sidebar user card -->
   <div class="db-sidebar__user">
-    <div class="db-sidebar__avatar" onclick="switchPanel('profile', document.querySelector('[data-panel=profile]'))" style="cursor:pointer;">
+    <div class="db-sidebar__avatar" id="db-sidebar-avatar" onclick="switchPanel('profile', document.querySelector('[data-panel=profile]'))" style="cursor:pointer;">
       <?= $userInitial ?>
     </div>
     <div class="db-sidebar__user-info">
@@ -397,9 +400,19 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
 
     <div id="category-create-form" class="db-create-form" style="display:none">
-      <div class="db-form__group" style="max-width:360px;">
+      <div class="db-form__group" style="max-width:560px;">
         <label>Emri i Kategorisë</label>
         <input type="text" id="new-category-name" class="ud-input" placeholder="p.sh. Mjedisi, Ushqimi…" maxlength="60">
+        <label style="margin-top:10px;">Banner i Kategorisë</label>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <label class="db-btn db-btn--ghost" style="cursor:pointer;font-size:0.85rem;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Ngarko banner
+            <input type="file" id="new-category-banner" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="previewCategoryBanner(this)">
+          </label>
+          <span id="cat-banner-filename" style="font-size:0.82rem;color:#64748b;"></span>
+        </div>
+        <img id="cat-banner-preview" src="" alt="" style="display:none;max-height:110px;border-radius:10px;margin-top:8px;object-fit:cover;max-width:320px;">
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="db-btn db-btn--primary" onclick="createCategory()">Shto</button>
           <button class="db-btn db-btn--ghost" onclick="toggleCategoryForm()">Anulo</button>
@@ -513,9 +526,9 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 <div class="db-panel" id="panel-profile">
   <div class="db-panel__header">
     <h3>Llogaria ime</h3>
-    <a href="/TiranaSolidare/views/events.php" target="_blank" class="db-btn db-btn--ghost">
+    <a href="/TiranaSolidare/public/" target="_blank" class="db-btn db-btn--ghost">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
-      Shiko faqen publike
+      Shiko platformën publike
     </a>
   </div>
 
@@ -524,6 +537,9 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     <div class="db-profile-avatar-wrap" id="profile-avatar-wrap">
       <div class="ud-avatar ud-avatar--active" id="profile-avatar-initials"><?= $userInitial ?></div>
       <img id="profile-avatar-img" src="" alt="" style="display:none;width:64px;height:64px;border-radius:16px;object-fit:cover;">
+      <button type="button" class="db-avatar-delete-btn" id="profile-avatar-delete-btn" title="Fshi foton" onclick="adminDeletePicture()" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </button>
       <label class="db-avatar-upload-btn" title="Ndrysho foton">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="adminUploadPicture(this)">
@@ -553,6 +569,20 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         <input type="text" id="admin-emri" class="ud-input" placeholder="Emri Mbiemri">
         <button class="db-btn db-btn--primary" onclick="adminSaveName()">Ruaj emrin</button>
         <div id="admin-name-status" style="font-size:13px;min-height:16px"></div>
+      </div>
+    </div>
+
+    <div class="ud-card">
+      <div class="ud-card__header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="m8.7 15.9 2.6-7.8"/><path d="m15.3 8.1 1 7.8"/><path d="m8.9 18.2 6.2.2"/></svg>
+        <h4>Pamja e profilit</h4>
+      </div>
+      <p class="ud-card__desc">Ngjyra e profilit përdoret për avatarin dhe elementët personale të panelit tuaj administrativ. Ajo nuk shfaqet si profil publik për vullnetarët.</p>
+      <div class="ud-card__body">
+        <div id="profile-color-grid" class="db-color-grid"></div>
+        <div style="font-size:0.84rem;color:#64748b;">Ngjyra aktive: <strong id="admin-color-label" style="color:#1f2937;"><?= htmlspecialchars($adminProfileLabel) ?></strong></div>
+        <button class="db-btn db-btn--primary" onclick="adminSaveColor()">Ruaj ngjyrën</button>
+        <div id="admin-color-status" style="font-size:13px;min-height:16px"></div>
       </div>
     </div>
 
@@ -640,84 +670,173 @@ document.addEventListener('DOMContentLoaded', function() {
   const createWrapper = document.getElementById('create-event-wrapper');
   if (createWrapper) {
 
-    // Inicializo hartën kur hapet forma
-    const observer = new MutationObserver(function() {
-      if (createWrapper.style.display !== 'none' && !eventMapPicker) {
-        setTimeout(() => {
-          eventMapPicker = TSMap.picker('event-map-picker', {
-            latInput: 'event-lat-input',
-            lngInput: 'event-lng-input',
-            addressInput: 'event-vendndodhja',
-            onSelect: function(lat, lng) {
-              const coordDisplay = document.getElementById('event-coord-display');
-              const coordText = document.getElementById('event-coord-text');
-              if (coordDisplay && coordText) {
-                coordDisplay.style.display = 'flex';
-                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-              }
-            }
-          });
-          if (eventMapPicker && eventMapPicker.map) {
-            eventMapPicker.map.invalidateSize();
-          }
-        }, 200);
+    let pendingLocation = null;
+    let geocodeTimeout = null;
+    let autocompleteAbort = null;
+    let autocompleteSeq = 0;
+    let mapInitTimer = null;
+    let autocompleteResults = [];
+    const vendInput = document.getElementById('event-vendndodhja');
+    const suggestBox = document.getElementById('event-location-suggestions');
+
+    function updateCoordDisplay(lat, lng) {
+      const coordDisplay = document.getElementById('event-coord-display');
+      const coordText = document.getElementById('event-coord-text');
+      if (coordDisplay && coordText) {
+        coordDisplay.style.display = 'flex';
+        coordText.textContent = Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5);
       }
+    }
+
+    function hideSuggestions() {
+      if (!suggestBox) return;
+      suggestBox.style.display = 'none';
+      suggestBox.innerHTML = '';
+      autocompleteResults = [];
+    }
+
+    function ensureEventMapPicker() {
+      if (eventMapPicker || createWrapper.style.display === 'none') return;
+      clearTimeout(mapInitTimer);
+      mapInitTimer = setTimeout(() => {
+        if (eventMapPicker) return;
+        eventMapPicker = TSMap.picker('event-map-picker', {
+          latInput: 'event-lat-input',
+          lngInput: 'event-lng-input',
+          addressInput: 'event-vendndodhja',
+          showSearch: false,
+          onSelect: function(lat, lng) {
+            updateCoordDisplay(lat, lng);
+          }
+        });
+        if (eventMapPicker && eventMapPicker.map) {
+          eventMapPicker.map.invalidateSize();
+        }
+        if (pendingLocation && eventMapPicker) {
+          eventMapPicker.setPosition(pendingLocation.lat, pendingLocation.lng);
+          pendingLocation = null;
+        }
+      }, 120);
+    }
+
+    const observer = new MutationObserver(function() {
+      ensureEventMapPicker();
     });
     observer.observe(createWrapper, { attributes: true, attributeFilter: ['style'] });
+    ensureEventMapPicker();
 
-    const vendInput = document.getElementById('event-vendndodhja');
-    if (vendInput) {
-      let geocodeTimeout = null;
-      const suggestBox = document.getElementById('event-location-suggestions');
+    if (vendInput && suggestBox) {
+      suggestBox.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+      });
 
-      function hideSuggestions() { if (suggestBox) suggestBox.style.display = 'none'; }
+      suggestBox.addEventListener('click', function(e) {
+        const item = e.target.closest('[data-result-index]');
+        if (!item) return;
+        const result = autocompleteResults[Number(item.dataset.resultIndex)];
+        if (!result) return;
+        window.selectEventLocation(
+          parseFloat(result.lat),
+          parseFloat(result.lon),
+          result.label
+        );
+      });
 
       vendInput.addEventListener('input', function() {
         clearTimeout(geocodeTimeout);
-        const q = this.value.trim();
-        if (q.length < 3) { hideSuggestions(); return; }
+        const query = this.value.trim();
+        if (autocompleteAbort) {
+          autocompleteAbort.abort();
+          autocompleteAbort = null;
+        }
+        if (query.length < 3) {
+          hideSuggestions();
+          return;
+        }
+
+        const requestSeq = ++autocompleteSeq;
         geocodeTimeout = setTimeout(async () => {
+          autocompleteAbort = new AbortController();
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Albania')}&limit=5`,
-              { headers: { 'Accept-Language': 'sq,en' } }
+              `/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(query)}`,
+              {
+                headers: { 'Accept': 'application/json' },
+                signal: autocompleteAbort.signal,
+              }
             );
-            const data = await res.json();
-            if (!data.length) { hideSuggestions(); return; }
-            if (suggestBox) {
-              suggestBox.innerHTML = data.map((item, i) => {
-                const label = item.display_name.replace(/, Albania$/, '');
-                return `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:0.84rem;color:#334155;transition:background .15s;" 
-                  onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''" 
-                  onclick="selectEventLocation(${parseFloat(item.lat)},${parseFloat(item.lon)},${JSON.stringify(label)})">${label}</div>`;
-              }).join('');
-              suggestBox.style.display = 'block';
+            const json = await res.json();
+            const data = json.success ? (json.data.results || []) : [];
+            if (requestSeq !== autocompleteSeq) return;
+            if (!Array.isArray(data) || data.length === 0) {
+              hideSuggestions();
+              return;
             }
-          } catch (e) { hideSuggestions(); }
-        }, 450);
+            autocompleteResults = data.map(function(item) {
+              return {
+                lat: item.lat,
+                lon: item.lon,
+                label: item.short_name || item.display_name || ''
+              };
+            });
+            suggestBox.innerHTML = '';
+            autocompleteResults.forEach(function(result, index) {
+              const row = document.createElement('div');
+              row.dataset.resultIndex = String(index);
+              row.style.padding = '10px 14px';
+              row.style.cursor = 'pointer';
+              row.style.borderBottom = '1px solid #f1f5f9';
+              row.style.fontSize = '0.84rem';
+              row.style.color = '#334155';
+              row.style.transition = 'background .15s';
+              row.textContent = result.label;
+              row.addEventListener('mouseenter', function() { row.style.background = '#f8fafc'; });
+              row.addEventListener('mouseleave', function() { row.style.background = ''; });
+              suggestBox.appendChild(row);
+            });
+            suggestBox.style.display = 'block';
+          } catch (e) {
+            if (e.name !== 'AbortError') hideSuggestions();
+          } finally {
+            autocompleteAbort = null;
+          }
+        }, 90);
       });
 
-      vendInput.addEventListener('blur', function() { setTimeout(hideSuggestions, 200); });
+      vendInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 3) {
+          this.dispatchEvent(new Event('input'));
+        }
+      });
+
+      vendInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideSuggestions();
+      });
+
+      vendInput.addEventListener('blur', function() {
+        setTimeout(hideSuggestions, 180);
+      });
 
       window.selectEventLocation = function(lat, lng, label) {
         vendInput.value = label;
         hideSuggestions();
-        // Always fill hidden inputs regardless of map state
+
         const latIn = document.getElementById('event-lat-input');
         const lngIn = document.getElementById('event-lng-input');
-        if (latIn) latIn.value = lat;
-        if (lngIn) lngIn.value = lng;
-        if (!eventMapPicker) return;
-        eventMapPicker.setPosition(lat, lng);
-        const coordDisplay = document.getElementById('event-coord-display');
-        const coordText = document.getElementById('event-coord-text');
-        if (coordDisplay && coordText) {
-          coordDisplay.style.display = 'flex';
-          coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+        if (latIn) latIn.value = Number(lat).toFixed(7);
+        if (lngIn) lngIn.value = Number(lng).toFixed(7);
+        updateCoordDisplay(lat, lng);
+
+        if (!eventMapPicker) {
+          pendingLocation = { lat, lng };
+          ensureEventMapPicker();
+          return;
         }
+
+        eventMapPicker.setPosition(lat, lng);
       };
 
-      vendInput._skipNextGeocode = () => {}; // kept for API compat
+      vendInput._skipNextGeocode = function() {};
     }
   }
 });
@@ -726,6 +845,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function previewEventBanner(input) {
   const prev = document.getElementById('event-banner-preview');
   const fname = document.getElementById('event-banner-filename');
+  if (input.files && input.files[0]) {
+    if (prev) { prev.src = URL.createObjectURL(input.files[0]); prev.style.display = 'block'; }
+    if (fname) fname.textContent = input.files[0].name;
+  }
+}
+function previewCategoryBanner(input) {
+  const prev = document.getElementById('cat-banner-preview');
+  const fname = document.getElementById('cat-banner-filename');
   if (input.files && input.files[0]) {
     if (prev) { prev.src = URL.createObjectURL(input.files[0]); prev.style.display = 'block'; }
     if (fname) fname.textContent = input.files[0].name;

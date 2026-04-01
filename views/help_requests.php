@@ -377,7 +377,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
           <p class="rq-sidebar-trust__sub">Kjo platformë mundëson lidhje direkte midis vullnetarëve dhe atyre që kanë nevojë.</p>
         </div>
 
-        <?php if ($currUserId && !$isOwner): ?>
+          <?php if ($currentUserId && !$isOwner): ?>
         <button class="rq-btn-full rq-btn-sm" style="background:#fff;color:#ef4444;border:1.5px solid #fee2e2" onclick="reportHelpRequest(<?= (int) $request['id_kerkese_ndihme'] ?>)">
           <svg style="margin-right:8px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
           Raporto këtë kërkesë

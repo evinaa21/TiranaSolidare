@@ -98,6 +98,64 @@ $initial = mb_strtoupper(mb_substr($profile['emri'], 0, 1));
 $memberSince = date('d M Y', strtotime($profile['krijuar_me']));
 $colorResolved = ts_resolve_profile_color($profile['profile_color'] ?? 'emerald');
 $profileColorTheme = $colorResolved['theme'];
+$roleLabel = status_label($profile['roli']);
+$displayBio = trim((string) ($profile['bio'] ?? ''));
+$displayBioShort = $displayBio;
+$badgeCount = count($earnedBadges);
+$totalVisibleActivity = $eventCount + $requestCount + $helpAppCount;
+$badgeChipLabel = $badgeCount === 1 ? '1 badge e fituar' : $badgeCount . ' badge të fituara';
+$activityChipLabel = $totalVisibleActivity === 0
+    ? 'Aktiviteti i parë pritet'
+    : ($totalVisibleActivity === 1 ? '1 sinjal aktiviteti' : $totalVisibleActivity . ' sinjale aktiviteti');
+$headerLead = 'Profili ruan privatësinë dhe nuk shfaq aktivitet ose arritje publike për vizitorët.';
+
+if ($displayBioShort !== '' && mb_strlen($displayBioShort) > 180) {
+    $displayBioShort = rtrim(mb_substr($displayBioShort, 0, 177)) . '...';
+}
+
+$heroTitle = 'Ky profil është privat';
+$heroSummary = 'Detajet e aktivitetit publik dhe badge-t nuk shfaqen për vizitorët kur profili mbahet privat.';
+$heroSpotlightLabel = 'Qasje e kufizuar';
+$heroSpotlightTitle = 'Aktiviteti publik nuk shfaqet';
+$heroSpotlightMeta = 'Vetëm pronari i profilit mund të shohë historikun e plotë dhe arritjet e ruajtura këtu.';
+
+if (!$privateProfile) {
+    $heroTitle = $totalVisibleActivity > 0
+        ? 'Një profil që tregon kontributin real në komunitet'
+        : 'Profili publik është gati për historinë e parë të kontributit';
+
+    if ($displayBioShort !== '') {
+        $heroSummary = $displayBioShort;
+    } elseif ($totalVisibleActivity > 0) {
+        $heroSummary = $profile['emri'] . ' ka ndërtuar një profil që përmbledh eventet e pranuara, kërkesat e krijuara dhe ndihmat e pranuara në Tirana Solidare.';
+    } else {
+        $heroSummary = 'Sapo të nisë pjesëmarrja në evente ose kërkesa, ky profil do të mbushet me badge, aktivitet dhe momentet kryesore të kontributit në komunitet.';
+    }
+
+    if (!empty($recentEvents)) {
+        $heroSpotlightLabel = 'Në fokus tani';
+        $heroSpotlightTitle = (string) ($recentEvents[0]['titulli'] ?? 'Event i komunitetit');
+        $heroSpotlightMeta = date('d M Y', strtotime((string) $recentEvents[0]['data'])) . ' • ' . ($recentEvents[0]['vendndodhja'] ?: 'Tiranë');
+    } elseif (!empty($recentRequests)) {
+        $heroSpotlightLabel = 'Kërkesa më e fundit';
+        $heroSpotlightTitle = (string) ($recentRequests[0]['titulli'] ?? 'Kërkesë për ndihmë');
+        $heroSpotlightMeta = status_label((string) ($recentRequests[0]['statusi'] ?? 'open')) . ' • ' . date('d M Y', strtotime((string) $recentRequests[0]['krijuar_me']));
+    } else {
+        $heroSpotlightLabel = 'Profili po ndërtohet';
+        $heroSpotlightTitle = 'Ende pa aktivitet publik';
+        $heroSpotlightMeta = 'Kur të nisë angazhimi i parë, këtu do të shfaqet momenti më i fundit i dukshëm në platformë.';
+    }
+
+    if ($displayBio !== '') {
+        $headerLead = $displayBio;
+    } elseif ($totalVisibleActivity > 0) {
+        $headerLead = $profile['emri'] . ' po ndërton një histori publike me pjesëmarrje në evente, kërkesa dhe kontribute të dukshme në komunitet.';
+    } elseif ($badgeCount > 0) {
+        $headerLead = 'Badge-t e fituara janë shenja e para e prezencës në platformë. Sapo të nisë aktiviteti publik, këtu do të shfaqen edhe eventet dhe kërkesat përkatëse.';
+    } else {
+        $headerLead = 'Ky profil është gati të mbledhë aktivitetin e parë publik. Pasi të nisë angazhimi, kjo zonë do të lidhet natyrshëm me historikun dhe arritjet e përdoruesit.';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -116,7 +174,7 @@ $profileColorTheme = $colorResolved['theme'];
         /* ── Cover Banner ── */
         .pp-cover {
             position: relative;
-            height: 220px;
+            min-height: 280px;
             background: linear-gradient(135deg, var(--pp-color-from, #003229) 0%, var(--pp-color-mid, #00715D) 40%, var(--pp-color-to, #34d399) 100%);
             overflow: hidden;
             border-radius: 22px;
@@ -147,16 +205,166 @@ $profileColorTheme = $colorResolved['theme'];
                 radial-gradient(circle at 20% 50%, rgba(255,255,255,0.04) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
         }
+        .pp-cover__inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.95fr);
+            gap: 24px;
+            min-height: 280px;
+            padding: 30px 32px 86px;
+        }
+        .pp-cover__content {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-width: 0;
+            color: #fff;
+        }
+        .pp-cover__eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: rgba(255,255,255,0.92);
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            backdrop-filter: blur(12px);
+        }
+        .pp-cover__title {
+            margin: 18px 0 0;
+            max-width: 640px;
+            font-family: 'Bitter', serif;
+            font-size: 2rem;
+            line-height: 1.08;
+            color: #fff;
+        }
+        .pp-cover__summary {
+            max-width: 640px;
+            margin: 14px 0 0;
+            font-size: 0.98rem;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.88);
+        }
+        .pp-cover__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .pp-cover__chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        .pp-cover__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+            position: relative;
+            z-index: 4;
+        }
+        .pp-cover__cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 18px;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--pp-color-from, #003229);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .pp-cover__cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+        }
+        .pp-cover__spotlight {
+            align-self: stretch;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 20px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.10));
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 28px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(16px);
+            color: #fff;
+        }
+        .pp-cover__spotlight-label {
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.74);
+        }
+        .pp-cover__spotlight-title {
+            margin-top: 6px;
+            font-family: 'Bitter', serif;
+            font-size: 1.2rem;
+            line-height: 1.3;
+            color: #fff;
+        }
+        .pp-cover__spotlight-meta {
+            margin-top: 8px;
+            font-size: 0.86rem;
+            line-height: 1.55;
+            color: rgba(255,255,255,0.80);
+        }
+        .pp-cover__mini-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .pp-cover__mini-stat {
+            padding: 12px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.10);
+            text-align: center;
+        }
+        .pp-cover__mini-value {
+            font-family: 'Bitter', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+        }
+        .pp-cover__mini-label {
+            margin-top: 6px;
+            font-size: 0.72rem;
+            line-height: 1.3;
+            color: rgba(255,255,255,0.72);
+        }
 
         /* ── Avatar overlapping the banner ── */
         .pp-avatar-wrap {
             position: relative;
-            margin-top: -48px;
+            margin-top: -34px;
             padding: 0 32px;
             display: flex;
             align-items: flex-end;
             gap: 20px;
-            z-index: 2;
+            z-index: 3;
         }
         .pp-avatar {
             width: 96px; height: 96px;
@@ -179,8 +387,11 @@ $profileColorTheme = $colorResolved['theme'];
 
         /* ── Info area below avatar ── */
         .pp-header-body {
-            margin-top: 12px;
-            padding: 20px 32px 24px;
+            position: relative;
+            z-index: 1;
+            margin-top: -14px;
+            padding: 24px 32px 24px 148px;
+            min-height: 118px;
             border-radius: 18px;
             background: #fff;
             box-shadow: 0 5px 24px rgba(15, 23, 42, 0.08);
@@ -190,6 +401,7 @@ $profileColorTheme = $colorResolved['theme'];
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+            min-height: 42px;
         }
         .pp-name-row h1 {
             margin: 0;
@@ -208,8 +420,9 @@ $profileColorTheme = $colorResolved['theme'];
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: #e0f5ef;
-            color: #00715D;
+            background: linear-gradient(135deg, var(--pp-color-from, #003229), var(--pp-color-mid, #00715D));
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
         }
         .pp-badge svg { width: 13px; height: 13px; }
         .pp-earned-badges {
@@ -224,22 +437,23 @@ $profileColorTheme = $colorResolved['theme'];
             gap: 12px;
             padding: 14px;
             border-radius: 14px;
-            background: linear-gradient(145deg, #f0fdf8 0%, #dcfce7 100%);
-            color: #064e3b;
-            border: 1px solid #86efac;
-            box-shadow: 0 6px 16px rgba(4, 120, 87, 0.14);
+            background: #fff;
+            color: #0f172a;
+            border: 1px solid #e5e7eb;
+            border-top: 3px solid var(--pp-color-mid, #00715D);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
         }
         .pp-earned-badge__icon {
             flex-shrink: 0;
             width: 38px;
             height: 38px;
             border-radius: 10px;
-            background: #047857;
+            background: linear-gradient(135deg, var(--pp-color-from, #003229), var(--pp-color-to, #34d399));
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(4, 120, 87, 0.28);
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
         }
         .pp-earned-badge__icon svg {
             width: 20px;
@@ -255,12 +469,12 @@ $profileColorTheme = $colorResolved['theme'];
             font-size: 0.95rem;
             font-weight: 800;
             line-height: 1.2;
-            color: #064e3b;
+            color: var(--pp-color-from, #003229);
         }
         .pp-earned-badge__desc {
             font-size: 0.8rem;
             line-height: 1.45;
-            color: #166534;
+            color: #475569;
         }
         .pp-meta {
             display: flex;
@@ -281,6 +495,7 @@ $profileColorTheme = $colorResolved['theme'];
             font-size: 0.9rem;
             color: #374151;
             line-height: 1.6;
+            max-width: 70ch;
         }
 
         /* ── Stats ── */
@@ -311,7 +526,7 @@ $profileColorTheme = $colorResolved['theme'];
             font-family: 'Bitter', serif;
             font-size: 1.6rem;
             font-weight: 700;
-            color: #00715D;
+            color: var(--pp-color-mid, #00715D);
             line-height: 1;
         }
         .pp-stat__label {
@@ -339,12 +554,12 @@ $profileColorTheme = $colorResolved['theme'];
             align-items: center;
             gap: 8px;
         }
-        .pp-section h3 svg { width: 18px; height: 18px; color: #00715D; }
+        .pp-section h3 svg { width: 18px; height: 18px; color: var(--pp-color-mid, #00715D); }
         .pp-table-wrap { overflow-x: auto; }
         .pp-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .pp-table th { text-align: left; padding: 10px 12px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #f0f2f5; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.3px; }
         .pp-table td { padding: 10px 12px; border-bottom: 1px solid #f0f2f5; color: #374151; }
-        .pp-table a { color: #00715D; text-decoration: none; font-weight: 600; }
+        .pp-table a { color: var(--pp-color-mid, #00715D); text-decoration: none; font-weight: 600; }
         .pp-table a:hover { text-decoration: underline; }
         .pp-status { padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; }
         .pp-status--open { background: #d1fae5; color: #065f46; }
@@ -366,6 +581,58 @@ $profileColorTheme = $colorResolved['theme'];
         }
         .pp-private-msg svg { flex-shrink: 0; color: #9ca3af; }
 
+        .pp-empty-state {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+        .pp-empty-state__icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--pp-color-from, #003229), var(--pp-color-to, #34d399));
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+        }
+        .pp-empty-state__icon svg {
+            width: 24px;
+            height: 24px;
+        }
+        .pp-empty-state__title {
+            margin: 0;
+            font-family: 'Bitter', serif;
+            font-size: 1.08rem;
+            color: #1a1a2e;
+        }
+        .pp-empty-state__text {
+            margin: 8px 0 0;
+            font-size: 0.92rem;
+            line-height: 1.65;
+            color: #64748b;
+        }
+        .pp-empty-state__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .pp-empty-state__chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            color: #334155;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
         .pp-section .rq-grid {
             margin-top: 8px;
         }
@@ -374,15 +641,58 @@ $profileColorTheme = $colorResolved['theme'];
             animation: none;
         }
 
+        @media (max-width: 900px) {
+            .pp-cover {
+                min-height: 0;
+            }
+            .pp-cover__inner {
+                grid-template-columns: 1fr;
+                min-height: 0;
+            }
+            .pp-cover__title {
+                font-size: 1.8rem;
+            }
+            .pp-cover__spotlight {
+                min-height: 0;
+            }
+            .pp-header-body {
+                padding-left: 32px;
+                margin-top: 10px;
+                min-height: 0;
+            }
+        }
+
         /* ── Responsive ── */
         @media (max-width: 600px) {
             .pp-shell { margin-top: 80px; }
-            .pp-cover { height: 160px; }
-            .pp-avatar-wrap { flex-direction: column; align-items: center; padding: 0 20px; margin-top: -40px; }
+            .pp-cover {
+                min-height: 0;
+            }
+            .pp-cover__inner {
+                padding: 22px 20px 34px;
+                gap: 18px;
+            }
+            .pp-cover__content {
+                text-align: center;
+            }
+            .pp-cover__title {
+                font-size: 1.55rem;
+            }
+            .pp-cover__summary {
+                font-size: 0.9rem;
+            }
+            .pp-cover__chips,
+            .pp-cover__actions {
+                justify-content: center;
+            }
+            .pp-cover__spotlight {
+                text-align: left;
+                padding: 18px;
+            }
+            .pp-avatar-wrap { flex-direction: column; align-items: center; padding: 0 20px; margin-top: -30px; }
             .pp-avatar { width: 80px; height: 80px; font-size: 1.8rem; }
-            .pp-header-body { text-align: center; padding: 12px 20px 20px; }
+            .pp-header-body { text-align: center; padding: 12px 20px 20px; margin-top: 12px; }
             .pp-name-row { justify-content: center; }
-            .pp-meta { justify-content: center; }
             .pp-stats { margin: 14px 0 0; grid-template-columns: repeat(3, 1fr); }
             .pp-stat__value { font-size: 1.3rem; }
             .pp-section { padding: 20px; }
@@ -390,6 +700,17 @@ $profileColorTheme = $colorResolved['theme'];
             .pp-earned-badges { grid-template-columns: 1fr; }
             .pp-earned-badge { padding: 12px; }
             .pp-earned-badge__icon { width: 34px; height: 34px; }
+            .pp-bio { max-width: none; }
+            .pp-empty-state {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .pp-empty-state__icon {
+                margin: 0 auto;
+            }
+            .pp-empty-state__chips {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -397,32 +718,107 @@ $profileColorTheme = $colorResolved['theme'];
 <?php include __DIR__ . '/../public/components/header.php'; ?>
 
 <main class="pp-shell">
-    <div class="pp-card">
+    <div class="pp-card" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;">
         <?php if ($privateProfile): ?>
-        <div class="pp-cover" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;"><div class="pp-cover__pattern"></div></div>
+        <div class="pp-cover">
+            <div class="pp-cover__pattern"></div>
+            <div class="pp-cover__inner">
+                <div class="pp-cover__content">
+                    <div>
+                        <span class="pp-cover__eyebrow">Profil privat</span>
+                        <h2 class="pp-cover__title"><?= htmlspecialchars($heroTitle) ?></h2>
+                        <p class="pp-cover__summary"><?= htmlspecialchars($heroSummary) ?></p>
+                        <div class="pp-cover__chips">
+                            <span class="pp-cover__chip"><?= htmlspecialchars($roleLabel) ?></span>
+                            <span class="pp-cover__chip">Anëtar që nga <?= htmlspecialchars($memberSince) ?></span>
+                        </div>
+                    </div>
+                </div>
+                <aside class="pp-cover__spotlight">
+                    <div>
+                        <div class="pp-cover__spotlight-label"><?= htmlspecialchars($heroSpotlightLabel) ?></div>
+                        <div class="pp-cover__spotlight-title"><?= htmlspecialchars($heroSpotlightTitle) ?></div>
+                        <div class="pp-cover__spotlight-meta"><?= htmlspecialchars($heroSpotlightMeta) ?></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
         <div class="pp-avatar-wrap">
-            <div class="pp-avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($profileColorTheme['mid']) ?>, <?= htmlspecialchars($profileColorTheme['to']) ?>)"><?= htmlspecialchars($initial) ?></div>
+            <div class="pp-avatar"><?= htmlspecialchars($initial) ?></div>
         </div>
         <div class="pp-header-body">
             <div class="pp-name-row">
                 <h1><?= htmlspecialchars($profile['emri']) ?></h1>
                 <span class="pp-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-                    <?= htmlspecialchars(status_label($profile['roli'])) ?>
+                    <?= htmlspecialchars($roleLabel) ?>
                 </span>
             </div>
+            <p class="pp-bio"><?= nl2br(htmlspecialchars($headerLead)) ?></p>
         </div>
         <div class="pp-private-msg">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             Ky profil është privat.
         </div>
         <?php else: ?>
-        <div class="pp-cover" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;"><div class="pp-cover__pattern"></div></div>
+        <div class="pp-cover">
+            <div class="pp-cover__pattern"></div>
+            <div class="pp-cover__inner">
+                <div class="pp-cover__content">
+                    <div>
+                        <span class="pp-cover__eyebrow">Profili publik i vullnetarit</span>
+                        <h2 class="pp-cover__title"><?= htmlspecialchars($heroTitle) ?></h2>
+                        <p class="pp-cover__summary"><?= nl2br(htmlspecialchars($heroSummary)) ?></p>
+                        <div class="pp-cover__chips">
+                            <span class="pp-cover__chip">Anëtar që nga <?= htmlspecialchars($memberSince) ?></span>
+                            <span class="pp-cover__chip"><?= htmlspecialchars($badgeChipLabel) ?></span>
+                            <span class="pp-cover__chip"><?= htmlspecialchars($activityChipLabel) ?></span>
+                        </div>
+                    </div>
+                    <?php if ($isLoggedIn && !$isOwner): ?>
+                    <div class="pp-cover__actions">
+                        <a href="/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=<?= (int) $profile['id_perdoruesi'] ?>" class="pp-cover__cta">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Dërgo mesazh
+                        </a>
+                    </div>
+                    <?php elseif ($isOwner): ?>
+                    <div class="pp-cover__actions">
+                        <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile" class="pp-cover__cta">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            Ndrysho profilin
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <aside class="pp-cover__spotlight">
+                    <div>
+                        <div class="pp-cover__spotlight-label"><?= htmlspecialchars($heroSpotlightLabel) ?></div>
+                        <div class="pp-cover__spotlight-title"><?= htmlspecialchars($heroSpotlightTitle) ?></div>
+                        <div class="pp-cover__spotlight-meta"><?= htmlspecialchars($heroSpotlightMeta) ?></div>
+                    </div>
+                    <div class="pp-cover__mini-stats">
+                        <div class="pp-cover__mini-stat">
+                            <div class="pp-cover__mini-value"><?= $eventCount ?></div>
+                            <div class="pp-cover__mini-label">Evente të pranuara</div>
+                        </div>
+                        <div class="pp-cover__mini-stat">
+                            <div class="pp-cover__mini-value"><?= $requestCount ?></div>
+                            <div class="pp-cover__mini-label">Kërkesa të krijuara</div>
+                        </div>
+                        <div class="pp-cover__mini-stat">
+                            <div class="pp-cover__mini-value"><?= $helpAppCount ?></div>
+                            <div class="pp-cover__mini-label">Ndihma të pranuara</div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
         <div class="pp-avatar-wrap">
             <?php if (!empty($profile['profile_picture'])): ?>
                 <img src="<?= htmlspecialchars($profile['profile_picture']) ?>" alt="<?= htmlspecialchars($profile['emri']) ?>" class="pp-avatar pp-avatar--img" onerror="this.outerHTML='<div class=\'pp-avatar\'><?= htmlspecialchars($initial) ?></div>'">
             <?php else: ?>
-                <div class="pp-avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($profileColorTheme['mid']) ?>, <?= htmlspecialchars($profileColorTheme['to']) ?>)"><?= htmlspecialchars($initial) ?></div>
+                <div class="pp-avatar"><?= htmlspecialchars($initial) ?></div>
             <?php endif; ?>
         </div>
         <div class="pp-header-body">
@@ -430,28 +826,10 @@ $profileColorTheme = $colorResolved['theme'];
                 <h1><?= htmlspecialchars($profile['emri']) ?></h1>
                 <span class="pp-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-                    <?= htmlspecialchars(status_label($profile['roli'])) ?>
+                    <?= htmlspecialchars($roleLabel) ?>
                 </span>
             </div>
-            <div class="pp-meta">
-                <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                    Anëtar që nga <?= $memberSince ?>
-                </span>
-            </div>
-            <?php if ($isLoggedIn && !$isOwner): ?>
-            <div style="margin-top:14px;">
-                <a href="/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=<?= (int) $profile['id_perdoruesi'] ?>"
-                   class="btn_primary"
-                   style="display:inline-flex;align-items:center;gap:8px;font-size:0.88rem;padding:9px 18px;text-decoration:none;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Dërgo mesazh
-                </a>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($profile['bio'])): ?>
-                <p class="pp-bio"><?= nl2br(htmlspecialchars($profile['bio'])) ?></p>
-            <?php endif; ?>
+            <p class="pp-bio"><?= nl2br(htmlspecialchars($headerLead)) ?></p>
             <?php if (!empty($earnedBadges)): ?>
                 <div class="pp-earned-badges">
                     <?php foreach ($earnedBadges as $badge): ?>
@@ -469,26 +847,11 @@ $profileColorTheme = $colorResolved['theme'];
             <?php endif; ?>
         </div>
 
-        <div class="pp-stats">
-            <div class="pp-stat">
-                <div class="pp-stat__value"><?= $eventCount ?></div>
-                <div class="pp-stat__label">Evente të pranuara</div>
-            </div>
-            <div class="pp-stat">
-                <div class="pp-stat__value"><?= $requestCount ?></div>
-                <div class="pp-stat__label">Kërkesa të krijuara</div>
-            </div>
-            <div class="pp-stat">
-                <div class="pp-stat__value"><?= $helpAppCount ?></div>
-                <div class="pp-stat__label">Ndihma të pranuara</div>
-            </div>
-        </div>
-
         <?php if (!empty($recentEvents)): ?>
         <div class="pp-section">
             <h3>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Une kam marr pjese ne:
+                Kam marrë pjesë në:
             </h3>
             <div class="rq-grid">
                 <?php foreach ($recentEvents as $ev): ?>
@@ -555,7 +918,20 @@ $profileColorTheme = $colorResolved['theme'];
 
         <?php if (empty($recentEvents) && empty($recentRequests)): ?>
         <div class="pp-section">
-            <p class="pp-empty">Ky vullnetar nuk ka aktivitet publik ende.</p>
+            <div class="pp-empty-state">
+                <div class="pp-empty-state__icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6"/><path d="M18 20V10"/><path d="M6 20v-2"/></svg>
+                </div>
+                <div>
+                    <h3 class="pp-empty-state__title">Kur të nisë aktiviteti, historiku do të shfaqet këtu</h3>
+                    <p class="pp-empty-state__text">Kjo zonë është rezervuar për eventet e pranuara dhe kërkesat publike. Sapo të ketë lëvizje në platformë, faqja do të mbushet automatikisht me momentet dhe lidhjet përkatëse.</p>
+                    <div class="pp-empty-state__chips">
+                        <span class="pp-empty-state__chip">Badge-t do të shfaqen sapo të fitohen</span>
+                        <span class="pp-empty-state__chip">Eventet e para do të listohen këtu</span>
+                        <span class="pp-empty-state__chip">Kërkesat publike do të duken këtu</span>
+                    </div>
+                </div>
+            </div>
         </div>
         <?php endif; ?>
 

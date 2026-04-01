@@ -235,7 +235,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--db-primary), #22a68a);
+  background: linear-gradient(135deg, var(--db-profile-from, var(--db-primary)), var(--db-profile-to, #22a68a));
   color: #fff;
   font-family: var(--db-font-head);
   font-weight: 700;
@@ -1309,7 +1309,7 @@
   font-weight: 700;
   font-family: var(--db-font-head);
   color: #fff;
-  background: var(--db-primary);
+  background: linear-gradient(135deg, var(--db-profile-from, var(--db-primary)), var(--db-profile-to, #22a68a));
   flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0,113,93,0.25);
 }
@@ -1951,6 +1951,30 @@
     transform: scale(1.1);
 }
 
+.db-avatar-delete-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 26px;
+  height: 26px;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2.5px solid #fff;
+  transition: background 0.2s, transform 0.15s;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.db-avatar-delete-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.1);
+}
+
 /* ─── Profile color palette grid ─── */
 .db-color-grid {
     display: flex;
@@ -2084,6 +2108,24 @@
     user-select: none;
     letter-spacing: -0.5px;
 }
+
+  .db-cat-media {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .db-cat-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 
 .db-cat-card__body {
     flex: 1;

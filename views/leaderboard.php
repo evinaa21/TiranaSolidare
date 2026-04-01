@@ -3,8 +3,6 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-$isLoggedIn = isset($_SESSION['user_id']);
-
 // Fetch top 20 volunteers by score
 $stmt = $pdo->query(
     "SELECT
@@ -151,15 +149,16 @@ $badgeIconMap = [
         $colorResolved = ts_resolve_profile_color($v['profile_color'] ?? 'emerald');
         $initial = mb_strtoupper(mb_substr($v['emri'] ?? 'V', 0, 1));
         $userBadges = $badgeMap[$v['id_perdoruesi']] ?? [];
+        $profileUrl = ts_public_profile_url((int) $v['id_perdoruesi'], (string) ($v['emri'] ?? 'Përdorues'));
       ?>
       <div class="lb-podium__item lb-podium__item--<?= $pos ?>">
         <div class="lb-podium__rank"><?= $pos ?></div>
-        <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-podium__avatar-link" title="Shiko profilin e <?= htmlspecialchars($v['emri']) ?>">
+        <a href="<?= htmlspecialchars($profileUrl) ?>" class="lb-podium__avatar-link" title="Shiko profilin e <?= htmlspecialchars($v['emri']) ?>">
           <div class="lb-podium__avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($colorResolved['theme']['from']) ?>, <?= htmlspecialchars($colorResolved['theme']['to']) ?>);">
             <?= htmlspecialchars($initial) ?>
           </div>
         </a>
-        <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-podium__name"><?= htmlspecialchars($v['emri']) ?></a>
+        <a href="<?= htmlspecialchars($profileUrl) ?>" class="lb-podium__name"><?= htmlspecialchars($v['emri']) ?></a>
         <div class="lb-podium__score"><?= (int) $v['score'] ?> <small>pikë</small></div>
         <?php if (!empty($userBadges)): ?>
         <div class="lb-podium__badges">
@@ -182,8 +181,9 @@ $badgeIconMap = [
         $colorResolved = ts_resolve_profile_color($v['profile_color'] ?? 'emerald');
         $initial = mb_strtoupper(mb_substr($v['emri'] ?? 'V', 0, 1));
         $userBadges = $badgeMap[$v['id_perdoruesi']] ?? [];
+        $profileUrl = ts_public_profile_url((int) $v['id_perdoruesi'], (string) ($v['emri'] ?? 'Përdorues'));
       ?>
-      <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-row lb-row--link">
+      <a href="<?= htmlspecialchars($profileUrl) ?>" class="lb-row lb-row--link">
         <div class="lb-row__rank"><?= $pos ?></div>
         <div class="lb-row__avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($colorResolved['theme']['from']) ?>, <?= htmlspecialchars($colorResolved['theme']['to']) ?>);">
           <?= htmlspecialchars($initial) ?>
@@ -208,5 +208,6 @@ $badgeIconMap = [
 </div>
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

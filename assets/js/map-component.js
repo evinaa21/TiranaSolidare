@@ -95,42 +95,44 @@ const TSMap = (() => {
     });
     map.addControl(new InstructionControl());
 
-    // Search box for address
-    const searchDiv = L.DomUtil.create('div', 'ts-map-search');
-    searchDiv.innerHTML = `
-      <div class="ts-map-search__inner">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" class="ts-map-search__input" placeholder="Kërko adresë në Tiranë..." />
-      </div>
-      <div class="ts-map-search__results"></div>
-    `;
-    const SearchControl = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd: function() { return searchDiv; },
-    });
-    map.addControl(new SearchControl());
+    let searchSelected = false;
+    if (options.showSearch !== false) {
+      // Search box for address
+      const searchDiv = L.DomUtil.create('div', 'ts-map-search');
+      searchDiv.innerHTML = `
+        <div class="ts-map-search__inner">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="ts-map-search__input" placeholder="Kërko adresë në Tiranë..." />
+        </div>
+        <div class="ts-map-search__results"></div>
+      `;
+      const SearchControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function() { return searchDiv; },
+      });
+      map.addControl(new SearchControl());
 
-    // Prevent map clicks when interacting with search
-    L.DomEvent.disableClickPropagation(searchDiv);
-    L.DomEvent.disableScrollPropagation(searchDiv);
+      // Prevent map clicks when interacting with search
+      L.DomEvent.disableClickPropagation(searchDiv);
+      L.DomEvent.disableScrollPropagation(searchDiv);
 
-    const searchInput = searchDiv.querySelector('.ts-map-search__input');
-    const searchResults = searchDiv.querySelector('.ts-map-search__results');
-    let searchTimeout = null;
+      const searchInput = searchDiv.querySelector('.ts-map-search__input');
+      const searchResults = searchDiv.querySelector('.ts-map-search__results');
+      let searchTimeout = null;
 
-    searchInput.addEventListener('input', function() {
-      clearTimeout(searchTimeout);
-      const q = this.value.trim();
-      if (q.length < 3) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; return; }
-      searchTimeout = setTimeout(() => geocodeSearch(q, searchResults, map, marker, options, (m) => { marker = m; }, () => { searchSelected = true; }), 400);
-    });
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const q = this.value.trim();
+        if (q.length < 3) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; return; }
+        searchTimeout = setTimeout(() => geocodeSearch(q, searchResults, map, marker, options, (m) => { marker = m; }, () => { searchSelected = true; }), 400);
+      });
 
-    searchInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') e.preventDefault();
-    });
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') e.preventDefault();
+      });
+    }
 
     // Click on map to place marker
-    let searchSelected = false;
     map.on('click', function(e) {
   if (searchSelected) {
     searchSelected = false;
@@ -196,14 +198,11 @@ const TSMap = (() => {
     if (!addressInput) return;
 
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'sq,en' },
-      });
-      const data = await res.json();
-      if (data.display_name) {
-        // Shorten to most relevant part
-        const parts = data.display_name.split(',').slice(0, 3).map(s => s.trim());
-        addressInput.value = parts.join(', ');
+      const res = await fetch(`/TiranaSolidare/api/geocode.php?action=reverse&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`);
+      const json = await res.json();
+      const data = json.success ? (json.data.result || null) : null;
+      if (data && (data.short_name || data.display_name)) {
+        addressInput.value = data.short_name || data.display_name;
       }
     } catch (e) {
       // Silently fail — user can type manually
@@ -213,10 +212,9 @@ const TSMap = (() => {
   // Forward geocode search
   async function geocodeSearch(query, resultsDiv, map, marker, options, setMarker, onResultSelect) {
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Tiranë, Albania')}&limit=5&addressdetails=1`, {
-        headers: { 'Accept-Language': 'sq,en' },
-      });
-      const results = await res.json();
+      const res = await fetch(`/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(query)}`);
+      const json = await res.json();
+      const results = json.success ? (json.data.results || []) : [];
 
       if (results.length === 0) {
         resultsDiv.innerHTML = '<div class="ts-map-search__item ts-map-search__empty">Asnjë rezultat</div>';
@@ -225,10 +223,10 @@ const TSMap = (() => {
       }
 
       resultsDiv.innerHTML = results.map(r => {
-        const displayParts = r.display_name.split(',').slice(0, 3).map(s => s.trim());
-        return `<div class="ts-map-search__item" data-lat="${r.lat}" data-lng="${r.lon}" data-name="${displayParts.join(', ')}">
+        const name = r.short_name || r.display_name || '';
+        return `<div class="ts-map-search__item" data-lat="${r.lat}" data-lng="${r.lon}" data-name="${name}">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-          <span>${displayParts.join(', ')}</span>
+          <span>${name}</span>
         </div>`;
       }).join('');
       resultsDiv.style.display = 'block';

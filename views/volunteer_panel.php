@@ -80,6 +80,8 @@ $scoreMax     = 150;
 $scorePercent = min(100, round(($score / $scoreMax) * 100));
 $profileBadgeInfo = ts_get_user_profile_badges($pdo, (int) $userId);
 $earnedBadges = $profileBadgeInfo['badges'];
+$earnedBadgeCount = count($earnedBadges);
+$publicProfileUrl = ts_public_profile_url((int) $userId, (string) ($user['emri'] ?? ($_SESSION['emri'] ?? 'Përdorues')));
 
 $badgeIcons = [
   'seedling' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5 7-7.8 7-12-4.2 0-8 2.7-9.5 6.8"/><path d="M7 20c-2.5-2.2-4-5.6-4-9.5 3.2 0 5.9 1.3 7.9 3.6"/></svg>',
@@ -100,7 +102,7 @@ $badgeIcons = [
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css?v=20260401a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css?v=20260401a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260322a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260401b">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css?v=20260401a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
@@ -113,32 +115,84 @@ $badgeIcons = [
 <main>
 
 <!-- ─── HERO ─── -->
-<section class="vp-hero" style="--vp-accent: <?= htmlspecialchars($profileColorTheme['from']) ?>;">
+<section class="vp-hero" style="--vp-accent: <?= htmlspecialchars($profileColorTheme['from']) ?>; --vp-accent-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --vp-accent-end: <?= htmlspecialchars($profileColorTheme['to']) ?>;">
+  <div class="vp-hero__orb vp-hero__orb--one" aria-hidden="true"></div>
+  <div class="vp-hero__orb vp-hero__orb--two" aria-hidden="true"></div>
   <div class="vp-hero__inner">
-    <?php if (!empty($user['profile_picture'])): ?>
-      <img src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-hero__avatar vp-hero__avatar--img">
-    <?php else: ?>
-      <div class="vp-hero__avatar vp-hero__avatar--letter"><?= $userInitial ?></div>
-    <?php endif; ?>
-    <div class="vp-hero__text">
-      <h2 class="vp-hero__name"><?= htmlspecialchars($userEmri) ?></h2>
-      <span class="vp-hero__role-badge">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-        <?= htmlspecialchars($userRoli) ?>
-      </span>
-      <?php if (!empty($user['email'])): ?>
-        <p class="vp-hero__email"><?= htmlspecialchars($user['email']) ?></p>
+    <div class="vp-hero__identity">
+      <?php if (!empty($user['profile_picture'])): ?>
+        <img src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-hero__avatar vp-hero__avatar--img">
+      <?php else: ?>
+        <div class="vp-hero__avatar vp-hero__avatar--letter"><?= $userInitial ?></div>
       <?php endif; ?>
+      <div class="vp-hero__text">
+        <span class="vp-hero__eyebrow">Profili yt në komunitet</span>
+        <div class="vp-hero__headline">
+          <h2 class="vp-hero__name"><?= $userEmri ?></h2>
+          <span class="vp-hero__role-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            <?= htmlspecialchars($userRoli) ?>
+          </span>
+        </div>
+        <?php if (!empty($user['email'])): ?>
+          <p class="vp-hero__email"><?= htmlspecialchars($user['email']) ?></p>
+        <?php endif; ?>
+        <p class="vp-hero__summary">
+          Ke ndërtuar <?= $score ?> pikë nga kontributet e tua, me <?= $acceptedApps ?> aplikime të pranuara,
+          <?= $totalRequests ?> kërkesa të krijuara dhe <?= $earnedBadgeCount ?> badge të fituara deri tani.
+        </p>
+        <div class="vp-hero__meta">
+          <span>Anëtar që nga <?= date('m/Y', strtotime($user['krijuar_me'])) ?></span>
+          <span><?= $pendingApps ?> aplikime në pritje</span>
+          <span><?= $openRequests ?> kërkesa aktive</span>
+        </div>
+        <?php if ($earnedBadgeCount > 0): ?>
+          <div class="vp-hero__badge-strip">
+            <?php foreach (array_slice($earnedBadges, 0, 3) as $badge): ?>
+              <span class="vp-hero__badge-pill" title="<?= htmlspecialchars($badge['name']) ?>">
+                <?= $badgeIcons[$badge['icon']] ?? '' ?>
+                <?= htmlspecialchars($badge['name']) ?>
+              </span>
+            <?php endforeach; ?>
+            <?php if ($earnedBadgeCount > 3): ?>
+              <span class="vp-hero__badge-pill vp-hero__badge-pill--count">+<?= $earnedBadgeCount - 3 ?> të tjera</span>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+        <div class="vp-hero__actions">
+          <a href="<?= htmlspecialchars($publicProfileUrl) ?>" target="_blank" rel="noopener" class="btn_primary vp-hero__cta">Shiko profilin publik</a>
+          <a href="?tab=settings" class="vp-hero__ghost">Personalizo profilin</a>
+        </div>
+      </div>
     </div>
-    <div class="vp-hero__stats-inline">
-      <div class="vp-hi-stat">
-        <strong><?= $totalApps ?></strong><span>Aplikime</span>
+    <div class="vp-hero__side">
+      <div class="vp-hero__score-card">
+        <span class="vp-hero__score-label">Ritmi yt i kontributit</span>
+        <div class="vp-hero__score-value">
+          <?= $score ?>
+          <small>/<?= $scoreMax ?> pikë</small>
+        </div>
+        <div class="vp-hero__progress" aria-hidden="true">
+          <span style="width: <?= $scorePercent ?>%"></span>
+        </div>
+        <div class="vp-hero__score-foot">
+          <span><?= $scorePercent ?>% e objektivit të profilit</span>
+          <span><?= $earnedBadgeCount ?> badge</span>
+        </div>
       </div>
-      <div class="vp-hi-stat">
-        <strong><?= $acceptedApps ?></strong><span>Pranuar</span>
-      </div>
-      <div class="vp-hi-stat">
-        <strong><?= $totalRequests ?></strong><span>Kërkesa</span>
+      <div class="vp-hero__stats-inline">
+        <div class="vp-hi-stat">
+          <strong><?= $totalApps ?></strong><span>Aplikime</span>
+        </div>
+        <div class="vp-hi-stat">
+          <strong><?= $acceptedApps ?></strong><span>Pranuar</span>
+        </div>
+        <div class="vp-hi-stat">
+          <strong><?= $totalRequests ?></strong><span>Kërkesa</span>
+        </div>
+        <div class="vp-hi-stat">
+          <strong><?= $earnedBadgeCount ?></strong><span>Badge</span>
+        </div>
       </div>
     </div>
   </div>
@@ -217,7 +271,7 @@ $badgeIcons = [
     <div class="vp-card">
       <div class="vp-card__header">
         <h3>Informacioni i profilit</h3>
-        <a href="<?= htmlspecialchars(ts_public_profile_url((int) $userId, (string) ($user['emri'] ?? $userEmri))) ?>" target="_blank" rel="noopener" class="btn_secondary">Shiko profilin tënd</a>
+        <a href="<?= htmlspecialchars($publicProfileUrl) ?>" target="_blank" rel="noopener" class="btn_secondary">Shiko profilin tënd</a>
       </div>
       <div class="vp-card__body">
         <div class="vp-profile-avatar">
@@ -246,24 +300,6 @@ $badgeIcons = [
               <span class="vp-badge vp-badge--role"><?= $userRoli ?></span>
               <span class="vp-badge vp-badge--status"><?= htmlspecialchars(status_label($user['statusi_llogarise'] ?? '')) ?></span>
             </div>
-          </div>
-        </div>
-        <div class="vp-profile-meta-grid">
-          <div class="vp-meta-item">
-            <span>Regjistruar</span>
-            <strong><?= date('d/m/Y', strtotime($user['krijuar_me'])) ?></strong>
-          </div>
-          <div class="vp-meta-item">
-            <span>Total aplikime</span>
-            <strong><?= $totalApps ?></strong>
-          </div>
-          <div class="vp-meta-item">
-            <span>Kërkesa krijuar</span>
-            <strong><?= $totalRequests ?></strong>
-          </div>
-          <div class="vp-meta-item">
-            <span>Aplikime pranuar</span>
-            <strong><?= $acceptedApps ?></strong>
           </div>
         </div>
         <div id="vp-avatar-status" class="vp-status" style="display:none"></div>
@@ -1104,8 +1140,12 @@ function formatDate(dateStr) {
 
 const PROFILE_COLOR_THEME = <?= json_encode($profileColorPalette, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
+function getProfileTheme(colorKey) {
+  return PROFILE_COLOR_THEME[colorKey] || PROFILE_COLOR_THEME.emerald;
+}
+
 function applyHeaderAvatarProfileColor(colorKey) {
-  const theme = PROFILE_COLOR_THEME[colorKey] || PROFILE_COLOR_THEME.emerald;
+  const theme = getProfileTheme(colorKey);
   if (!theme) return;
 
   const headerAvatar = document.querySelector('.header-user-avatar');
@@ -1118,6 +1158,30 @@ function applyHeaderAvatarProfileColor(colorKey) {
     headerFallback.style.setProperty('--avatar-from', theme.from || '#003229');
     headerFallback.style.setProperty('--avatar-to', theme.to || '#009e7e');
   }
+}
+
+function applyVolunteerProfileTheme(colorKey) {
+  const theme = getProfileTheme(colorKey);
+  if (!theme) return;
+
+  const hero = document.querySelector('.vp-hero');
+  if (hero) {
+    hero.style.setProperty('--vp-accent', theme.from || '#003229');
+    hero.style.setProperty('--vp-accent-mid', theme.mid || '#00715D');
+    hero.style.setProperty('--vp-accent-end', theme.to || '#009e7e');
+  }
+
+  const heroFallback = document.querySelector('.vp-hero__avatar--letter');
+  if (heroFallback && heroFallback.tagName === 'DIV') {
+    heroFallback.style.background = `linear-gradient(135deg, ${theme.from || '#003229'}, ${theme.to || '#009e7e'})`;
+  }
+
+  const profileFallback = document.getElementById('vp-profile-avatar-display');
+  if (profileFallback && profileFallback.tagName === 'DIV') {
+    profileFallback.style.background = `linear-gradient(135deg, ${theme.mid || '#00715D'}, ${theme.to || '#009e7e'})`;
+  }
+
+  applyHeaderAvatarProfileColor(colorKey);
 }
 
 function initSettingsNavigation() {
@@ -1150,6 +1214,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNotifBadge();
   setInterval(updateNotifBadge, 15000);
   initPushSubscription();
+  applyVolunteerProfileTheme(document.getElementById('vp-profile-color')?.value || 'emerald');
 });
 
 // ── Web Push Subscription ─────────────────────────────────────────────────────
@@ -1270,10 +1335,11 @@ document.addEventListener('DOMContentLoaded', function() {
         geocodeTimeout = setTimeout(async () => {
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Tiranë, Albania')}&limit=1`,
-              { headers: { 'Accept-Language': 'sq,en' } }
+              `/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(q)}`,
+              { headers: { 'Accept': 'application/json' } }
             );
-            const data = await res.json();
+            const json = await res.json();
+            const data = json.success ? (json.data.results || []) : [];
             if (data.length > 0) {
               const lat = parseFloat(data[0].lat);
               const lng = parseFloat(data[0].lon);
@@ -1349,6 +1415,8 @@ function initColorDropdown() {
       options.forEach(opt => opt.classList.remove('active'));
       option.classList.add('active');
 
+      applyVolunteerProfileTheme(colorKey);
+
       // Close menu
       menu.hidden = true;
       trigger.setAttribute('aria-expanded', 'false');
@@ -1401,7 +1469,7 @@ if (profileForm) {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
-      applyHeaderAvatarProfileColor(profile_color);
+      applyVolunteerProfileTheme(profile_color);
       vpStatus('vp-profile-form-status', 'success', 'Profili publik u përditësua me sukses.');
     } catch (err) {
       vpStatus('vp-profile-form-status', 'error', err.message);
@@ -1567,20 +1635,21 @@ function initDeleteButton() {
       const currentPictureInput = document.getElementById('vp-current-picture');
       if (currentPictureInput) currentPictureInput.value = '';
 
-      // Get color theme for fallback avatar
-      const colorTheme = PROFILE_COLOR_THEME[Object.keys(PROFILE_COLOR_THEME)[0]];
+      // Keep the fallback avatar aligned with the currently selected profile color.
+      const selectedColorKey = document.getElementById('vp-profile-color')?.value || Object.keys(PROFILE_COLOR_THEME)[0];
+      const colorTheme = PROFILE_COLOR_THEME[selectedColorKey] || PROFILE_COLOR_THEME[Object.keys(PROFILE_COLOR_THEME)[0]];
       const fallbackGradient = colorTheme ? `linear-gradient(135deg, ${colorTheme.mid}, ${colorTheme.to})` : 'linear-gradient(135deg, #00715D, #00a88a)';
+      const initialSource = document.querySelector('.header-user-name')?.textContent || document.getElementById('vp-profile-emri')?.textContent || 'P';
+      const initial = initialSource.trim().charAt(0).toUpperCase() || 'P';
 
       const profileAvatar = document.getElementById('vp-profile-avatar-display');
       if (profileAvatar) {
-        const initial = document.querySelector('.header-user')?.textContent?.charAt(0).toUpperCase() || 'P';
         profileAvatar.outerHTML = '<div id="vp-profile-avatar-display" class="vp-avatar" style="background:' + fallbackGradient + '">' + initial + '</div>';
       }
 
       const heroAvatar = document.querySelector('.vp-hero__avatar');
       if (heroAvatar) {
-        const initial = document.querySelector('.header-user')?.textContent?.charAt(0).toUpperCase() || 'P';
-        heroAvatar.outerHTML = '<div class="vp-hero__avatar" style="background:' + fallbackGradient + '">' + initial + '</div>';
+        heroAvatar.outerHTML = '<div class="vp-hero__avatar vp-hero__avatar--letter" style="background:' + fallbackGradient + '">' + initial + '</div>';
       }
 
       const headerAvatarImg = document.querySelector('.header-user-avatar > img');

@@ -5,8 +5,6 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-$isLoggedIn = isset($_SESSION['user_id']);
-
 // Fetch all events with coordinates
 $stmtEvents = $pdo->query(
     "SELECT e.id_eventi, e.titulli, e.vendndodhja, e.latitude, e.longitude, e.data,
@@ -69,11 +67,12 @@ foreach ($requests as $req) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?= csrf_meta() ?>
   <title>Harta — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260401a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401b">
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>

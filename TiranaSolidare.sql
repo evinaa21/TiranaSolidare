@@ -116,7 +116,8 @@ INSERT INTO `eventi` (`id_eventi`, `id_perdoruesi`, `id_kategoria`, `titulli`, `
 
 CREATE TABLE `kategoria` (
   `id_kategoria` int(11) NOT NULL,
-  `emri` varchar(50) DEFAULT NULL
+  `emri` varchar(50) DEFAULT NULL,
+  `banner_path` varchar(500) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

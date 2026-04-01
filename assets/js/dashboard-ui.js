@@ -131,6 +131,7 @@ function toggleCreateEvent() {
         w.style.display = isOpening ? 'block' : 'none';
         if (table) table.style.display = isOpening ? 'none' : 'block';
         if (appCard) appCard.style.display = 'none';
+        if (isOpening) loadCategoryDropdown();
     }
 }
 
@@ -140,15 +141,28 @@ function toggleCreateEvent() {
 async function loadCategoryDropdown() {
     const sel = document.getElementById('event-category-select');
     if (!sel) return;
+    const currentValue = sel.value;
+    sel.innerHTML = '<option value="">Pa kategori</option>';
     try {
         const json = await apiCall('categories.php?action=list');
         if (json.success && json.data.categories) {
-            json.data.categories.forEach(c => {
+            const categories = json.data.categories || [];
+            if (categories.length === 0) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.textContent = 'Nuk ka kategori ende';
+                sel.appendChild(opt);
+                return;
+            }
+            categories.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id_kategoria;
                 opt.textContent = c.emri;
                 sel.appendChild(opt);
             });
+            if (currentValue && categories.some(c => String(c.id_kategoria) === String(currentValue))) {
+                sel.value = currentValue;
+            }
         } else {
             console.warn('[Dashboard] Category load failed:', json.message || 'Unknown error');
             const opt = document.createElement('option');
@@ -1969,21 +1983,50 @@ window.changeUserRole = async function(userId, currentRole) {
 
 // Color palette (mirrors PHP ts_profile_color_palette())
 const PROFILE_COLORS = {
-    emerald: { label: 'Emerald', mid: '#00715D' },
-    ocean:   { label: 'Ocean',   mid: '#1d4ed8' },
-    sunset:  { label: 'Sunset',  mid: '#ea580c' },
-    rose:    { label: 'Rose',    mid: '#be185d' },
-    violet:  { label: 'Violet',  mid: '#7e22ce' },
-    slate:   { label: 'Slate',   mid: '#334155' },
-    teal:    { label: 'Teal',    mid: '#0d9488' },
-    amber:   { label: 'Amber',   mid: '#d97706' },
-    indigo:  { label: 'Indigo',  mid: '#4f46e5' },
-    pink:    { label: 'Pink',    mid: '#ec4899' },
-    lime:    { label: 'Lime',    mid: '#84cc16' },
-    cyan:    { label: 'Cyan',    mid: '#0891b2' },
+    emerald: { label: 'Emerald', from: '#003229', mid: '#00715D', to: '#009e7e' },
+    ocean:   { label: 'Ocean',   from: '#0b2a52', mid: '#1d4ed8', to: '#2563eb' },
+    sunset:  { label: 'Sunset',  from: '#7c2d12', mid: '#ea580c', to: '#f97316' },
+    rose:    { label: 'Rose',    from: '#881337', mid: '#be185d', to: '#e11d48' },
+    violet:  { label: 'Violet',  from: '#3b0764', mid: '#7e22ce', to: '#9333ea' },
+    slate:   { label: 'Slate',   from: '#1e293b', mid: '#334155', to: '#475569' },
+    teal:    { label: 'Teal',    from: '#134e4a', mid: '#0d9488', to: '#14b8a6' },
+    amber:   { label: 'Amber',   from: '#78350f', mid: '#d97706', to: '#f59e0b' },
+    indigo:  { label: 'Indigo',  from: '#312e81', mid: '#4f46e5', to: '#6366f1' },
+    pink:    { label: 'Pink',    from: '#831843', mid: '#ec4899', to: '#f472b6' },
+    lime:    { label: 'Lime',    from: '#365314', mid: '#84cc16', to: '#a3e635' },
+    cyan:    { label: 'Cyan',    from: '#082f49', mid: '#0891b2', to: '#06b6d4' },
 };
 
 let _selectedColor = 'emerald';
+
+function getAdminProfileTheme(key) {
+    return PROFILE_COLORS[key] || PROFILE_COLORS.emerald;
+}
+
+function applyAdminProfileColor(key) {
+    const theme = getAdminProfileTheme(key);
+    const body = document.body;
+    if (body) {
+        body.style.setProperty('--db-profile-from', theme.from);
+        body.style.setProperty('--db-profile-mid', theme.mid);
+        body.style.setProperty('--db-profile-to', theme.to);
+    }
+
+    const initialsAvatar = document.getElementById('profile-avatar-initials');
+    if (initialsAvatar) {
+        initialsAvatar.style.background = `linear-gradient(135deg, ${theme.from}, ${theme.to})`;
+    }
+
+    const sidebarAvatar = document.getElementById('db-sidebar-avatar');
+    if (sidebarAvatar) {
+        sidebarAvatar.style.background = `linear-gradient(135deg, ${theme.from}, ${theme.to})`;
+    }
+
+    const colorLabel = document.getElementById('admin-color-label');
+    if (colorLabel) {
+        colorLabel.textContent = theme.label;
+    }
+}
 
 function initColorGrid(selectedKey) {
     const grid = document.getElementById('profile-color-grid');
@@ -1997,6 +2040,7 @@ function initColorGrid(selectedKey) {
                     onclick="selectColorSwatch('${key}')"></button>`;
     }
     grid.innerHTML = html;
+    applyAdminProfileColor(_selectedColor);
 }
 
 window.selectColorSwatch = function(key) {
@@ -2004,6 +2048,7 @@ window.selectColorSwatch = function(key) {
     document.querySelectorAll('.db-color-swatch').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick') === `selectColorSwatch('${key}')`);
     });
+    applyAdminProfileColor(key);
 };
 
 window.loadAdminProfile = async function() {
@@ -2033,21 +2078,40 @@ window.loadAdminProfile = async function() {
         if (profilePublic) profilePublic.checked = !!parseInt(d.profile_public ?? 1);
 
         initColorGrid(d.profile_color || 'emerald');
+        applyAdminProfileColor(d.profile_color || 'emerald');
 
-        // Avatar — profile_picture is already a root-relative path starting with /TiranaSolidare/
-        const pic = d.profile_picture;
-        const imgEl = document.getElementById('profile-avatar-img');
-        const initEl = document.getElementById('profile-avatar-initials');
-        if (imgEl && initEl && pic) {
-            imgEl.src = pic;
-            imgEl.style.display = 'block';
-            initEl.style.display = 'none';
-            imgEl.onerror = () => { imgEl.style.display = 'none'; initEl.style.display = ''; };
-        }
+        setAdminProfileAvatar(d.profile_picture || '');
     } catch (e) {
         console.error('[loadAdminProfile]', e);
     }
 };
+
+function setAdminProfileAvatar(profilePicture) {
+    const imgEl = document.getElementById('profile-avatar-img');
+    const initEl = document.getElementById('profile-avatar-initials');
+    const deleteBtn = document.getElementById('profile-avatar-delete-btn');
+
+    if (!imgEl || !initEl) return;
+
+    if (profilePicture) {
+        imgEl.src = profilePicture;
+        imgEl.style.display = 'block';
+        initEl.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'flex';
+        imgEl.onerror = () => {
+            imgEl.removeAttribute('src');
+            imgEl.style.display = 'none';
+            initEl.style.display = '';
+            if (deleteBtn) deleteBtn.style.display = 'none';
+        };
+        return;
+    }
+
+    imgEl.removeAttribute('src');
+    imgEl.style.display = 'none';
+    initEl.style.display = '';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+}
 
 window.adminSaveName = async function() {
     const emri = (document.getElementById('admin-emri')?.value || '').trim();
@@ -2080,6 +2144,9 @@ window.adminSaveColor = async function() {
     const st = document.getElementById('admin-color-status');
     try {
         const json = await apiCall('users.php?action=update_profile', 'PUT', { profile_color: _selectedColor });
+        if (json.success) {
+            applyAdminProfileColor(_selectedColor);
+        }
         if (st) { st.style.color = json.success ? '#16a34a' : '#dc2626'; st.textContent = json.success ? 'Ngjyra u ruajt.' : (json.message || 'Gabim.'); }
     } catch (e) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; } }
 };
@@ -2108,7 +2175,7 @@ window.adminUploadPicture = async function(input) {
     if (st) { st.textContent = 'Duke ngarkuar…'; st.style.color = ''; }
 
     const formData = new FormData();
-    formData.append('profile_picture', input.files[0]);
+    formData.append('image', input.files[0]);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     try {
@@ -2122,13 +2189,7 @@ window.adminUploadPicture = async function(input) {
         if (json.success) {
             // API returns data.url — already a root-relative path starting with /TiranaSolidare/
             const path = json.data?.url;
-            const imgEl = document.getElementById('profile-avatar-img');
-            const initEl = document.getElementById('profile-avatar-initials');
-            if (imgEl && path) {
-                imgEl.src = path + '?t=' + Date.now();
-                imgEl.style.display = 'block';
-                if (initEl) initEl.style.display = 'none';
-            }
+            if (path) setAdminProfileAvatar(path + '?t=' + Date.now());
             if (st) { st.style.color = '#16a34a'; st.textContent = 'Foto u ngarkua me sukses!'; }
         } else {
             if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Ngarkimi dështoi.'; }
@@ -2137,6 +2198,30 @@ window.adminUploadPicture = async function(input) {
         if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti.'; }
     }
     input.value = '';
+};
+
+window.adminDeletePicture = async function() {
+    const st = document.getElementById('profile-avatar-status');
+    if (!confirm('Jeni i sigurt që doni të fshini foton e profilit?')) return;
+
+    try {
+        const json = await apiCall('users.php?action=delete_profile_picture', 'DELETE');
+        if (json.success) {
+            setAdminProfileAvatar('');
+            if (st) {
+                st.style.color = '#16a34a';
+                st.textContent = json.message || 'Fotoja u fshi.';
+            }
+        } else if (st) {
+            st.style.color = '#dc2626';
+            st.textContent = json.message || 'Gabim gjatë fshirjes së fotos.';
+        }
+    } catch (e) {
+        if (st) {
+            st.style.color = '#dc2626';
+            st.textContent = 'Gabim rrjeti.';
+        }
+    }
 };
 
 
@@ -2220,8 +2305,12 @@ window.loadCategories = async function() {
             const pal = _CAT_PALETTE[c.id_kategoria % _CAT_PALETTE.length];
             const ltr = escapeHtml((c.emri || '?')[0].toUpperCase());
             const cnt = parseInt(c.event_count) || 0;
+            const bannerPath = (c.banner_path || '').trim();
+            const mediaHtml = bannerPath
+                ? `<div class="db-cat-media"><img src="${escapeHtml(bannerPath)}" alt="${escapeHtml(c.emri || 'Kategori')}" loading="lazy"></div>`
+                : `<div class="db-cat-avatar" style="background:${pal.bg};color:${pal.text};">${ltr}</div>`;
             html += `<div class="db-cat-card" id="cat-card-${c.id_kategoria}">
-                <div class="db-cat-avatar" style="background:${pal.bg};color:${pal.text};">${ltr}</div>
+                ${mediaHtml}
                 <div class="db-cat-card__body">
                     <span class="db-cat-card__name" id="cat-name-${c.id_kategoria}">${escapeHtml(c.emri)}</span>
                     <span class="db-cat-card__count">${cnt} event${cnt === 1 ? '' : 'e'}</span>
@@ -2243,28 +2332,71 @@ window.loadCategories = async function() {
     }
 };
 
+function resetCategoryCreateForm() {
+    const nameInput = document.getElementById('new-category-name');
+    const bannerInput = document.getElementById('new-category-banner');
+    const bannerPreview = document.getElementById('cat-banner-preview');
+    const bannerFilename = document.getElementById('cat-banner-filename');
+    const status = document.getElementById('cat-create-status');
+
+    if (nameInput) nameInput.value = '';
+    if (bannerInput) bannerInput.value = '';
+    if (bannerPreview) {
+        bannerPreview.src = '';
+        bannerPreview.style.display = 'none';
+    }
+    if (bannerFilename) bannerFilename.textContent = '';
+    if (status) status.textContent = '';
+}
+
 window.toggleCategoryForm = function() {
     const form = document.getElementById('category-create-form');
     if (!form) return;
     const isHidden = form.style.display === 'none' || !form.style.display;
     form.style.display = isHidden ? 'block' : 'none';
     if (isHidden) {
+        resetCategoryCreateForm();
         const inp = document.getElementById('new-category-name');
-        if (inp) { inp.value = ''; inp.focus(); }
-        const st = document.getElementById('cat-create-status');
-        if (st) st.textContent = '';
+        if (inp) inp.focus();
+    } else {
+        resetCategoryCreateForm();
     }
 };
 
 window.createCategory = async function() {
     const emri = (document.getElementById('new-category-name')?.value || '').trim();
+    const bannerInput = document.getElementById('new-category-banner');
     const st = document.getElementById('cat-create-status');
     if (!emri) { if (st) { st.style.color = '#dc2626'; st.textContent = 'Shkruaj emrin.'; } return; }
     try {
-        const json = await apiCall('categories.php?action=create', 'POST', { emri });
+        let bannerPath = '';
+        if (bannerInput && bannerInput.files.length > 0) {
+            const uploadFd = new FormData();
+            uploadFd.append('image', bannerInput.files[0]);
+            const csrfToken = typeof getAdminCSRF === 'function'
+                ? getAdminCSRF()
+                : (document.querySelector('meta[name="csrf-token"]')?.content || '');
+            const upRes = await fetch('/TiranaSolidare/api/upload.php', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin',
+                body: uploadFd
+            });
+            const upJson = await upRes.json();
+            if (!upJson.success) {
+                if (st) { st.style.color = '#dc2626'; st.textContent = upJson.message || 'Gabim gjatë ngarkimit të bannerit.'; }
+                return;
+            }
+            bannerPath = upJson.data?.url || '';
+        }
+
+        const payload = { emri };
+        if (bannerPath) payload.banner_path = bannerPath;
+
+        const json = await apiCall('categories.php?action=create', 'POST', payload);
         if (json.success) {
             if (st) { st.style.color = '#16a34a'; st.textContent = 'Kategoria u krijua!'; }
-            setTimeout(() => { toggleCategoryForm(); loadCategories(); }, 800);
+            setTimeout(() => { toggleCategoryForm(); loadCategories(); loadCategoryDropdown(); }, 800);
         } else {
             if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Gabim.'; }
         }
@@ -2321,6 +2453,7 @@ window.renameCategory = async function(id, emri, fallbackName) {
                 const item = window._catList.find(c => c.id_kategoria == id);
                 if (item) item.emri = emri;
             }
+            loadCategoryDropdown();
         } else {
             const nameEl = document.getElementById(`cat-name-${id}`);
             if (nameEl) nameEl.textContent = fallbackName || emri;
@@ -2437,6 +2570,7 @@ window.executeCategoryDelete = async function() {
                 setTimeout(() => { card.remove(); }, 260);
             }
             if (window._catList) window._catList = window._catList.filter(c => c.id_kategoria != id);
+            loadCategoryDropdown();
             dbToast(json.message || 'Kategoria u fshi.', 'success');
         } else {
             dbToast(json.message || 'Gabim gjatë fshirjes.', 'danger');

@@ -312,11 +312,25 @@ function csv_safe(?string $v): string
     return preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
 }
 
+function csv_date(?string $value, bool $withTime = true): string
+{
+  if ($value === null || $value === '') return '';
+  $ts = strtotime($value);
+  if ($ts === false) return csv_safe($value);
+
+  $formatted = $withTime
+    ? date('d.m.Y H:i', $ts)
+    : date('d.m.Y', $ts);
+
+  // Force spreadsheets to keep the exact rendered value instead of reformatting it.
+  return "'" . $formatted;
+}
+
 if ($type === 'users') {
     fputcsv($output, ['ID', 'Emri', 'Email', 'Roli', 'Statusi', 'Regjistruar Me']);
     $stmt = $pdo->query("SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me FROM Perdoruesi ORDER BY krijuar_me DESC");
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_perdoruesi'], csv_safe($row['emri']), csv_safe($row['email']), $row['roli'], $row['statusi_llogarise'], $row['krijuar_me']]);
+    fputcsv($output, [$row['id_perdoruesi'], csv_safe($row['emri']), csv_safe($row['email']), $row['roli'], $row['statusi_llogarise'], csv_date($row['krijuar_me'])]);
     }
 }
 
@@ -330,7 +344,7 @@ if ($type === 'events') {
          ORDER BY e.data DESC"
     );
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_eventi'], csv_safe($row['titulli']), csv_safe($row['kategoria'] ?? '-'), $row['data'], csv_safe($row['vendndodhja']), $row['statusi'] ?? 'active', $row['krijuar_me']]);
+        fputcsv($output, [$row['id_eventi'], csv_safe($row['titulli']), csv_safe($row['kategoria'] ?? '-'), csv_date($row['data']), csv_safe($row['vendndodhja']), $row['statusi'] ?? 'active', csv_date($row['krijuar_me'])]);
     }
 }
 
@@ -344,7 +358,7 @@ if ($type === 'applications') {
          ORDER BY a.aplikuar_me DESC"
     );
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['id_aplikimi'], csv_safe($row['emri']), csv_safe($row['email']), csv_safe($row['eventi']), $row['statusi'], $row['aplikuar_me']]);
+        fputcsv($output, [$row['id_aplikimi'], csv_safe($row['emri']), csv_safe($row['email']), csv_safe($row['eventi']), $row['statusi'], csv_date($row['aplikuar_me'])]);
     }
 }
 

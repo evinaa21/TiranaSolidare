@@ -35,10 +35,10 @@ $totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 
 // Categories with event counts
 $kategorite = $pdo->query(
-    "SELECT k.id_kategoria, k.emri, COUNT(e.id_eventi) AS event_count
+  "SELECT k.id_kategoria, k.emri, k.banner_path, COUNT(e.id_eventi) AS event_count
      FROM Kategoria k
      LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND e.is_archived = 0
-     GROUP BY k.id_kategoria
+    GROUP BY k.id_kategoria, k.emri, k.banner_path
      ORDER BY event_count DESC"
 )->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -227,6 +227,9 @@ $kategorite = $pdo->query(
             'img' => 'https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=800',
             'desc' => 'Zbuloni më shumë rreth kësaj kategorie.'
           ];
+          if (!empty($kat['banner_path'])) {
+            $meta['img'] = $kat['banner_path'];
+          }
         ?>
         <a href="/TiranaSolidare/views/events.php?category=<?= $kat['id_kategoria'] ?>" class="kbtn-card kbtn-card-<?= $index ?> reveal reveal-scale">
           <div class="kbtn-img-wrap">
