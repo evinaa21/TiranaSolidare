@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once __DIR__ . '/../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -8,8 +8,8 @@ require_once __DIR__ . '/../includes/functions.php';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Politika e Privatësisë — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css?v=20260401a">
   <style>
     main { padding-top: 96px; }
     .privacy-container { max-width: 820px; margin: 0 auto; padding: 0 2rem 2rem; }
@@ -100,6 +100,6 @@ require_once __DIR__ . '/../includes/functions.php';
 </main>
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

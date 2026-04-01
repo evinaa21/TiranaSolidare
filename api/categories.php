@@ -118,16 +118,16 @@ switch ($action) {
             json_error('ID-ja e kategorisë është e pavlefshme.', 400);
         }
 
-        // Nullify events referencing this category
-        $pdo->prepare('UPDATE Eventi SET id_kategoria = NULL WHERE id_kategoria = ?')
-            ->execute([$id]);
-
-        $stmt = $pdo->prepare('DELETE FROM Kategoria WHERE id_kategoria = ?');
-        $stmt->execute([$id]);
-
-        if ($stmt->rowCount() === 0) {
+        // Verify existence before any side effects
+        $exists = $pdo->prepare('SELECT id_kategoria FROM Kategoria WHERE id_kategoria = ? LIMIT 1');
+        $exists->execute([$id]);
+        if (!$exists->fetch()) {
             json_error('Kategoria nuk u gjet.', 404);
         }
+
+        // Nullify events referencing this category then delete
+        $pdo->prepare('UPDATE Eventi SET id_kategoria = NULL WHERE id_kategoria = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM Kategoria WHERE id_kategoria = ?')->execute([$id]);
 
         json_success(['message' => 'Kategoria u fshi.']);
         break;

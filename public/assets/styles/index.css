@@ -596,9 +596,9 @@
 }
 
 .sf-card__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   display: -ms-grid;
   display: grid;
   place-items: center;
@@ -669,13 +669,13 @@
     padding: 26px 20px 22px;
   }
   .sf-card__icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
   }
   .sf-card__icon svg {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
   }
 }
 
@@ -928,8 +928,8 @@
 }
 
 .kbtn-dock-icon {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   border-radius: 14px;
   background: #f0f4f3;
   display: -ms-grid;
@@ -943,7 +943,7 @@
   transition: all 0.4s ease;
 }
 .kbtn-card-0 .kbtn-dock-icon {
-  width: 60px; height: 60px; border-radius: 16px;
+  width: 72px; height: 72px; border-radius: 18px;
 }
 
 .kbtn-card:hover .kbtn-dock-icon {
@@ -2994,14 +2994,14 @@
   }
 
   .sf-card__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
   }
 
   .sf-card__icon svg {
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
   }
 
   .sf-card__step {
@@ -3083,14 +3083,14 @@
   }
 
   .kbtn-dock-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
   }
 
   .kbtn-dock-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .kbtn-dock-text h3 {
@@ -3414,77 +3414,7 @@
   }
 }
 
-/* ── FOOTER ── */
-@media screen and (max-width: 700px) {
-  .footer {
-    padding: 44px 20px 32px;
-    background-size: 180px;
-    background-position: top 20px left 10%;
-  }
-
-  .footer-main {
-    -ms-grid-columns: 1fr;
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-
-  .footer-content {
-    -webkit-box-align: center;
-        -ms-flex-align: center;
-            align-items: center;
-    text-align: center;
-    gap: 12px;
-  }
-
-  .footer-content p {
-    font-size: 0.84rem;
-    max-width: 340px;
-    line-height: 1.6;
-  }
-
-  .footer-logo > span {
-    font-size: 1.15rem;
-  }
-
-  .footer-links {
-    display: -ms-grid !important;
-    display: grid !important;
-    -ms-grid-columns: 0.7fr 1.2fr;
-    grid-template-columns: 0.7fr 1.2fr;
-    gap: 16px 0;
-    width: 100%;
-  }
-
-  .footer-links ul {
-    -webkit-box-flex: unset;
-        -ms-flex: unset;
-            flex: unset;
-    padding: 10px 4px;
-    -webkit-box-align: start;
-        -ms-flex-align: start;
-            align-items: flex-start;
-  }
-
-  .footer-links ul:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .footer-links ul li:nth-child(1) {
-    font-size: 0.95rem;
-    margin-bottom: 6px;
-  }
-
-  .footer-links ul li a {
-    font-size: 0.78rem;
-  }
-
-  .footer-copy {
-    margin-top: 24px;
-    padding-top: 18px;
-    text-align: center;
-    font-size: 0.75rem;
-  }
-}
+/* ── FOOTER — rules moved to main.css for consistency across all pages ── */
 
 /* ── GLOBAL 700px ── */
 @media screen and (max-width: 700px) {

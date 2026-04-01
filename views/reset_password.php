@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once __DIR__ . '/../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $token = trim($_GET['token'] ?? '');
 $email = trim($_GET['email'] ?? '');
@@ -32,9 +32,9 @@ if ($token === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Krijo fjalëkalim të ri — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css?v=20260401a">
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -73,6 +73,6 @@ if ($token === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)
   </section>
 </main>
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

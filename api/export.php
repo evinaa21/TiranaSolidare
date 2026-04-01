@@ -176,7 +176,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 <header class="rh">
   <div class="rh__inner">
     <div class="rh__logo">
-      <div class="rh__ico">🤝</div>
+      <div class="rh__ico"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div>
       <div>
         <div class="rh__brand">Tirana Solidare</div>
         <div class="rh__sub">Bashkia Tiranës &mdash; Platforma e Vullnetarizmit</div>
@@ -197,11 +197,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 
   <p class="sh">Statistikat Kryesore</p>
   <div class="kpi-row">
-    <div class="kpi"><div class="kpi__ico" style="background:#e8faf6;">👥</div><div class="kpi__val" style="color:var(--pri);"><?= $totalUsers ?></div><div class="kpi__lbl">Vullnetarë Aktivë</div></div>
-    <div class="kpi"><div class="kpi__ico" style="background:#fef3c7;">📅</div><div class="kpi__val" style="color:#b45309;"><?= $totalEvents ?></div><div class="kpi__lbl">Evente Aktive</div></div>
-    <div class="kpi"><div class="kpi__ico" style="background:#dbeafe;">📋</div><div class="kpi__val" style="color:var(--blu);"><?= $totalApps ?></div><div class="kpi__lbl">Aplikime Totale</div></div>
-    <div class="kpi"><div class="kpi__ico" style="background:#dcfce7;">✅</div><div class="kpi__val" style="color:var(--grn);"><?= $approvedApps ?></div><div class="kpi__lbl">Pranuar</div><div class="kpi__sub"><?= $approvalRate ?>% normë</div></div>
-    <div class="kpi"><div class="kpi__ico" style="background:#fce7f3;">💬</div><div class="kpi__val" style="color:#db2777;"><?= $openRequests ?></div><div class="kpi__lbl">Kërkesa Hapura</div></div>
+    <div class="kpi"><div class="kpi__ico" style="background:#e8faf6;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="kpi__val" style="color:var(--pri);"><?= $totalUsers ?></div><div class="kpi__lbl">Vullnetarë Aktivë</div></div>
+    <div class="kpi"><div class="kpi__ico" style="background:#fef3c7;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div><div class="kpi__val" style="color:#b45309;"><?= $totalEvents ?></div><div class="kpi__lbl">Evente Aktive</div></div>
+    <div class="kpi"><div class="kpi__ico" style="background:#dbeafe;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blu)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></div><div class="kpi__val" style="color:var(--blu);"><?= $totalApps ?></div><div class="kpi__lbl">Aplikime Totale</div></div>
+    <div class="kpi"><div class="kpi__ico" style="background:#dcfce7;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div><div class="kpi__val" style="color:var(--grn);"><?= $approvedApps ?></div><div class="kpi__lbl">Pranuar</div><div class="kpi__sub"><?= $approvalRate ?>% normë</div></div>
+    <div class="kpi"><div class="kpi__ico" style="background:#fce7f3;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></div><div class="kpi__val" style="color:#db2777;"><?= $openRequests ?></div><div class="kpi__lbl">Kërkesa Hapura</div></div>
   </div>
 
   <div class="appr">
@@ -272,7 +272,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
       <tbody>
         <?php foreach ($topUsers as $i => $u): ?>
         <tr>
-          <td style="text-align:center;font-size:1.1rem;"><?php if($i===0):?>🥇<?php elseif($i===1):?>🥈<?php elseif($i===2):?>🥉<?php else:?><span style="font-size:0.77rem;color:var(--txm);font-weight:600;">#<?=$i+1?></span><?php endif;?></td>
+          <td style="text-align:center;"><?php if($i===0):?><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#ffd700;color:#78350f;font-size:0.72rem;font-weight:800;">#1</span><?php elseif($i===1):?><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#e2e8f0;color:#475569;font-size:0.72rem;font-weight:800;">#2</span><?php elseif($i===2):?><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#fed7aa;color:#9a3412;font-size:0.72rem;font-weight:800;">#3</span><?php else:?><span style="font-size:0.77rem;color:var(--txm);font-weight:600;">#<?=$i+1?></span><?php endif;?></td>
           <td><strong><?= $esc($u['emri']) ?></strong></td>
           <td><span class="bdg bg-g" style="font-size:0.68rem;"><?= $esc($u['roli']) ?></span></td>
           <td style="text-align:right;font-size:1.15rem;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums;"><?= (int)$u['app_count'] ?></td>
@@ -296,35 +296,6 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
     exit;
 }
 
-
-
-    $recentEvents = $pdo->query(
-        "SELECT e.titulli, k.emri AS kategoria, e.data, e.vendndodhja, e.statusi,
-                COUNT(a.id_aplikimi) AS total_aplikime
-         FROM Eventi e
-         LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-         LEFT JOIN Aplikimi a ON a.id_eventi = e.id_eventi
-         WHERE e.is_archived = 0
-         GROUP BY e.id_eventi
-         ORDER BY e.data DESC
-         LIMIT 10"
-    )->fetchAll(PDO::FETCH_ASSOC);
-
-    $topUsers = $pdo->query(
-        "SELECT p.emri, p.roli, COUNT(a.id_aplikimi) AS app_count
-         FROM Perdoruesi p
-         JOIN Aplikimi a ON a.id_perdoruesi = p.id_perdoruesi AND a.statusi = 'approved'
-         GROUP BY p.id_perdoruesi
-         ORDER BY app_count DESC
-         LIMIT 5"
-    )->fetchAll(PDO::FETCH_ASSOC);
-
-    $generatedAt = date('d.m.Y H:i');
-    $esc = fn (?string $v): string => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-    header('Content-Type: text/html; charset=utf-8');
-    header('Content-Disposition: inline; filename=report_' . date('Y-m-d') . '.html');
-    ?>
 // CSV EXPORTS
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename=' . $type . '_' . date('Y-m-d') . '.csv');

@@ -168,21 +168,22 @@ switch ($action) {
             json_error('Nuk mund të aplikoni për një event që ka kaluar.', 422);
         }
 
-        // Check for duplicate application
-        $dup = $pdo->prepare(
-            'SELECT id_aplikimi FROM Aplikimi WHERE id_perdoruesi = ? AND id_eventi = ?'
-        );
-        $dup->execute([$user['id'], $eventId]);
-
-        if ($dup->fetch()) {
-            json_error('Ju keni aplikuar tashmë për këtë event.', 409);
-        }
-
-        // Determine waitlist status and insert atomically — prevents duplicate waitlist flags
-        // under concurrent requests from many users applying at the same time.
+        // Determine waitlist status and insert atomically — prevents duplicate applications
+        // and duplicate waitlist flags under concurrent requests.
         $waitlisted = 0;
         try {
             $pdo->beginTransaction();
+
+            // Duplicate check inside transaction with FOR UPDATE to prevent race condition
+            // where two simultaneous requests from the same user both pass the check.
+            $dup = $pdo->prepare(
+                'SELECT id_aplikimi FROM Aplikimi WHERE id_perdoruesi = ? AND id_eventi = ? FOR UPDATE'
+            );
+            $dup->execute([$user['id'], $eventId]);
+            if ($dup->fetch()) {
+                $pdo->rollBack();
+                json_error('Ju keni aplikuar tashmë për këtë event.', 409);
+            }
 
             if ($event['kapaciteti'] !== null && (int) $event['kapaciteti'] > 0) {
                 // Lock approved rows for this event so no other transaction can sneak an INSERT

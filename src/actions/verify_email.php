@@ -14,38 +14,35 @@ if ($token === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)
 $tokenHash = hash('sha256', $token);
 
 try {
-    $stmt = $pdo->prepare(
-        'SELECT id_perdoruesi, verified, verification_token_expires
-         FROM Perdoruesi
-         WHERE email = ? AND verification_token_hash = ?
-         LIMIT 1'
-    );
-    $stmt->execute([$email, $tokenHash]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$user) {
-        header('Location: /TiranaSolidare/views/login.php?error=invalid_verification_link');
-        exit();
-    }
-
-    if ((int) ($user['verified'] ?? 0) === 1) {
-        header('Location: /TiranaSolidare/views/login.php?success=email_already_verified');
-        exit();
-    }
-
-    if (empty($user['verification_token_expires']) || strtotime($user['verification_token_expires']) < time()) {
-        header('Location: /TiranaSolidare/views/login.php?error=verification_expired');
-        exit();
-    }
-
+    // Atomically consume the token in a single query — prevents TOCTOU race conditions where
+    // two concurrent requests with the same token could both SELECT before either UPDATEs.
     $update = $pdo->prepare(
         'UPDATE Perdoruesi
          SET verified = 1,
              verification_token_hash = NULL,
              verification_token_expires = NULL
-         WHERE id_perdoruesi = ?'
+         WHERE email = ?
+           AND verification_token_hash = ?
+           AND verified = 0
+           AND verification_token_expires > NOW()'
     );
-    $update->execute([(int) $user['id_perdoruesi']]);
+    $update->execute([$email, $tokenHash]);
+
+    if ($update->rowCount() === 0) {
+        // Could be: wrong token, already verified, or expired — distinguish for UX
+        $check = $pdo->prepare('SELECT verified, verification_token_expires FROM Perdoruesi WHERE email = ? LIMIT 1');
+        $check->execute([$email]);
+        $row = $check->fetch(PDO::FETCH_ASSOC);
+
+        if ($row && (int) ($row['verified'] ?? 0) === 1) {
+            header('Location: /TiranaSolidare/views/login.php?success=email_already_verified');
+        } elseif ($row && !empty($row['verification_token_expires']) && strtotime($row['verification_token_expires']) < time()) {
+            header('Location: /TiranaSolidare/views/login.php?error=verification_expired');
+        } else {
+            header('Location: /TiranaSolidare/views/login.php?error=invalid_verification_link');
+        }
+        exit();
+    }
 
     header('Location: /TiranaSolidare/views/login.php?success=email_verified');
     exit();

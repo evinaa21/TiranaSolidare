@@ -228,7 +228,7 @@ case 'monthly':
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
-        $validReportTypes = ['Përmbledhje Mujore', 'Vullnetarë Aktivë'];
+        $validReportTypes = ['Përmbledhje Mujore', 'Vullnetarë Aktivë', 'Analiza e Eventeve'];
         if (!in_array($tipiRaportit, $validReportTypes, true)) {
             json_error('Tipi i raportit nuk është i vlefshëm. Zgjidhni: ' . implode(', ', $validReportTypes), 422);
         }
@@ -259,6 +259,25 @@ case 'monthly':
                     "SELECT COUNT(DISTINCT id_perdoruesi) FROM Aplikimi WHERE statusi = 'approved'"
                 )->fetchColumn();
                 $content = "Vullnetarë aktivë (me të paktën 1 aplikim të pranuar): $activeVols";
+                break;
+
+            case 'Analiza e Eventeve':
+                $totalEvents    = $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
+                $activeEvents   = $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0 AND statusi = 'active'")->fetchColumn();
+                $completedEvs   = $pdo->query("SELECT COUNT(*) FROM Eventi WHERE statusi = 'completed'")->fetchColumn();
+                $cancelledEvs   = $pdo->query("SELECT COUNT(*) FROM Eventi WHERE statusi = 'cancelled'")->fetchColumn();
+                $totalApps      = $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
+                $approvedApps   = $pdo->query("SELECT COUNT(*) FROM Aplikimi WHERE statusi = 'approved'")->fetchColumn();
+                $avgAppsPerEv   = $totalEvents > 0 ? round((int)$totalApps / (int)$totalEvents, 1) : 0;
+
+                $content = "Analiza e Eventeve\n"
+                    . "Evente aktive: {$activeEvents}\n"
+                    . "Evente të përfunduara: {$completedEvs}\n"
+                    . "Evente të anuluara: {$cancelledEvs}\n"
+                    . "Total eventeve (pa arkivuar): {$totalEvents}\n"
+                    . "Total aplikimeve: {$totalApps}\n"
+                    . "Aplikime të pranuara: {$approvedApps}\n"
+                    . "Mesatare aplikimesh / event: {$avgAppsPerEv}";
                 break;
 
             default:

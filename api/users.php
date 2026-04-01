@@ -163,7 +163,7 @@ $params[] = $user['id'];
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        $sql = "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me, deaktivizuar_me
+        $sql = "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, verified, krijuar_me, deaktivizuar_me
                 FROM Perdoruesi $whereSQL
                 ORDER BY krijuar_me DESC
                 LIMIT ? OFFSET ?";
@@ -195,7 +195,7 @@ $params[] = $user['id'];
         }
 
         $stmt = $pdo->prepare(
-            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me, deaktivizuar_me
+            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, verified, krijuar_me, deaktivizuar_me
              FROM Perdoruesi WHERE id_perdoruesi = ?"
         );
         $stmt->execute([$id]);

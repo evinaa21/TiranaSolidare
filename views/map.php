@@ -1,9 +1,9 @@
 <?php
 // views/map.php — Interactive overview map showing all events & help requests
-session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
 
@@ -13,7 +13,7 @@ $stmtEvents = $pdo->query(
             k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND e.is_archived = 0
+     WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND e.is_archived = 0 AND e.statusi != 'cancelled'
      ORDER BY e.data DESC"
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
@@ -70,10 +70,10 @@ foreach ($requests as $req) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Harta — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260401a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
 </head>
 <body>
 <?php include __DIR__ . '/../public/components/header.php'; ?>
@@ -135,12 +135,12 @@ foreach ($requests as $req) {
   <button class="map-filter-btn" data-filter="request" onclick="filterMarkers('request', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
     Kërkoj Ndihmë
-    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'request')) ?></span>
+    <span class="filter-count"><?= $totalOpenRequests ?></span>
   </button>
   <button class="map-filter-btn" data-filter="offer" onclick="filterMarkers('offer', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
     Ofroj Ndihmë
-    <span class="filter-count"><?= count(array_filter($requests, fn($r) => $r['tipi'] === 'offer')) ?></span>
+    <span class="filter-count"><?= $totalOpenOffers ?></span>
   </button>
 </div>
 
@@ -182,7 +182,7 @@ foreach ($requests as $req) {
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/TiranaSolidare/assets/js/map-component.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js?v=20260401a"></script>
 <script>
 const allMarkers = <?= json_encode($markers, JSON_UNESCAPED_UNICODE) ?>;
 let currentMap = null;
@@ -245,6 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initMap(allMarkers);
 });
 </script>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

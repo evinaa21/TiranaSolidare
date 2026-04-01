@@ -94,6 +94,11 @@ switch ($action) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
         }
 
+        // Privacy consent required (mirrors form-based register)
+        if (empty($body['privacy_consent'])) {
+            json_error('Duhet të pranoni Politikën e Privatësisë për të vazhduar.', 422);
+        }
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             json_error('Formati i email-it nuk është i vlefshëm.', 422);
         }

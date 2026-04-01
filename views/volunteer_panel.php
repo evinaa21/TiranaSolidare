@@ -1,14 +1,9 @@
 <?php
 // views/volunteer_panel.php — Volunteer Personal Panel (public-style layout)
-session_start();
-require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/status_labels.php';
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /TiranaSolidare/views/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
-    exit();
-}
+check_login();
 
 // If admin or super_admin, redirect to admin dashboard
 if (in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
@@ -102,13 +97,13 @@ $badgeIcons = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Paneli im — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260321a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/auth.css?v=20260401a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/volunteer-panel.css?v=20260322a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css?v=20260401a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
   <?= csrf_meta() ?>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -118,12 +113,7 @@ $badgeIcons = [
 <main>
 
 <!-- ─── HERO ─── -->
-<section class="page-hero page-hero--green vp-hero" style="--vp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --vp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --vp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;">
-  <div class="vp-hero__decor">
-    <div class="vp-hero__circle vp-hero__circle--1"></div>
-    <div class="vp-hero__circle vp-hero__circle--2"></div>
-    <div class="vp-hero__circle vp-hero__circle--3"></div>
-  </div>
+<section class="vp-hero" style="--vp-accent: <?= htmlspecialchars($profileColorTheme['from']) ?>;">
   <div class="vp-hero__inner">
     <?php if (!empty($user['profile_picture'])): ?>
       <img src="<?= htmlspecialchars($user['profile_picture']) ?>" alt="<?= $userEmri ?>" class="vp-hero__avatar vp-hero__avatar--img">
@@ -131,18 +121,31 @@ $badgeIcons = [
       <div class="vp-hero__avatar vp-hero__avatar--letter"><?= $userInitial ?></div>
     <?php endif; ?>
     <div class="vp-hero__text">
-      <span class="page-badge">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <?= $userRoli ?>
+      <h2 class="vp-hero__name"><?= htmlspecialchars($userEmri) ?></h2>
+      <span class="vp-hero__role-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        <?= htmlspecialchars($userRoli) ?>
       </span>
-      <h1>Mirë se vini, <?= $userEmri ?>!</h1>
-      <p>Menaxhoni profilin, aplikimet dhe kërkesat tuaja nga paneli personal.</p>
+      <?php if (!empty($user['email'])): ?>
+        <p class="vp-hero__email"><?= htmlspecialchars($user['email']) ?></p>
+      <?php endif; ?>
+    </div>
+    <div class="vp-hero__stats-inline">
+      <div class="vp-hi-stat">
+        <strong><?= $totalApps ?></strong><span>Aplikime</span>
+      </div>
+      <div class="vp-hi-stat">
+        <strong><?= $acceptedApps ?></strong><span>Pranuar</span>
+      </div>
+      <div class="vp-hi-stat">
+        <strong><?= $totalRequests ?></strong><span>Kërkesa</span>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ─── STATS BAR ─── -->
-<section class="vp-stats-section">
+<!-- ─── STATS BAR (mobile-only fallback, hidden on desktop since inline in hero) ─── -->
+<section class="vp-stats-section vp-stats-section--mobile">
   <div class="vp-stats">
     <div class="vp-stat">
       <strong><?= $totalApps ?></strong>
@@ -1235,8 +1238,8 @@ async function initPushSubscription() {
 }
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/TiranaSolidare/assets/js/map-component.js"></script>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js?v=20260401a"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 <script>
 // Initialize map picker for help request form
 document.addEventListener('DOMContentLoaded', function() {

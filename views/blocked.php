@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once __DIR__ . '/../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -10,10 +10,10 @@ require_once __DIR__ . '/../includes/functions.php';
   <title>Pse jam bllokuar? - Tirana Solidare</title>
 
   <!-- Main styles -->
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
 
   <!-- Blog styles -->
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/blog-post.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/blog-post.css?v=20260401a">
 </head>
 
 <body>
@@ -53,7 +53,7 @@ require_once __DIR__ . '/../includes/functions.php';
     <ol>
       <li>
         Dërgoni email në 
-        <a href="mailto:team@tiranasolidare.al">team@tiranasolidare.al</a>.
+        <a href="mailto:info@tiranasolidare.al">info@tiranasolidare.al</a>.
       </li>
       <li>
         Shpjegoni shkurt pse mendoni se bllokimi është gabim ose si do të përmirësoni sjelljen.
@@ -73,7 +73,7 @@ require_once __DIR__ . '/../includes/functions.php';
 
     <!-- Actions -->
     <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 20px;">
-      <a href="mailto:team@tiranasolidare.al" class="btn_secondary">
+      <a href="mailto:info@tiranasolidare.al" class="btn_secondary">
         Kontakto ekipin
       </a>
     </div>

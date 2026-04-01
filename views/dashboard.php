@@ -1,12 +1,7 @@
 ﻿<?php
 // views/dashboard.php — Admin Panel (Admin only)
-require_once __DIR__ . '/../includes/functions.php'; // must come first — sets ini_set() cookie params before session_start()
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /TiranaSolidare/views/login.php");
-    exit();
-}
+require_once __DIR__ . '/../includes/functions.php';
+check_login();
 
 // Redirect volunteers to their own panel
 if (!in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
@@ -96,15 +91,19 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     <?php endif; ?>
 
     <button class="db-nav-item" data-panel="messages" onclick="switchPanel('messages', this)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+      <span class="db-nav-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+        <span class="db-nav-badge" id="msg-badge" style="display:none"></span>
+      </span>
       <span>Mesazhet</span>
-      <span class="db-nav-badge" id="msg-badge" style="display:none"></span>
     </button>
 
     <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="db-nav-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
+      </span>
       <span>Njoftimet</span>
-      <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
     </button>
 
     <button class="db-nav-item" data-panel="profile" onclick="switchPanel('profile', this)">
@@ -189,11 +188,6 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
             <label>Titulli</label>
             <input type="text" name="titulli" required placeholder="Emri i eventit">
           </div>
-          <div class="db-form__group" style="position:relative;">
-            <label>Vendndodhja</label>
-            <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="Shkruaj vendndodhjen&hellip;" autocomplete="off">
-            <div id="event-location-suggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:9999;display:none;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
-          </div>
           <div class="db-form__group">
             <label>Data</label>
             <input type="datetime-local" name="data" required>
@@ -204,6 +198,19 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
               <option value="">Pa kategori</option>
             </select>
           </div>
+          <div class="db-form__group">
+            <label>Kapaciteti (opsional)</label>
+            <input type="number" name="kapaciteti" min="1" placeholder="p.sh. 30">
+          </div>
+        </div>
+        <!-- Location search row — prominent above the map -->
+        <div class="db-form__group" style="position:relative;">
+          <label style="display:flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            Vendndodhja — shkruaj adresën dhe zgjidhni nga sugjerimet
+          </label>
+          <input type="text" name="vendndodhja" id="event-vendndodhja" required placeholder="p.sh. Bulevardi Dëshmorët e Kombit, Tiranë" autocomplete="off" style="font-size:0.95rem;padding:10px 14px;">
+          <div id="event-location-suggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;display:none;max-height:240px;overflow-y:auto;margin-top:2px;"></div>
         </div>
         <div class="db-form__group">
           <label>Përshkrimi</label>
@@ -223,7 +230,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         </div>
         <div class="db-form__group">
           <div class="ts-map-wrapper">
-            <label>Vendndodhja në hartë (opsionale)</label>
+            <label>Pozicioni në hartë (opsionale — klikoni për të vendosur pin)</label>
             <div id="event-map-picker" class="ts-map-picker"></div>
             <input type="hidden" name="latitude" id="event-lat-input">
             <input type="hidden" name="longitude" id="event-lng-input">
@@ -324,7 +331,7 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
     </div>
 
     <!-- KPI strip (filled by JS) -->
-    <div id="reports-kpi-strip"></div>
+    <div id="reports-kpi-strip" class="reports-kpi-strip"></div>
 
     <!-- Charts grid -->
     <div class="reports-grid" id="reports-charts">
@@ -357,15 +364,15 @@ $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
         </div>
         <div class="rpt-gen-modal__body">
           <button class="rpt-type-btn" onclick="submitGenerateReport('Përmbledhje Mujore')">
-            <div class="rpt-type-btn__icon" style="background:#e8faf6;">📊</div>
+            <div class="rpt-type-btn__icon" style="background:#e8faf6;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00715D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg></div>
             <div><div class="rpt-type-btn__label">Përmbledhje Mujore</div><div class="rpt-type-btn__desc">Statistika të aplikimeve dhe eventeve të muajit</div></div>
           </button>
           <button class="rpt-type-btn" onclick="submitGenerateReport('Vullnetarë Aktivë')">
-            <div class="rpt-type-btn__icon" style="background:#fef3c7;">👥</div>
+            <div class="rpt-type-btn__icon" style="background:#fef3c7;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div><div class="rpt-type-btn__label">Vullnetarë Aktivë</div><div class="rpt-type-btn__desc">Lista e vullnetarëve me aplikime të pranuara</div></div>
           </button>
           <button class="rpt-type-btn" onclick="submitGenerateReport('Analiza e Eventeve')">
-            <div class="rpt-type-btn__icon" style="background:#dbeafe;">📅</div>
+            <div class="rpt-type-btn__icon" style="background:#dbeafe;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg></div>
             <div><div class="rpt-type-btn__label">Analiza e Eventeve</div><div class="rpt-type-btn__desc">Performanca dhe statistikat e eventeve</div></div>
           </button>
         </div>
@@ -695,6 +702,11 @@ document.addEventListener('DOMContentLoaded', function() {
       window.selectEventLocation = function(lat, lng, label) {
         vendInput.value = label;
         hideSuggestions();
+        // Always fill hidden inputs regardless of map state
+        const latIn = document.getElementById('event-lat-input');
+        const lngIn = document.getElementById('event-lng-input');
+        if (latIn) latIn.value = lat;
+        if (lngIn) lngIn.value = lng;
         if (!eventMapPicker) return;
         eventMapPicker.setPosition(lat, lng);
         const coordDisplay = document.getElementById('event-coord-display');
@@ -703,11 +715,6 @@ document.addEventListener('DOMContentLoaded', function() {
           coordDisplay.style.display = 'flex';
           coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
         }
-        // Fill hidden lat/lng inputs
-        const latIn = document.getElementById('event-lat-input');
-        const lngIn = document.getElementById('event-lng-input');
-        if (latIn) latIn.value = lat;
-        if (lngIn) lngIn.value = lng;
       };
 
       vendInput._skipNextGeocode = () => {}; // kept for API compat

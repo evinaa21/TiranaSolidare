@@ -1,8 +1,8 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $isAdmin = ($isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true));
@@ -144,10 +144,10 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321a">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css">
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
   <?= csrf_meta() ?>
 </head>
 <body class="page-requests">
@@ -638,7 +638,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/TiranaSolidare/assets/js/map-component.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js?v=20260401a"></script>
 <script>
 const API = '/TiranaSolidare/api';
 function getCSRF() { return document.querySelector('meta[name="csrf-token"]')?.content || ''; }
@@ -992,6 +992,6 @@ if (deleteBtn) {
 })();
 
 </script>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

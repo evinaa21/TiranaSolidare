@@ -33,6 +33,19 @@
     </div>
   </div>
   <div class="footer-copy">
-    <span>Copyright © <?= date('Y') ?> Tirana Solidare. Të drejtat e rezervuara</span>
+    <div class="footer-partners">
+      <div class="footer-partners__logos">
+        <img src="/TiranaSolidare/public/assets/images/bashkia.png?v=<?= @filemtime(__DIR__ . '/../assets/images/bashkia.png') ?: time() ?>"
+             alt="Bashkia Tiranë"
+             class="footer-partner-logo footer-partner-logo--bashkia"
+             onerror="this.style.display='none'">
+        <span class="footer-partners__divider"></span>
+        <img src="/TiranaSolidare/public/assets/images/webchallenge.png?v=<?= @filemtime(__DIR__ . '/../assets/images/webchallenge.png') ?: time() ?>"
+             alt="Web Challenge"
+             class="footer-partner-logo footer-partner-logo--webchallenge"
+             onerror="this.style.display='none'">
+      </div>
+    </div>
+    <span>Copyright &copy; <?= date('Y') ?> Tirana Solidare. Të drejtat e rezervuara</span>
   </div>
 </footer>

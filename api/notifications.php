@@ -138,8 +138,8 @@ switch ($action) {
         $roli  = trim($body['roli'] ?? 'all');    // 'all' | 'volunteer' | 'admin'
         $linku = !empty($body['linku']) ? trim($body['linku']) : null;
 
-        // Validate link to prevent stored XSS via javascript: or data: URIs
-        if ($linku !== null && !str_starts_with($linku, '/TiranaSolidare/')) {
+        // Validate link to prevent stored XSS via javascript:/data: URIs and path traversal
+        if ($linku !== null && (!str_starts_with($linku, '/TiranaSolidare/') || str_contains($linku, '..'))) {
             json_error('Linku duhet të jetë relativ dhe të fillojë me /TiranaSolidare/.', 422);
         }
 

@@ -1,0 +1,31 @@
+{
+  "name": "tiranasolidare",
+  "version": "1.0.0",
+  "description": "![Project Status](https://img.shields.io/badge/status-in%20development-orange)\r ![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue)\r ![License](https://img.shields.io/badge/license-MIT-green)",
+  "main": "sw.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report tests/e2e/reports"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evinaa21/TiranaSolidare.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/evinaa21/TiranaSolidare/issues"
+  },
+  "homepage": "https://github.com/evinaa21/TiranaSolidare#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

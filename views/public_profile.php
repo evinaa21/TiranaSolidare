@@ -1,8 +1,8 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $publicHandle = trim((string) ($_GET['u'] ?? ''));
 $userId = ts_parse_public_profile_id($publicHandle);
@@ -106,9 +106,9 @@ $profileColorTheme = $colorResolved['theme'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($profile['emri']) ?> — Tirana Solidare</title>
     <link rel="canonical" href="<?= htmlspecialchars($canonicalProfileUrl) ?>">
-    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
-    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css">
-    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css">
+    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
+    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/pages.css?v=20260401a">
+    <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260401a">
     <style>
         .pp-shell { max-width: 1180px; margin: 96px auto 60px; padding: 0 24px; }
         .pp-card { background: transparent; border-radius: 0; box-shadow: none; overflow: visible; }
@@ -564,6 +564,6 @@ $profileColorTheme = $colorResolved['theme'];
 </main>
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

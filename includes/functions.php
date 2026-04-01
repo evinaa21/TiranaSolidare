@@ -16,6 +16,15 @@ if (session_status() === PHP_SESSION_NONE) {
     if ($isHttps) {
         ini_set('session.cookie_secure', '1');
     }
+    // Ensure all sessions use the same cookie path to prevent stale cookie conflicts
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/TiranaSolidare/',
+        'domain'   => '',
+        'secure'   => $isHttps,
+        'httponly'  => true,
+        'samesite' => 'Lax',
+    ]);
 }
 
 /**
@@ -771,6 +780,10 @@ function check_profanity(string ...$texts): ?string
 function validate_image_url(?string $url): bool
 {
     if (empty($url)) return true; // Optional field
+    // Allow internal upload paths (relative paths starting with our app prefix)
+    if (strncmp($url, '/TiranaSolidare/', 16) === 0) {
+        return true;
+    }
     if (!preg_match('#^https://#i', $url)) {
         return false;
     }

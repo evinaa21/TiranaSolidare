@@ -1009,21 +1009,95 @@ body {
 
 /* Mobile footer polish */
 @media screen and (max-width: 700px) {
+  .footer {
+    padding: 44px 20px 32px;
+    background-size: 180px;
+    background-position: top 20px left 10%;
+  }
+
   .footer-main {
     -ms-grid-columns: 1fr;
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 28px;
   }
-  
+
+  .footer-content {
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .footer-content p {
+    font-size: 0.84rem;
+    max-width: 340px;
+    line-height: 1.6;
+  }
+
+  .footer-logo > span {
+    font-size: 1.15rem;
+  }
+
   .footer-links {
-    -webkit-box-pack: start;
-        -ms-flex-pack: start;
-            justify-content: flex-start;
-    gap: 30px;
+    display: -ms-grid !important;
+    display: grid !important;
+    -ms-grid-columns: 0.7fr 1.2fr;
+    grid-template-columns: 0.7fr 1.2fr;
+    gap: 16px 0;
+    width: 100%;
   }
-  
-  .footer {
-    padding: 60px clamp(16px, 5%, 5%);
+
+  .footer-links ul {
+    -webkit-box-flex: unset;
+        -ms-flex: unset;
+            flex: unset;
+    padding: 10px 4px;
+    -webkit-box-align: start;
+        -ms-flex-align: start;
+            align-items: flex-start;
+  }
+
+  .footer-links ul:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .footer-links ul li:nth-child(1) {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .footer-links ul li a {
+    font-size: 0.78rem;
+  }
+
+  .footer-copy {
+    margin-top: 24px;
+    padding-top: 18px;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+
+  .footer-partners__logos {
+    padding: 10px 20px;
+    gap: 16px;
+    border-radius: 12px;
+  }
+
+  .footer-partner-logo {
+    height: 46px;
+  }
+
+  .footer-partner-logo--bashkia {
+    height: 50px;
+  }
+
+  .footer-partner-logo--webchallenge {
+    height: 40px;
+  }
+
+  .footer-partners__divider {
+    height: 30px;
   }
 }
 
@@ -1154,8 +1228,59 @@ body {
 .footer-copy{
   margin-top: 50px;
   border-top: 1px solid #fff5;
-  padding-top: 50px;
-  color: #fff8
+  padding-top: 30px;
+  color: #fff8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+/* ─── Partner logos strip ──────────────────────────── */
+.footer-partners {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-partners__logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(255,255,255,0.92);
+  padding: 14px 32px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.footer-partners__divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+
+.footer-partner-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s;
+}
+
+.footer-partner-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Bashkia Tiranë */
+.footer-partner-logo--bashkia {
+  height: 66px;
+}
+
+/* Web Challenge */
+.footer-partner-logo--webchallenge {
+  height: 54px;
 }
 
 

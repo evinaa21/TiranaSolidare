@@ -144,7 +144,7 @@ switch ($action) {
         $pershkrimi   = $body['pershkrimi'] ?? '';
         $data_eventi  = required_field($body, 'data', $errors);
         $vendndodhja  = required_field($body, 'vendndodhja', $errors);
-        $id_kategoria = isset($body['id_kategoria']) ? (int) $body['id_kategoria'] : null;
+        $id_kategoria = isset($body['id_kategoria']) && $body['id_kategoria'] !== '' ? (int) $body['id_kategoria'] : null;
         $banner       = $body['banner'] ?? null;
         $latitude     = isset($body['latitude']) ? (float) $body['latitude'] : null;
         $longitude    = isset($body['longitude']) ? (float) $body['longitude'] : null;

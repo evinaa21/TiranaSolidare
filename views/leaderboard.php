@@ -1,7 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
 
@@ -65,7 +65,7 @@ $badgeIconMap = [
   <title>Renditja e Vullnetarëve — Tirana Solidare</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <style>
     .lb-page { min-height: 100vh; background: linear-gradient(160deg, #f4f8f6 0%, #e8f0ec 50%, #f0f5f3 100%); }
     .lb-container { max-width: 800px; margin: 0 auto; padding: 40px 20px 80px; }
@@ -87,7 +87,10 @@ $badgeIconMap = [
     .lb-podium__item--3 .lb-podium__rank { background: linear-gradient(135deg, #CD7F32, #a0522d); }
     .lb-podium__avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; color: #fff; margin: 0 auto 12px; }
     .lb-podium__item--1 .lb-podium__avatar { width: 68px; height: 68px; font-size: 1.5rem; }
-    .lb-podium__name { font-family: 'Bitter', serif; font-weight: 600; color: #003229; font-size: 0.95rem; margin-bottom: 4px; }
+    .lb-podium__name { font-family: 'Bitter', serif; font-weight: 600; color: #003229; font-size: 0.95rem; margin-bottom: 4px; text-decoration: none; display: block; }
+    .lb-podium__name:hover { color: #00715D; text-decoration: underline; }
+    .lb-podium__avatar-link { display: block; text-decoration: none; }
+    .lb-podium__avatar-link:hover .lb-podium__avatar { outline: 3px solid rgba(0,113,93,0.5); outline-offset: 2px; }
     .lb-podium__score { font-family: 'Raleway', sans-serif; font-size: 1.3rem; font-weight: 700; color: #00715D; }
     .lb-podium__score small { font-size: 0.7rem; font-weight: 500; color: #64748b; }
     .lb-podium__badges { display: flex; justify-content: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
@@ -96,6 +99,10 @@ $badgeIconMap = [
     .lb-list { display: flex; flex-direction: column; gap: 10px; }
     .lb-row { display: flex; align-items: center; gap: 16px; background: #fff; border-radius: 14px; padding: 16px 20px; border: 1px solid #e8ede9; box-shadow: 0 2px 10px rgba(0,44,37,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .lb-row:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,44,37,0.08); }
+    /* When the whole row is a link */
+    a.lb-row { text-decoration: none; cursor: pointer; }
+    a.lb-row .lb-row__name { color: #003229; }
+    a.lb-row:hover .lb-row__name { color: #00715D; text-decoration: underline; }
     .lb-row__rank { font-family: 'Bitter', serif; font-weight: 700; color: #94a3b8; font-size: 1.1rem; min-width: 32px; text-align: center; }
     .lb-row__avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 1rem; flex-shrink: 0; }
     .lb-row__info { flex: 1; min-width: 0; }
@@ -147,10 +154,12 @@ $badgeIconMap = [
       ?>
       <div class="lb-podium__item lb-podium__item--<?= $pos ?>">
         <div class="lb-podium__rank"><?= $pos ?></div>
-        <div class="lb-podium__avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($colorResolved['theme']['from']) ?>, <?= htmlspecialchars($colorResolved['theme']['to']) ?>);">
-          <?= htmlspecialchars($initial) ?>
-        </div>
-        <div class="lb-podium__name"><?= htmlspecialchars($v['emri']) ?></div>
+        <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-podium__avatar-link" title="Shiko profilin e <?= htmlspecialchars($v['emri']) ?>">
+          <div class="lb-podium__avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($colorResolved['theme']['from']) ?>, <?= htmlspecialchars($colorResolved['theme']['to']) ?>);">
+            <?= htmlspecialchars($initial) ?>
+          </div>
+        </a>
+        <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-podium__name"><?= htmlspecialchars($v['emri']) ?></a>
         <div class="lb-podium__score"><?= (int) $v['score'] ?> <small>pikë</small></div>
         <?php if (!empty($userBadges)): ?>
         <div class="lb-podium__badges">
@@ -174,7 +183,7 @@ $badgeIconMap = [
         $initial = mb_strtoupper(mb_substr($v['emri'] ?? 'V', 0, 1));
         $userBadges = $badgeMap[$v['id_perdoruesi']] ?? [];
       ?>
-      <div class="lb-row">
+      <a href="/TiranaSolidare/views/public_profile.php?id=<?= (int)$v['id_perdoruesi'] ?>" class="lb-row lb-row--link">
         <div class="lb-row__rank"><?= $pos ?></div>
         <div class="lb-row__avatar" style="background: linear-gradient(135deg, <?= htmlspecialchars($colorResolved['theme']['from']) ?>, <?= htmlspecialchars($colorResolved['theme']['to']) ?>);">
           <?= htmlspecialchars($initial) ?>
@@ -190,7 +199,7 @@ $badgeIconMap = [
           <?php endif; ?>
         </div>
         <div class="lb-row__score"><?= (int) $v['score'] ?> <small>pikë</small></div>
-      </div>
+      </a>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>

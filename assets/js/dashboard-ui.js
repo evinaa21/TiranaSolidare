@@ -166,6 +166,72 @@ async function loadCategoryDropdown() {
 }
 
 
+// ── Nominatim Address Autocomplete (vendndodhja) ────────
+
+function initVendndodhjaAutocomplete() {
+    const input  = document.getElementById('event-vendndodhja');
+    const sugBox = document.getElementById('event-location-suggestions');
+    if (!input || !sugBox) return;
+
+    let timer;
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        const q = input.value.trim();
+        if (q.length < 3) { sugBox.style.display = 'none'; return; }
+        timer = setTimeout(async () => {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&countrycodes=al&addressdetails=1`;
+                const res  = await fetch(url, { headers: { 'Accept-Language': 'sq' } });
+                const data = await res.json();
+                if (!data.length) { sugBox.style.display = 'none'; return; }
+                sugBox.innerHTML = data.map(r => `
+                    <div class="loc-sug-item" onclick="selectNominatimResult(${r.lat}, ${r.lon}, ${JSON.stringify(r.display_name)})">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                        ${escapeHtml(r.display_name)}
+                    </div>`).join('');
+                sugBox.style.display = 'block';
+            } catch (e) { /* network error — silently ignore */ }
+        }, 400);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !sugBox.contains(e.target)) {
+            sugBox.style.display = 'none';
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { sugBox.style.display = 'none'; }
+    });
+}
+
+window.selectNominatimResult = function(lat, lon, displayName) {
+    const input  = document.getElementById('event-vendndodhja');
+    const sugBox = document.getElementById('event-location-suggestions');
+    const latEl  = document.getElementById('event-lat-input');
+    const lngEl  = document.getElementById('event-lng-input');
+    if (input)  input.value  = displayName;
+    if (latEl)  latEl.value  = lat;
+    if (lngEl)  lngEl.value  = lon;
+    if (sugBox) sugBox.style.display = 'none';
+
+    // Pan the map picker if it's already initialised
+    if (window._eventMapPicker) {
+        window._eventMapPicker.setView([parseFloat(lat), parseFloat(lon)], 16);
+        if (window._eventMapMarker) {
+            window._eventMapMarker.setLatLng([parseFloat(lat), parseFloat(lon)]);
+        } else {
+            window._eventMapMarker = L.marker([parseFloat(lat), parseFloat(lon)], { draggable: true })
+                .addTo(window._eventMapPicker);
+        }
+        const coordDisplay = document.getElementById('event-coord-display');
+        const coordText    = document.getElementById('event-coord-text');
+        if (coordText)    coordText.textContent   = `${parseFloat(lat).toFixed(5)}, ${parseFloat(lon).toFixed(5)}`;
+        if (coordDisplay) coordDisplay.style.display = 'flex';
+    }
+};
+
+
 // ═══════════════════════════════════════════════════════
 //  OVERRIDE: Dashboard Stats Renderer
 // ═══════════════════════════════════════════════════════
@@ -292,6 +358,8 @@ window.loadDashboardStats = async function () {
 
         subContainer.innerHTML = `<div class="db-ov-grid">
 
+            <div class="db-ov-card">
+                <div class="db-ov-card__head"><span class="db-ov-card__title">Aplikimet sipas Statusit</span></div>
                 <div class="db-ov-funnel">
                     <div class="db-ov-fitem" style="background:#fef3c7;" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
                         <div class="db-ov-fitem__val" style="color:#92400e;">${d.applications.ne_pritje || 0}</div>
@@ -1146,6 +1214,18 @@ window.loadNotifications = async function () {
     });
     html += '</div>';
     container.innerHTML = html;
+
+    // ── Update notification bell badge ──────────────────
+    const notifBadge = document.getElementById('notif-badge');
+    if (notifBadge) {
+        const unreadCount = notifs.filter(n => !n.is_read).length;
+        if (unreadCount > 0) {
+            notifBadge.textContent    = unreadCount > 99 ? '99+' : String(unreadCount);
+            notifBadge.style.display  = 'inline-flex';
+        } else {
+            notifBadge.style.display  = 'none';
+        }
+    }
 };
 
 
@@ -1303,6 +1383,7 @@ function dbPagination(current, totalPages, callbackName) {
 document.addEventListener('DOMContentLoaded', () => {
     // Load category dropdown for event creation form
     loadCategoryDropdown();
+    // NOTE: event location autocomplete is handled inline in dashboard.php
 
     // Determine the initial panel (from URL hash or default 'overview')
     let initialPanel = 'overview';
@@ -1837,11 +1918,15 @@ async function loadUnreadBadge() {
     try {
         const json = await apiCall('messages.php?action=conversations');
         if (!json.success) return;
-        const total = (json.data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
+        const total = json.data.total_unread ?? (json.data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
         const badge = document.getElementById('msg-badge');
         if (badge) {
-            if (total > 0) { badge.textContent = ''; badge.style.display = 'inline-flex'; }
-            else { badge.style.display = 'none'; }
+            if (total > 0) {
+                badge.textContent = total > 99 ? '99+' : String(total);
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
         }
     } catch (e) {}
 }

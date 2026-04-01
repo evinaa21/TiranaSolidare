@@ -1,7 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $isAdmin = ($isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true));
@@ -50,7 +50,7 @@ $category = (int) ($_GET['category'] ?? 0);
 // Fetch categories for filter dropdown
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
-$where  = ['e.is_archived = 0'];
+$where  = ['e.is_archived = 0', "e.statusi != 'cancelled'"];
 $params = [];
 if ($search !== '') {
     $where[]  = '(e.titulli LIKE ? OR e.pershkrimi LIKE ? OR e.vendndodhja LIKE ?)';
@@ -126,9 +126,10 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?= csrf_meta() ?>
   <title><?= isset($event) ? htmlspecialchars($event['titulli']) . ' — ' : '' ?>Evente — Tirana Solidare</title>
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260318a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260328b">  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css"></head>
+  <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
+</head>
 <body class="page-events">
 <?php include __DIR__ . '/../public/components/header.php'; ?>
 
@@ -473,7 +474,7 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/TiranaSolidare/assets/js/map-component.js"></script>
+<script src="/TiranaSolidare/assets/js/map-component.js?v=20260401a"></script>
 <script>
 // Apply for event (AJAX)
 document.addEventListener('DOMContentLoaded', function() {
@@ -678,6 +679,6 @@ document.addEventListener('DOMContentLoaded', function() {
   <?php endif; ?>
 });
 </script>
-<script src="/TiranaSolidare/public/assets/scripts/main.js"></script>
+<script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>
 </html>

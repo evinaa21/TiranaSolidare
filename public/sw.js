@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tirana-solidare-v2';
+const CACHE_NAME = 'tirana-solidare-v3';
 const ASSETS = [
   '/TiranaSolidare/public/',
   '/TiranaSolidare/public/assets/styles/main.css',
@@ -22,12 +22,23 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // HTML faqet - gjithmonë nga rrjeti
+  // HTML pages - always from network
   if (event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(fetch(event.request));
     return;
   }
-  // Assets (CSS, JS) - nga cache
+  // Images - network first, fall back to cache
+  if (event.request.destination === 'image') {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  // Other assets (CSS, JS) - cache first, then network
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

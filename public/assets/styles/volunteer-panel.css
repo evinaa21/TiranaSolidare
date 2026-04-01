@@ -3,71 +3,40 @@
    Same visual language as public pages (pages.css, requests.css)
    ═══════════════════════════════════════════════════════ */
 
-/* ── Hero Panel Override ──────────────────────────── */
+/* ── Hero Panel — Profile Banner ─────────────────── */
 
 .vp-hero {
+  background: #fff;
+  border-bottom: 1px solid #e8ede9;
+  padding: 80px clamp(20px, 5%, 5%) 0;
   position: relative;
-  overflow: hidden;
-  padding: 140px clamp(20px, 5%, 5%) 80px;
-  background: linear-gradient(135deg, var(--vp-color-from, #003229) 0%, var(--vp-color-mid, #00715D) 50%, var(--vp-color-to, #009e7e) 100%);
-}
-
-.vp-hero__decor {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.vp-hero__circle {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.06);
-}
-
-.vp-hero__circle--1 {
-  width: 300px; height: 300px;
-  top: -80px; right: -60px;
-}
-
-.vp-hero__circle--2 {
-  width: 180px; height: 180px;
-  bottom: -40px; left: 10%;
-  border-color: rgba(255,255,255,0.04);
-}
-
-.vp-hero__circle--3 {
-  width: 120px; height: 120px;
-  top: 30%; right: 20%;
-  background: rgba(255,255,255,0.02);
-  border: none;
 }
 
 .vp-hero__inner {
-  max-width: 800px;
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 28px;
-  position: relative;
-  z-index: 2;
+  gap: 22px;
+  padding-bottom: 28px;
+  border-bottom: 3px solid var(--vp-accent, #00715D);
 }
 
+/* Avatar */
 .vp-hero__avatar {
-  width: 88px;
-  height: 88px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 3px solid rgba(255,255,255,0.25);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.13);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
   flex-shrink: 0;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  background: #e2e8f0;
 }
 
 .vp-hero__avatar--img {
@@ -75,52 +44,107 @@
 }
 
 .vp-hero__avatar--letter {
-  background: linear-gradient(135deg, var(--vp-color-mid, #00715D), var(--vp-color-to, #009e7e));
+  background: var(--vp-accent, #00715D);
 }
 
+/* Text block */
 .vp-hero__text {
-  text-align: left;
+  flex: 1;
+  min-width: 160px;
 }
 
-.vp-hero__text .page-badge {
+.vp-hero__name {
+  color: #0f172a;
+  font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+  font-weight: 700;
+  margin: 0 0 5px;
+  letter-spacing: -0.01em;
+}
+
+.vp-hero__role-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  background: rgba(0, 113, 93, 0.1);
+  color: #00715D;
+  border: 1px solid rgba(0,113,93,0.2);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
 }
 
-.vp-hero__text h1 {
-  text-align: left;
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
-  margin: 12px 0 8px;
+.vp-hero__email {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin: 5px 0 0;
 }
 
-.vp-hero__text p {
-  text-align: left;
-  margin: 0;
-  font-size: 0.95rem;
+/* Inline stat strip — right side */
+.vp-hero__stats-inline {
+  display: flex;
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+  flex-shrink: 0;
 }
 
-@media (max-width: 600px) {
+.vp-hi-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px;
+  border-right: 1px solid #e2e8f0;
+  min-width: 64px;
+}
+
+.vp-hi-stat:last-child {
+  border-right: none;
+}
+
+.vp-hi-stat strong {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #00715D;
+  line-height: 1;
+}
+
+.vp-hi-stat span {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+/* Mobile fallback stats bar — hidden on desktop */
+.vp-stats-section--mobile {
+  display: none;
+}
+
+@media (max-width: 720px) {
   .vp-hero {
-    padding: 120px 20px 60px;
+    padding: 76px 20px 0;
   }
   .vp-hero__inner {
-    flex-direction: column;
-    text-align: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px;
   }
-  .vp-hero__avatar {
-    width: 72px; height: 72px;
-    font-size: 1.6rem;
+  .vp-hero__stats-inline {
+    display: none;
   }
-  .vp-hero__text {
-    text-align: center;
+  .vp-stats-section--mobile {
+    display: block;
   }
-  .vp-hero__text h1 {
-    text-align: center;
-    font-size: 1.5rem;
-  }
-  .vp-hero__text p {
-    text-align: center;
+}
+
+@media (max-width: 480px) {
+  .vp-hero__name {
+    font-size: 1.2rem;
   }
 }
 
@@ -128,7 +152,7 @@
 
 .vp-stats-section {
   max-width: 1100px;
-  margin: -28px auto 0;
+  margin: 20px auto 0;
   padding: 0 24px;
   position: relative;
   z-index: 2;

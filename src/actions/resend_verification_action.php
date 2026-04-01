@@ -6,9 +6,9 @@
  * Always redirects to a generic success message to prevent
  * email enumeration.
  */
-session_start();
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../config/db.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /TiranaSolidare/views/resend_verification.php');

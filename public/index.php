@@ -50,9 +50,9 @@ $kategorite = $pdo->query(
   <meta name="theme-color" content="#00715D">
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
   <title>Tirana Solidare</title>
-  <link rel="stylesheet" href="assets/styles/main.css?v=202603213">
+  <link rel="stylesheet" href="assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="assets/styles/requests.css?v=202603213">
-  <link rel="stylesheet" href="assets/styles/index.css?v=202603217">
+  <link rel="stylesheet" href="assets/styles/index.css?v=20260401a">
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
