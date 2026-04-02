@@ -28,7 +28,8 @@ class StatusLabelsTest extends TestCase
             'pending', 'approved', 'rejected', 'present', 'absent',
             'active', 'blocked', 'deactivated', 'admin', 'volunteer',
             'request', 'offer', 'open', 'closed', 'active_event',
-            'completed', 'cancelled',
+            'filled', 'completed', 'cancelled', 'waitlisted', 'withdrawn',
+            'pending_review', 'super_admin',
         ];
         foreach ($expectedKeys as $key) {
             $this->assertArrayHasKey($key, STATUS_LABELS, "Missing label for '{$key}'");
@@ -86,11 +87,16 @@ class StatusLabelsTest extends TestCase
         $this->assertSame('Kërkesë', status_label('request'));
         $this->assertSame('Ofertë', status_label('offer'));
         $this->assertSame('Hapur', status_label('open'));
+        $this->assertSame('Mbushur', status_label('filled'));
         $this->assertSame('Mbyllur', status_label('closed'));
         $this->assertSame('Përfunduar', status_label('completed'));
         $this->assertSame('Anuluar', status_label('cancelled'));
+        $this->assertSame('Në listë pritjeje', status_label('waitlisted'));
+        $this->assertSame('Tërhequr', status_label('withdrawn'));
         $this->assertSame('Prezent', status_label('present'));
         $this->assertSame('Munguar', status_label('absent'));
         $this->assertSame('Çaktivizuar', status_label('deactivated'));
+        $this->assertSame('Në shqyrtim', status_label('pending_review'));
+        $this->assertSame('Super Admin', status_label('super_admin'));
     }
 }

@@ -46,7 +46,8 @@ $myApps = ts_normalize_rows($stmtApps->fetchAll(PDO::FETCH_ASSOC));
 // Fetch my help request applications
 $stmtHelpApps = $pdo->prepare(
     "SELECT ak.*, kn.titulli AS kerkesa_titulli, kn.tipi AS kerkesa_tipi,
-            kn.statusi AS kerkesa_statusi, kn.krijuar_me AS kerkesa_krijuar_me,
+      kn.statusi AS kerkesa_statusi, kn.krijuar_me AS kerkesa_krijuar_me,
+      kn.matching_mode, kn.capacity_total,
             p.emri AS postuesi_emri
      FROM Aplikimi_Kerkese ak
      JOIN Kerkesa_per_Ndihme kn ON kn.id_kerkese_ndihme = ak.id_kerkese_ndihme
@@ -69,12 +70,36 @@ $stmtReqs = $pdo->prepare(
 $stmtReqs->execute([$userId]);
 $myRequests = ts_normalize_rows($stmtReqs->fetchAll(PDO::FETCH_ASSOC));
 
+$helpRequestIds = array_values(array_unique(array_merge(
+  array_map(static fn (array $row): int => (int) ($row['id_kerkese_ndihme'] ?? 0), $myHelpApps),
+  array_map(static fn (array $row): int => (int) ($row['id_kerkese_ndihme'] ?? 0), $myRequests)
+)));
+$helpRequestCounts = ts_help_request_application_counts_by_request_ids($pdo, $helpRequestIds);
+
+foreach ($myHelpApps as &$helpApp) {
+  $helpAppId = (int) ($helpApp['id_kerkese_ndihme'] ?? 0);
+  $helpApp['_matching'] = ts_help_request_matching_details([
+    'statusi' => $helpApp['kerkesa_statusi'] ?? 'open',
+    'matching_mode' => $helpApp['matching_mode'] ?? 'open',
+    'capacity_total' => $helpApp['capacity_total'] ?? null,
+  ], $helpRequestCounts[$helpAppId] ?? []);
+  $helpApp['kerkesa_statusi'] = $helpApp['_matching']['resolved_status'];
+}
+unset($helpApp);
+
+foreach ($myRequests as &$myRequest) {
+  $requestId = (int) ($myRequest['id_kerkese_ndihme'] ?? 0);
+  $myRequest['_matching'] = ts_help_request_matching_details($myRequest, $helpRequestCounts[$requestId] ?? []);
+  $myRequest['statusi'] = $myRequest['_matching']['resolved_status'];
+}
+unset($myRequest);
+
 // Stats
 $totalApps     = count($myApps);
 $acceptedApps  = count(array_filter($myApps, fn($a) => $a['statusi'] === 'approved'));
 $pendingApps   = count(array_filter($myApps, fn($a) => $a['statusi'] === 'pending'));
 $totalRequests = count($myRequests);
-$openRequests  = count(array_filter($myRequests, fn($r) => $r['statusi'] === 'open'));
+$openRequests  = count(array_filter($myRequests, fn($r) => in_array(($r['statusi'] ?? ''), TS_HELP_REQUEST_ACTIVE_STATUSES, true)));
 $score        = ($acceptedApps * 5) + ($totalApps * 1) + ($totalRequests * 2);
 $scoreMax     = 150;
 $scorePercent = min(100, round(($score / $scoreMax) * 100));
@@ -618,16 +643,31 @@ $badgeIcons = [
                 <th>Postuar nga</th>
                 <th>Statusi i kërkesës</th>
                 <th>Aplikimi im</th>
+                <th>Veprim</th>
                 <th>Aplikuar më</th>
               </tr>
             </thead>
             <tbody>
               <?php if (empty($myHelpApps)): ?>
                 <tr>
-                  <td colspan="6" class="vp-muted">Nuk keni aplikime për kërkesa ndihme ende.</td>
+                  <td colspan="7" class="vp-muted">Nuk keni aplikime për kërkesa ndihme ende.</td>
                 </tr>
               <?php else: ?>
                 <?php foreach ($myHelpApps as $app): ?>
+                  <?php
+                    $appMatching = $app['_matching'] ?? ts_help_request_matching_details([
+                      'statusi' => $app['kerkesa_statusi'] ?? 'open',
+                      'matching_mode' => $app['matching_mode'] ?? 'open',
+                      'capacity_total' => $app['capacity_total'] ?? null,
+                    ]);
+                    $appStatusClass = match ($app['statusi'] ?? 'pending') {
+                      'approved' => 'success',
+                      'completed' => 'completed',
+                      'rejected', 'withdrawn' => 'danger',
+                      'waitlisted' => 'waitlisted',
+                      default => 'pending',
+                    };
+                  ?>
                   <tr>
                     <td>
                       <a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $app['id_kerkese_ndihme'] ?>" class="vp-link">
@@ -642,13 +682,21 @@ $badgeIcons = [
                     <td><?= htmlspecialchars($app['postuesi_emri']) ?></td>
                     <td>
                       <span class="vp-badge vp-badge--<?= strtolower($app['kerkesa_statusi']) ?>">
-                        <?= htmlspecialchars($app['kerkesa_statusi']) ?>
+                        <?= htmlspecialchars(status_label($app['kerkesa_statusi'])) ?>
+                      </span>
+                      <div class="vp-help-meta-text"><?= htmlspecialchars(($appMatching['has_capacity_limit'] ?? false) ? (($appMatching['progress_count'] ?? 0) . ' / ' . ($appMatching['capacity_total'] ?? 0) . ' përputhje') : 'Kapacitet i hapur') ?></div>
+                    </td>
+                    <td>
+                      <span class="vp-badge vp-badge--<?= $appStatusClass ?>">
+                         <?= htmlspecialchars(status_label($app['statusi'] ?? '')) ?>
                       </span>
                     </td>
                     <td>
-                      <span class="vp-badge vp-badge--<?= $app['statusi'] === 'approved' ? 'success' : ($app['statusi'] === 'rejected' ? 'danger' : 'pending') ?>">
-                         <?= htmlspecialchars(status_label($app['statusi'] ?? '')) ?>
-                      </span>
+                      <?php if (in_array(($app['statusi'] ?? ''), ['pending', 'approved', 'waitlisted'], true)): ?>
+                        <button type="button" class="btn_secondary vp-btn-sm" onclick="withdrawHelpRequestApplication(<?= (int) $app['id_aplikimi_kerkese'] ?>)">Tërhiq</button>
+                      <?php else: ?>
+                        <span class="vp-muted">-</span>
+                      <?php endif; ?>
                     </td>
                     <td><?= date('d M Y', strtotime($app['aplikuar_me'])) ?></td>
                   </tr>
@@ -679,16 +727,36 @@ $badgeIcons = [
       <?php else: ?>
         <div class="vp-request-grid">
           <?php foreach ($myRequests as $req): ?>
+            <?php
+              $reqMatching = $req['_matching'] ?? ts_help_request_matching_details($req);
+              $reqSummary = ($reqMatching['has_capacity_limit'] ?? false)
+                ? (($reqMatching['progress_count'] ?? 0) . ' / ' . ($reqMatching['capacity_total'] ?? 0) . ' përputhje')
+                : 'Kapacitet i hapur';
+              $reqQueue = ($reqMatching['counts']['waitlisted'] ?? 0) > 0
+                ? (($reqMatching['counts']['waitlisted'] ?? 0) . ' në listë pritjeje')
+                : (($reqMatching['counts']['pending'] ?? 0) > 0 ? (($reqMatching['counts']['pending'] ?? 0) . ' në shqyrtim') : (($reqMatching['total_applications'] ?? 0) . ' aplikime'));
+            ?>
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
               <div class="vp-request-card__header">
                 <div class="vp-request-card__badges">
                   <span class="vp-badge vp-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
                   <span class="vp-badge vp-badge--<?= htmlspecialchars($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span>
+                  <?php
+                    $vpModStatus = $req['moderation_status'] ?? 'approved';
+                    if ($vpModStatus === 'pending_review'): ?>
+                    <span class="vp-badge" style="background:#fef3c7;color:#92400e;">&#9203; <?= status_label('pending_review') ?></span>
+                  <?php elseif ($vpModStatus === 'rejected'): ?>
+                    <span class="vp-badge" style="background:#fee2e2;color:#991b1b;">&#10007; <?= status_label('rejected') ?></span>
+                  <?php endif; ?>
                 </div>
               </div>
 
               <div class="vp-request-card__content">
                 <h4><?= htmlspecialchars($req['titulli']) ?></h4>
+                <div class="vp-request-card__summary">
+                  <span><?= htmlspecialchars($reqSummary) ?></span>
+                  <span><?= htmlspecialchars($reqQueue) ?></span>
+                </div>
                 <div class="vp-request-card__footer">
                   <span class="vp-request-card__time"><?= koheParapake($req['krijuar_me']) ?></span>
                   <span class="vp-request-card__arrow">
@@ -727,6 +795,22 @@ $badgeIcons = [
             </select>
           </div>
         </div>
+        <div class="vp-form-row">
+          <div class="vp-field">
+            <label for="vp-req-matching-mode">Modaliteti i përputhjes</label>
+            <select id="vp-req-matching-mode" name="matching_mode" class="vp-input">
+              <option value="open">Kapacitet i hapur</option>
+              <option value="single">Një përputhje</option>
+              <option value="limited">Kapacitet i kufizuar</option>
+            </select>
+            <small class="vp-help-text">Zgjidhni nëse postimi ka një përputhje, disa vende të kufizuara, ose pa kufi.</small>
+          </div>
+          <div class="vp-field" id="vp-req-capacity-wrap" style="display:none">
+            <label for="vp-req-capacity">Kapaciteti</label>
+            <input type="number" id="vp-req-capacity" name="capacity_total" min="2" max="100" placeholder="p.sh. 3" class="vp-input">
+            <small class="vp-help-text">Kjo përdoret vetëm për modalitetin me kapacitet të kufizuar.</small>
+          </div>
+        </div>
         <div class="vp-field">
           <label for="vp-req-category">Kategoria</label>
           <select id="vp-req-category" name="id_kategoria" class="vp-input">
@@ -743,9 +827,10 @@ $badgeIcons = [
           <label for="vp-req-desc">Përshkrimi</label>
           <textarea id="vp-req-desc" name="pershkrimi" rows="4" placeholder="Përshkruani kërkesën tuaj në detaje..." class="vp-input"></textarea>
         </div>
-        <div class="vp-field">
-          <label for="vp-req-location">Vendndodhja</label>
-          <input type="text" id="vp-req-location" name="vendndodhja" placeholder="Vendndodhja (opsionale)" class="vp-input">
+        <div class="vp-field" style="position:relative;">
+          <label for="vp-req-location">Vendndodhja — shkruani adresën dhe zgjidhni nga sugjerimet</label>
+          <input type="text" id="vp-req-location" name="vendndodhja" placeholder="p.sh. Bulevardi Dëshmorët e Kombit, Tiranë" autocomplete="off" class="vp-input">
+          <div id="request-location-suggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;display:none;max-height:240px;overflow-y:auto;margin-top:2px;"></div>
         </div>
         <div class="vp-field">
           <div class="ts-map-wrapper">
@@ -895,7 +980,7 @@ if (nameForm) {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
       document.getElementById('vp-profile-emri').textContent = emri;
-      const headerUser = document.querySelector('.header-user');
+      const headerUser = document.querySelector('.header-user-name');
       if (headerUser) headerUser.textContent = emri;
       vpStatus('vp-name-status', 'success', 'Emri u përditësua me sukses.');
     } catch (err) { vpStatus('vp-name-status', 'error', err.message); }
@@ -1009,6 +1094,27 @@ if (deleteAccountBtn && deleteAccountModal) {
 
 // ── Help Request form ──
 const reqForm = document.getElementById('vp-request-form');
+const reqMatchingMode = document.getElementById('vp-req-matching-mode');
+const reqCapacityWrap = document.getElementById('vp-req-capacity-wrap');
+const reqCapacityInput = document.getElementById('vp-req-capacity');
+
+function syncHelpRequestCapacityField() {
+  if (!reqMatchingMode || !reqCapacityWrap || !reqCapacityInput) return;
+  const mode = reqMatchingMode.value;
+  const showCapacity = mode === 'limited';
+  reqCapacityWrap.style.display = showCapacity ? '' : 'none';
+  reqCapacityInput.required = showCapacity;
+  reqCapacityInput.min = showCapacity ? '2' : '1';
+  if (!showCapacity) {
+    reqCapacityInput.value = '';
+  }
+}
+
+if (reqMatchingMode) {
+  reqMatchingMode.addEventListener('change', syncHelpRequestCapacityField);
+  syncHelpRequestCapacityField();
+}
+
 if (reqForm) {
   reqForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1024,6 +1130,8 @@ if (reqForm) {
     // Convert category to int or remove if empty
     if (body.id_kategoria) body.id_kategoria = parseInt(body.id_kategoria, 10);
     else delete body.id_kategoria;
+    if (body.capacity_total) body.capacity_total = parseInt(body.capacity_total, 10);
+    else delete body.capacity_total;
     
     delete body.image;
 
@@ -1042,6 +1150,22 @@ if (reqForm) {
       vpStatus('vp-req-status', 'success', 'Kërkesa u krijuar me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
     } catch (err) { vpStatus('vp-req-status', 'error', err.message); }
   });
+}
+
+async function withdrawHelpRequestApplication(id) {
+  if (!confirm('Jeni të sigurt që doni të tërhiqni këtë aplikim?')) return;
+  try {
+    const res = await fetch(API + '/help_requests.php?action=withdraw_application&id=' + id, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': csrfToken },
+      credentials: 'same-origin'
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
+    location.reload();
+  } catch (err) {
+    alert(err.message || 'Gabim rrjeti.');
+  }
 }
 
 // ── Withdraw application ──
@@ -1310,49 +1434,133 @@ async function initPushSubscription() {
 document.addEventListener('DOMContentLoaded', function() {
   const mapContainer = document.getElementById('request-map-picker');
   if (mapContainer) {
+    const vendInput = document.getElementById('vp-req-location');
+    const suggestBox = document.getElementById('request-location-suggestions');
+    let autocompleteResults = [];
+    let autocompleteAbort = null;
+    let autocompleteSeq = 0;
+    let geocodeTimeout = null;
+
+    function updateCoordDisplay(lat, lng) {
+      const coordDisplay = document.getElementById('req-coord-display');
+      const coordText = document.getElementById('req-coord-text');
+      if (coordDisplay && coordText) {
+        coordDisplay.style.display = 'flex';
+        coordText.textContent = Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5);
+      }
+    }
+
+    function hideSuggestions() {
+      if (!suggestBox) return;
+      suggestBox.style.display = 'none';
+      suggestBox.innerHTML = '';
+      autocompleteResults = [];
+    }
+
     const reqMap = TSMap.picker('request-map-picker', {
       latInput: 'req-lat-input',
       lngInput: 'req-lng-input',
       addressInput: 'vp-req-location',
+      showSearch: false,
       onSelect: function(lat, lng) {
-        const coordDisplay = document.getElementById('req-coord-display');
-        const coordText = document.getElementById('req-coord-text');
-        if (coordDisplay && coordText) {
-          coordDisplay.style.display = 'flex';
-          coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-        }
+        updateCoordDisplay(lat, lng);
       }
     });
 
-    // Forward geocoding — kur useri shkruan vendndodhjen
-    const vendInput = document.getElementById('vp-req-location');
-    if (vendInput) {
-      let geocodeTimeout = null;
+    if (vendInput && suggestBox && reqMap) {
+      suggestBox.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+      });
+
+      suggestBox.addEventListener('click', function(e) {
+        const item = e.target.closest('[data-result-index]');
+        if (!item) return;
+        const result = autocompleteResults[Number(item.dataset.resultIndex)];
+        if (!result) return;
+
+        vendInput.value = result.label;
+        hideSuggestions();
+        reqMap.setPosition(parseFloat(result.lat), parseFloat(result.lon));
+        updateCoordDisplay(parseFloat(result.lat), parseFloat(result.lon));
+      });
+
       vendInput.addEventListener('input', function() {
         clearTimeout(geocodeTimeout);
-        const q = this.value.trim();
-        if (q.length < 3) return;
+        const query = this.value.trim();
+
+        if (autocompleteAbort) {
+          autocompleteAbort.abort();
+          autocompleteAbort = null;
+        }
+
+        if (query.length < 3) {
+          hideSuggestions();
+          return;
+        }
+
+        const requestSeq = ++autocompleteSeq;
         geocodeTimeout = setTimeout(async () => {
+          autocompleteAbort = new AbortController();
           try {
             const res = await fetch(
-              `/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(q)}`,
-              { headers: { 'Accept': 'application/json' } }
+              `/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(query)}`,
+              {
+                headers: { 'Accept': 'application/json' },
+                signal: autocompleteAbort.signal,
+              }
             );
             const json = await res.json();
             const data = json.success ? (json.data.results || []) : [];
-            if (data.length > 0) {
-              const lat = parseFloat(data[0].lat);
-              const lng = parseFloat(data[0].lon);
-              reqMap.setPosition(lat, lng);
-              const coordDisplay = document.getElementById('req-coord-display');
-              const coordText = document.getElementById('req-coord-text');
-              if (coordDisplay && coordText) {
-                coordDisplay.style.display = 'flex';
-                coordText.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-              }
+            if (requestSeq !== autocompleteSeq) return;
+            if (!Array.isArray(data) || data.length === 0) {
+              hideSuggestions();
+              return;
             }
-          } catch (e) {}
-        }, 600);
+
+            autocompleteResults = data.map(function(item) {
+              return {
+                lat: item.lat,
+                lon: item.lon,
+                label: item.short_name || item.display_name || ''
+              };
+            });
+
+            suggestBox.innerHTML = '';
+            autocompleteResults.forEach(function(result, index) {
+              const row = document.createElement('div');
+              row.dataset.resultIndex = String(index);
+              row.style.padding = '10px 14px';
+              row.style.cursor = 'pointer';
+              row.style.borderBottom = '1px solid #f1f5f9';
+              row.style.fontSize = '0.84rem';
+              row.style.color = '#334155';
+              row.style.transition = 'background .15s';
+              row.textContent = result.label;
+              row.addEventListener('mouseenter', function() { row.style.background = '#f8fafc'; });
+              row.addEventListener('mouseleave', function() { row.style.background = ''; });
+              suggestBox.appendChild(row);
+            });
+            suggestBox.style.display = 'block';
+          } catch (e) {
+            if (e.name !== 'AbortError') hideSuggestions();
+          } finally {
+            autocompleteAbort = null;
+          }
+        }, 90);
+      });
+
+      vendInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 3) {
+          this.dispatchEvent(new Event('input'));
+        }
+      });
+
+      vendInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideSuggestions();
+      });
+
+      vendInput.addEventListener('blur', function() {
+        setTimeout(hideSuggestions, 180);
       });
     }
   }

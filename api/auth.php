@@ -442,7 +442,7 @@ switch ($action) {
             $tokenHash  = hash('sha256', $plainToken);
             $expiresAt  = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
             $verifyUrl  = app_base_url()
-                . '/TiranaSolidare/src/actions/verify_email.php?token=' . urlencode($plainToken)
+                . '/src/actions/verify_email.php?token=' . urlencode($plainToken)
                 . '&email=' . urlencode($email);
 
             $pdo->prepare(

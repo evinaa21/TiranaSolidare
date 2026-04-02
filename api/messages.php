@@ -177,9 +177,14 @@ switch ($action) {
             // Create notification for receiver — deep-link includes sender ID so clicking
             // the notification opens that specific conversation thread directly.
             $notifMsg = "{$user['emri']} ju dërgoi një mesazh.";
+            // In-app link (absolute web path for <a href="..."> inside the app)
             $notifLink = (is_admin_role($receiver['roli']))
                 ? '/TiranaSolidare/views/dashboard.php?with=' . $user['id'] . '#messages'
                 : '/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=' . $user['id'];
+            // App-relative path for constructing full URLs (email / push)
+            $emailPath = (is_admin_role($receiver['roli']))
+                ? '/views/dashboard.php?with=' . $user['id'] . '#messages'
+                : '/views/volunteer_panel.php?tab=messages&with=' . $user['id'];
             $notifStmt = $pdo->prepare(
                 'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
             );
@@ -194,7 +199,7 @@ switch ($action) {
 
             // Email notification — send_notification_email respects the user's email_notifications preference
             if (filter_var($receiver['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
-                $panelUrl = app_base_url() . $notifLink;
+                $panelUrl = app_base_url() . $emailPath;
                 send_notification_email(
                     $receiver['email'],
                     $receiver['emri'],
@@ -208,7 +213,7 @@ switch ($action) {
                 $receiverId,
                 "Mesazh i ri nga {$user['emri']}",
                 $message,
-                app_base_url() . $notifLink
+                app_base_url() . $emailPath
             );
 
             json_success([

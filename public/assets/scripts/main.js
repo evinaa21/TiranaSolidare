@@ -523,17 +523,13 @@ async function reportHelpRequest(id) {
     try {
         const meta = document.querySelector('meta[name="csrf-token"]');
         const token = meta ? meta.content : '';
-        const formParams = new URLSearchParams();
-        formParams.append('action', 'flag');
-        formParams.append('id', id);
-        formParams.append('csrf_token', token);
 
-        const res = await fetch('/TiranaSolidare/api/help_requests.php', {
+        const res = await fetch('/TiranaSolidare/api/help_requests.php?action=flag&id=' + encodeURIComponent(id), {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': token,
             },
-            body: formParams.toString()
+            credentials: 'same-origin'
         });
         const json = await res.json();
         alert(json.message || 'Kërkesa u raportua!');

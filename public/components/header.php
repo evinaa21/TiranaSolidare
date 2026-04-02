@@ -164,7 +164,7 @@ async function headerLoadNotifications(){
     var json=await res.json();
     if(!json.success||(json.data.notifications||[]).length===0){list.innerHTML='<div class="header-notif-empty">Nuk ka njoftime.</div>';return;}
     list.innerHTML=json.data.notifications.map(function(n){
-      var link=n.linku?('/TiranaSolidare'+n.linku):'#';
+      var link=n.linku?(n.linku):'#';
       var txt=(n.mesazhi||'').substring(0,90)+((n.mesazhi||'').length>90?'\u2026':'');
       return'<a href="'+link+'" class="header-notif-item '+(n.is_read?'header-notif-item--read':'header-notif-item--unread')+'" onclick="headerMarkNotifRead('+n.id_njoftimi+')">'
         +'<div class="header-notif-item__dot"></div>'

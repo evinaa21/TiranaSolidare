@@ -82,12 +82,20 @@ const TS_DB_NORMALIZE = [
     'Kërkesë'     => 'request',
     'Ofertë'      => 'offer',
     'Open'        => 'open',
-    'Closed'      => 'closed',
+    'Closed'      => 'completed',
+    'Filled'      => 'filled',
+    'Completed'   => 'completed',
+    'Cancelled'   => 'cancelled',
     'Hapur'       => 'open',
-    'Mbyllur'     => 'closed',
+    'Mbyllur'     => 'completed',
+    'Mbushur'     => 'filled',
+    'Përfunduar'  => 'completed',
+    'Anuluar'     => 'cancelled',
     'Në pritje'   => 'pending',
     'Pranuar'     => 'approved',
     'Refuzuar'    => 'rejected',
+    'Në listë pritjeje' => 'waitlisted',
+    'Tërhequr'    => 'withdrawn',
     'Aktiv'       => 'active',
     'Bllokuar'    => 'blocked',
     'Çaktivizuar' => 'deactivated',
@@ -106,6 +114,175 @@ function ts_normalize_row(array $row): array
         }
     }
     return $row;
+}
+
+const TS_HELP_REQUEST_MATCHING_MODES = ['single', 'limited', 'open'];
+const TS_HELP_REQUEST_ACTIVE_STATUSES = ['open', 'filled'];
+const TS_HELP_REQUEST_TERMINAL_STATUSES = ['completed', 'cancelled'];
+
+function ts_help_request_normalize_status(?string $status): string
+{
+    $normalized = ts_normalize_value((string) $status);
+    return $normalized === 'closed' ? 'completed' : $normalized;
+}
+
+function ts_help_request_matching_mode(?string $matchingMode, ?int $capacityTotal = null): string
+{
+    $mode = strtolower(trim((string) $matchingMode));
+    if (in_array($mode, TS_HELP_REQUEST_MATCHING_MODES, true)) {
+        return $mode;
+    }
+
+    if ($capacityTotal !== null) {
+        return $capacityTotal <= 1 ? 'single' : 'limited';
+    }
+
+    return 'open';
+}
+
+function ts_help_request_capacity_total(?string $matchingMode, ?int $capacityTotal): ?int
+{
+    $mode = ts_help_request_matching_mode($matchingMode, $capacityTotal);
+
+    if ($mode === 'open') {
+        return null;
+    }
+
+    if ($mode === 'single') {
+        return 1;
+    }
+
+    return ($capacityTotal !== null && $capacityTotal > 1) ? $capacityTotal : null;
+}
+
+function ts_help_request_application_counts_by_request_ids(PDO $pdo, array $requestIds): array
+{
+    $requestIds = array_values(array_unique(array_filter(array_map('intval', $requestIds), static fn (int $id): bool => $id > 0)));
+    if ($requestIds === []) {
+        return [];
+    }
+
+    $countsByRequest = [];
+    $placeholders = implode(',', array_fill(0, count($requestIds), '?'));
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id_kerkese_ndihme, LOWER(statusi) AS statusi, COUNT(*) AS total
+             FROM Aplikimi_Kerkese
+             WHERE id_kerkese_ndihme IN ($placeholders)
+             GROUP BY id_kerkese_ndihme, LOWER(statusi)"
+        );
+        $stmt->execute($requestIds);
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $requestId = (int) ($row['id_kerkese_ndihme'] ?? 0);
+            $status = ts_help_request_normalize_status((string) ($row['statusi'] ?? 'pending'));
+            if ($requestId <= 0) {
+                continue;
+            }
+            if (!isset($countsByRequest[$requestId])) {
+                $countsByRequest[$requestId] = [];
+            }
+            $countsByRequest[$requestId][$status] = (int) ($row['total'] ?? 0);
+        }
+    } catch (Throwable $e) {
+        error_log('help_request_application_counts: ' . $e->getMessage());
+    }
+
+    return $countsByRequest;
+}
+
+function ts_help_request_application_counts(PDO $pdo, int $requestId): array
+{
+    $counts = ts_help_request_application_counts_by_request_ids($pdo, [$requestId]);
+    return $counts[$requestId] ?? [];
+}
+
+function ts_help_request_matching_details(array $request, array $counts = []): array
+{
+    $normalizedCounts = [
+        'pending' => 0,
+        'approved' => 0,
+        'waitlisted' => 0,
+        'rejected' => 0,
+        'withdrawn' => 0,
+        'completed' => 0,
+    ];
+
+    foreach ($counts as $status => $total) {
+        $normalizedStatus = ts_help_request_normalize_status((string) $status);
+        if (array_key_exists($normalizedStatus, $normalizedCounts)) {
+            $normalizedCounts[$normalizedStatus] = (int) $total;
+        }
+    }
+
+    $rawCapacity = null;
+    if (array_key_exists('capacity_total', $request) && $request['capacity_total'] !== null && $request['capacity_total'] !== '') {
+        $rawCapacity = (int) $request['capacity_total'];
+    }
+
+    $matchingMode = ts_help_request_matching_mode($request['matching_mode'] ?? null, $rawCapacity);
+    $capacityTotal = ts_help_request_capacity_total($matchingMode, $rawCapacity);
+    $currentStatus = ts_help_request_normalize_status((string) ($request['statusi'] ?? 'open'));
+    $approvedCount = $normalizedCounts['approved'];
+    $completedCount = $normalizedCounts['completed'];
+    $matchedTotal = $approvedCount + $completedCount;
+    $isFull = $matchingMode !== 'open' && $capacityTotal !== null && $approvedCount >= $capacityTotal;
+
+    $resolvedStatus = $currentStatus;
+    if (!in_array($currentStatus, TS_HELP_REQUEST_TERMINAL_STATUSES, true)) {
+        $resolvedStatus = $isFull ? 'filled' : 'open';
+    }
+
+    $slotsRemaining = ($matchingMode === 'open' || $capacityTotal === null)
+        ? null
+        : max(0, $capacityTotal - $approvedCount);
+
+    $progressCount = $resolvedStatus === 'completed' ? $matchedTotal : $approvedCount;
+
+    return [
+        'matching_mode' => $matchingMode,
+        'capacity_total' => $capacityTotal,
+        'has_capacity_limit' => $capacityTotal !== null,
+        'resolved_status' => $resolvedStatus,
+        'is_full' => $isFull,
+        'can_receive_applications' => $resolvedStatus === 'open',
+        'is_active' => in_array($resolvedStatus, TS_HELP_REQUEST_ACTIVE_STATUSES, true),
+        'slots_remaining' => $slotsRemaining,
+        'counts' => $normalizedCounts,
+        'total_applications' => array_sum($normalizedCounts),
+        'active_matches' => $approvedCount,
+        'completed_matches' => $completedCount,
+        'matched_total' => $matchedTotal,
+        'progress_count' => $progressCount,
+    ];
+}
+
+function ts_help_request_sync_status(PDO $pdo, int $requestId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT id_kerkese_ndihme, statusi, tipi, matching_mode, capacity_total
+         FROM Kerkesa_per_Ndihme
+         WHERE id_kerkese_ndihme = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$requestId]);
+    $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$request) {
+        return null;
+    }
+
+    $request = ts_normalize_row($request);
+    $details = ts_help_request_matching_details($request, ts_help_request_application_counts($pdo, $requestId));
+    $currentStatus = ts_help_request_normalize_status((string) ($request['statusi'] ?? 'open'));
+
+    if (!in_array($currentStatus, TS_HELP_REQUEST_TERMINAL_STATUSES, true) && $currentStatus !== $details['resolved_status']) {
+        $update = $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET statusi = ? WHERE id_kerkese_ndihme = ?');
+        $update->execute([$details['resolved_status'], $requestId]);
+    }
+
+    return $details;
 }
 
 function ts_normalize_rows(array $rows): array
@@ -995,7 +1172,7 @@ function ts_collect_user_badge_metrics(PDO $pdo, int $userId): array
 
     $acceptedHelpApps = 0;
     try {
-        $acceptedHelpAppsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi = 'approved'");
+        $acceptedHelpAppsStmt = $pdo->prepare("SELECT COUNT(*) FROM Aplikimi_Kerkese WHERE id_perdoruesi = ? AND statusi IN ('approved', 'completed')");
         $acceptedHelpAppsStmt->execute([$userId]);
         $acceptedHelpApps = (int) $acceptedHelpAppsStmt->fetchColumn();
     } catch (Throwable $e) {

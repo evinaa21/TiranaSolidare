@@ -54,10 +54,17 @@ switch ($action) {
         $helpStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_kerkesa,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('open', 'e hapur') THEN 1 ELSE 0 END), 0) AS kerkese_open,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('closed', 'mbyllur') THEN 1 ELSE 0 END), 0) AS kerkese_closed,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('open', 'e hapur') THEN 1 ELSE 0 END), 0) AS oferte_open,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('closed', 'mbyllur') THEN 1 ELSE 0 END), 0) AS oferte_closed
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'filled' THEN 1 ELSE 0 END), 0) AS kerkese_filled,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('completed', 'closed') THEN 1 ELSE 0 END), 0) AS kerkese_completed,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'cancelled' THEN 1 ELSE 0 END), 0) AS kerkese_cancelled,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END), 0) AS kerkese_closed,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'open' THEN 1 ELSE 0 END), 0) AS oferte_open,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'filled' THEN 1 ELSE 0 END), 0) AS oferte_filled,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('completed', 'closed') THEN 1 ELSE 0 END), 0) AS oferte_completed,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'cancelled' THEN 1 ELSE 0 END), 0) AS oferte_cancelled,
+                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END), 0) AS oferte_closed,
+                COALESCE(SUM(CASE WHEN moderation_status = 'pending_review' THEN 1 ELSE 0 END), 0) AS pending_moderation
              FROM Kerkesa_per_Ndihme"
         )->fetch(PDO::FETCH_ASSOC);
 
@@ -114,8 +121,12 @@ switch ($action) {
         $helpStats = $pdo->prepare(
             "SELECT
                 COUNT(*) AS total_kerkesa,
+                SUM(CASE WHEN statusi IN ('open', 'filled') THEN 1 ELSE 0 END) AS te_aktive,
                 SUM(CASE WHEN statusi = 'open' THEN 1 ELSE 0 END) AS te_hapura,
-                SUM(CASE WHEN statusi = 'closed' THEN 1 ELSE 0 END) AS te_mbyllura
+                SUM(CASE WHEN statusi = 'filled' THEN 1 ELSE 0 END) AS te_mbushura,
+                SUM(CASE WHEN statusi IN ('completed', 'closed') THEN 1 ELSE 0 END) AS te_perfunduara,
+                SUM(CASE WHEN statusi = 'cancelled' THEN 1 ELSE 0 END) AS te_anuluara,
+                SUM(CASE WHEN statusi IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) AS te_mbyllura
              FROM Kerkesa_per_Ndihme
              WHERE id_perdoruesi = ?"
         );

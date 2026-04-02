@@ -297,8 +297,47 @@ $params[] = $user['id'];
         $stmt = $pdo->prepare("UPDATE Perdoruesi SET statusi_llogarise = 'blocked', arsye_bllokimi = ? WHERE id_perdoruesi = ?");
         $stmt->execute([$blockReason !== '' ? $blockReason : null, $id]);
 
-        // Close all open help requests by the blocked user
-        $pdo->prepare("UPDATE Kerkesa_per_Ndihme SET statusi = 'closed' WHERE id_perdoruesi = ? AND statusi = 'open'")->execute([$id]);
+        // Cancel all active help requests by the blocked user
+        $pdo->prepare(
+            "UPDATE Kerkesa_per_Ndihme
+             SET statusi = 'cancelled', cancelled_at = NOW(), closed_reason = COALESCE(?, 'user_blocked')
+             WHERE id_perdoruesi = ? AND statusi IN ('open', 'filled')"
+        )->execute([$blockReason !== '' ? $blockReason : 'user_blocked', $id]);
+
+        // Remove the blocked user from active help-request applications
+        $affectedHelpRequestIdsStmt = $pdo->prepare(
+            "SELECT DISTINCT id_kerkese_ndihme
+             FROM Aplikimi_Kerkese
+             WHERE id_perdoruesi = ? AND statusi IN ('pending', 'approved', 'waitlisted')"
+        );
+        $affectedHelpRequestIdsStmt->execute([$id]);
+        $affectedHelpRequestIds = array_map('intval', $affectedHelpRequestIdsStmt->fetchAll(PDO::FETCH_COLUMN));
+        $pdo->prepare(
+            "UPDATE Aplikimi_Kerkese
+             SET statusi = 'rejected'
+             WHERE id_perdoruesi = ? AND statusi IN ('pending', 'approved', 'waitlisted')"
+        )->execute([$id]);
+        foreach ($affectedHelpRequestIds as $helpRequestId) {
+            $details = ts_help_request_sync_status($pdo, $helpRequestId);
+            if ($details && $details['has_capacity_limit'] && ($details['slots_remaining'] ?? 0) > 0) {
+                $promotionLimit = (int) $details['slots_remaining'];
+                $promotedStmt = $pdo->prepare(
+                    "SELECT id_aplikimi_kerkese
+                     FROM Aplikimi_Kerkese
+                     WHERE id_kerkese_ndihme = ? AND statusi = 'waitlisted'
+                     ORDER BY aplikuar_me ASC
+                     LIMIT {$promotionLimit}"
+                );
+                $promotedStmt->execute([$helpRequestId]);
+                $promotedIds = array_map('intval', $promotedStmt->fetchAll(PDO::FETCH_COLUMN));
+                if ($promotedIds !== []) {
+                    $placeholders = implode(',', array_fill(0, count($promotedIds), '?'));
+                    $pdo->prepare("UPDATE Aplikimi_Kerkese SET statusi = 'pending' WHERE id_aplikimi_kerkese IN ({$placeholders})")
+                        ->execute($promotedIds);
+                }
+            }
+            ts_help_request_sync_status($pdo, $helpRequestId);
+        }
         // Reject pending event applications by the blocked user
         $pdo->prepare("UPDATE Aplikimi SET statusi = 'rejected' WHERE id_perdoruesi = ? AND statusi = 'pending'")->execute([$id]);
 

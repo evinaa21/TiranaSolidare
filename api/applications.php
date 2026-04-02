@@ -79,15 +79,15 @@ switch ($action) {
         }
 
         // Verify event exists (A-05)
-        $evCheck = $pdo->prepare('SELECT id_eventi, titulli, data FROM Eventi WHERE id_eventi = ?');
+        $evCheck = $pdo->prepare('SELECT id_eventi, titulli, data, kapaciteti FROM Eventi WHERE id_eventi = ?');
         $evCheck->execute([$eventId]);
         $eventRow = $evCheck->fetch();
         if (!$eventRow) {
             json_error('Eventi nuk u gjet.', 404);
         }
 
-        // Paginated fetch (A-06)
-        $pagination = get_pagination();
+        // Modal view does not paginate in the UI, so use a larger default page size.
+        $pagination = get_pagination(100, 500);
 
         $countStmt = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ?');
         $countStmt->execute([$eventId]);
@@ -98,11 +98,38 @@ switch ($action) {
              FROM Aplikimi a
              JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
              WHERE a.id_eventi = ?
-             ORDER BY a.aplikuar_me DESC
+             ORDER BY
+                CASE
+                    WHEN a.statusi = 'approved' THEN 0
+                    WHEN a.statusi = 'present' THEN 1
+                    WHEN a.statusi = 'pending' AND COALESCE(a.ne_liste_pritje, 0) = 0 THEN 2
+                    WHEN a.statusi = 'pending' AND COALESCE(a.ne_liste_pritje, 0) = 1 THEN 3
+                    WHEN a.statusi = 'absent' THEN 4
+                    WHEN a.statusi = 'rejected' THEN 5
+                    ELSE 6
+                END ASC,
+                a.aplikuar_me ASC
              LIMIT ? OFFSET ?"
         );
         $stmt->execute([$eventId, $pagination['limit'], $pagination['offset']]);
         $apps = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        $confirmedStmt = $pdo->prepare(
+            "SELECT a.id_aplikimi, a.statusi, p.emri AS vullnetari_emri, p.email AS vullnetari_email
+             FROM Aplikimi a
+             JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+             WHERE a.id_eventi = ? AND a.statusi IN ('approved', 'present', 'absent')
+             ORDER BY
+                CASE
+                    WHEN a.statusi = 'approved' THEN 0
+                    WHEN a.statusi = 'present' THEN 1
+                    WHEN a.statusi = 'absent' THEN 2
+                    ELSE 3
+                END ASC,
+                a.aplikuar_me ASC"
+        );
+        $confirmedStmt->execute([$eventId]);
+        $confirmedApplicants = ts_normalize_rows($confirmedStmt->fetchAll(PDO::FETCH_ASSOC));
 
         // Summary counts
         $summary = $pdo->prepare(
@@ -120,8 +147,11 @@ switch ($action) {
 
         json_success([
             'applications' => $apps,
+            'confirmed_applicants' => $confirmedApplicants,
             'summary'      => $stats,
             'event_data'   => $eventRow['data'],
+            'event_title'  => $eventRow['titulli'],
+            'capacity_total' => isset($eventRow['kapaciteti']) ? (int) $eventRow['kapaciteti'] : null,
             'total'        => $total,
             'page'         => $pagination['page'],
             'limit'        => $pagination['limit'],

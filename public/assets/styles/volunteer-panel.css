@@ -923,6 +923,16 @@
   color: #856404;
 }
 
+.vp-badge--waitlisted {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.vp-badge--completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .vp-badge--category {
   background: #e8f5f0;
   color: #00715D;
@@ -941,6 +951,21 @@
 .vp-badge--open {
   background: #d4edda;
   color: #155724;
+}
+
+.vp-badge--filled {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.vp-badge--completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.vp-badge--cancelled {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .vp-badge--closed {
@@ -972,6 +997,13 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: #3a4553;
+}
+
+.vp-help-text,
+.vp-help-meta-text {
+  font-size: 0.78rem;
+  color: #708093;
+  line-height: 1.4;
 }
 
 .vp-color-options {
@@ -1413,6 +1445,13 @@ select.vp-input {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.vp-request-card__summary {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #5c6c80;
 }
 
 .vp-request-card__footer {

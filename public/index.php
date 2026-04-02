@@ -9,7 +9,7 @@ $stmtReq = $pdo->prepare(
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
-     WHERE kn.statusi IN ('open','Open')
+     WHERE kn.statusi IN ('open','Open') AND kn.moderation_status = 'approved'
      ORDER BY kn.krijuar_me DESC
      LIMIT 8"
 );
@@ -31,7 +31,7 @@ $eventet = $stmtEv->fetchAll(PDO::FETCH_ASSOC);
 // Counts for hero stats
 $totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
 $totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
-$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('closed','Closed')")->fetchColumn();
+$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('completed','closed') AND moderation_status = 'approved'")->fetchColumn();
 
 // Categories with event counts
 $kategorite = $pdo->query(

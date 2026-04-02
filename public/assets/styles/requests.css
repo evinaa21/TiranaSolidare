@@ -725,6 +725,21 @@ body.page-requests .rq-blob--filters {
   overflow: hidden;
 }
 
+.rq-card__matching-meta {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.78rem;
+  color: #51606f;
+}
+
+.rq-card__matching-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .rq-card__footer {
   display: flex;
   align-items: center;
@@ -871,6 +886,21 @@ body.page-requests .rq-blob--filters {
   color: #16a34a;
   border: 1px solid rgba(34,197,94,0.12);
 }
+.rq-badge--filled {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245,158,11,0.18);
+}
+.rq-badge--completed {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(59,130,246,0.16);
+}
+.rq-badge--cancelled {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border: 1px solid rgba(239,68,68,0.14);
+}
 
 .rq-badge--closed {
   background: rgba(107, 114, 128, 0.07);
@@ -924,6 +954,21 @@ body.page-requests .rq-blob--filters {
   background: rgba(37, 255, 117, 0.25);
   color: #a8f0c4;
   border-color: rgba(34,197,94,0.35);
+}
+.rq-detail-hero .rq-badge--filled {
+  background: rgba(251, 191, 36, 0.24);
+  color: #fde68a;
+  border-color: rgba(251,191,36,0.38);
+}
+.rq-detail-hero .rq-badge--completed {
+  background: rgba(96, 165, 250, 0.24);
+  color: #dbeafe;
+  border-color: rgba(96,165,250,0.38);
+}
+.rq-detail-hero .rq-badge--cancelled {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fee2e2;
+  border-color: rgba(248,113,113,0.36);
 }
 
 .rq-detail-hero .rq-badge--closed {
@@ -1577,7 +1622,6 @@ body.page-requests .rq-sidebar-info li .rq-info-icon {
   color: var(--rq-primary);
   margin-top: 0;
 }
-
 .rq-sidebar-info div {
   display: flex;
   flex-direction: column;
@@ -1600,6 +1644,62 @@ body.page-requests .rq-sidebar-info li .rq-info-icon {
   font-weight: 600;
   margin-top: 3px;
   overflow-wrap: break-word;
+}
+
+.rq-capacity-panel {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.rq-capacity-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.rq-capacity-panel__head span {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.76rem;
+  color: var(--rq-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+.rq-capacity-panel__head strong {
+  font-family: 'Bitter', serif;
+  font-size: 1rem;
+  color: var(--rq-text);
+}
+.rq-capacity-panel__bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.rq-capacity-panel__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #00715D 0%, #22a68a 100%);
+}
+.rq-capacity-panel__detail {
+  margin: 0;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.82rem;
+  color: #334155;
+  line-height: 1.45;
+}
+.rq-capacity-panel__detail + .rq-capacity-panel__detail {
+  margin-top: 4px;
+}
+.rq-capacity-panel__detail--muted {
+  color: var(--rq-text-muted);
 }
 
 /* CTA section */
@@ -1680,6 +1780,17 @@ body.page-requests .rq-btn-full:hover {
   background: #1a1f2e !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(45,53,72,0.35);
+}
+
+.rq-btn-cancel {
+  background: rgba(239,68,68,0.08) !important;
+  color: #b91c1c !important;
+  border: 1.5px solid rgba(239,68,68,0.24) !important;
+}
+
+.rq-btn-cancel:hover {
+  background: rgba(239,68,68,0.14) !important;
+  box-shadow: 0 4px 16px rgba(239,68,68,0.18) !important;
 }
 
 .rq-sidebar-hint {
@@ -1888,20 +1999,38 @@ body.page-requests .rq-btn-full:hover {
   letter-spacing: 0.3px;
 }
 
+.rq-applicant-status--pending,
 .rq-applicant-status--në\ pritje,
 .rq-applicant-status--në-pritje {
   background: #fef3c7;
   color: #92400e;
 }
 
+.rq-applicant-status--approved,
 .rq-applicant-status--pranuar {
   background: #d1fae5;
   color: #065f46;
 }
 
+.rq-applicant-status--rejected,
 .rq-applicant-status--refuzuar {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.rq-applicant-status--waitlisted {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.rq-applicant-status--completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.rq-applicant-status--withdrawn {
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .rq-contact-form {
@@ -2368,7 +2497,6 @@ body.page-requests .rq-sidebar-trust__icon {
   flex-shrink: 0;
   font-family: 'Bitter', serif;
   font-size: 0.95rem;
-  font-weight: 700;
   color: var(--rq-text);
   padding: 0 16px;
   border-left: 1.5px solid var(--rq-border);

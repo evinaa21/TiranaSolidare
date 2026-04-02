@@ -11,10 +11,13 @@
 // ── English→Albanian label map (mirrors PHP status_labels.php) ──
 const STATUS_LABELS = {
     pending: 'Në pritje', approved: 'Pranuar', rejected: 'Refuzuar',
+    waitlisted: 'Në listë pritjeje', withdrawn: 'Tërhequr',
     present: 'Prezent', absent: 'Munguar',
     active: 'Aktiv', blocked: 'Bllokuar', deactivated: 'Çaktivizuar',
     admin: 'Admin', super_admin: 'Super Admin', volunteer: 'Vullnetar',
-    request: 'Kërkesë', offer: 'Ofertë'
+    request: 'Kërkesë', offer: 'Ofertë',
+    open: 'Hapur', filled: 'Mbushur', closed: 'Mbyllur', completed: 'Përfunduar', cancelled: 'Anuluar',
+    pending_review: 'Në shqyrtim'
 };
 function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
 
@@ -547,18 +550,51 @@ window.loadAdminEvents = async function (page = 1) {
 // ═══════════════════════════════════════════════════════
 
 window.viewEventApps = async function (eventId) {
-    const json = await apiCall(`applications.php?action=by_event&id=${eventId}`);
+    const json = await apiCall(`applications.php?action=by_event&id=${eventId}&limit=100`);
     if (!json.success) return;
 
-    const { applications, summary, event_data } = json.data;
+    const { applications, summary, event_data, event_title, capacity_total, confirmed_applicants } = json.data;
     const isPast = new Date(event_data) < new Date();
+    const confirmedApplicants = Array.isArray(confirmed_applicants) ? confirmed_applicants : [];
+    const confirmedCountLabel = capacity_total && capacity_total > 0
+        ? `${confirmedApplicants.length}/${capacity_total}`
+        : `${confirmedApplicants.length}`;
 
     let body = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
         <span class="db-badge db-badge--pending">Në pritje: ${summary.ne_pritje}</span>
         <span class="db-badge db-badge--active">Pranuar: ${summary.pranuar}</span>
         <span class="db-badge db-badge--blocked">Refuzuar: ${summary.refuzuar}</span>
+        <span class="db-badge" style="background:#ecfdf5;color:#065f46;">Të konfirmuar: ${confirmedCountLabel}</span>
         ${isPast ? `<span class="db-badge" style="background:#d1fae5;color:#065f46;">Prezent: ${summary.prezent || 0}</span>
         <span class="db-badge" style="background:#fee2e2;color:#991b1b;">Munguar: ${summary.munguar || 0}</span>` : ''}
+    </div>`;
+
+    body += `<div style="margin-bottom:16px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;${confirmedApplicants.length ? 'margin-bottom:12px;' : ''}">
+            <div>
+                <div style="font-size:0.95rem;font-weight:700;color:#166534;">Vullnetarët e konfirmuar</div>
+                <div style="font-size:0.82rem;color:#166534;">Këtu shfaqen menjëherë aplikantët e pranuar për këtë event.</div>
+            </div>
+            <span class="db-badge db-badge--active">${capacity_total && capacity_total > 0 ? `${confirmedApplicants.length}/${capacity_total} vende të zëna` : `${confirmedApplicants.length} të konfirmuar`}</span>
+        </div>
+        ${confirmedApplicants.length > 0
+            ? `<div style="display:grid;gap:8px;">${confirmedApplicants.map(app => {
+                const statusClass = app.statusi === 'absent' ? 'blocked' : 'active';
+                const statusStyle = app.statusi === 'present'
+                    ? 'background:#d1fae5;color:#065f46;'
+                    : app.statusi === 'absent'
+                    ? 'background:#fee2e2;color:#991b1b;'
+                    : '';
+                const badgeExtra = statusStyle ? ` style="${statusStyle}"` : '';
+                return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;background:#ffffff;border:1px solid #dcfce7;border-radius:10px;">
+                    <div>
+                        <div style="font-weight:700;color:#0f172a;">${escapeHtml(app.vullnetari_emri)}</div>
+                        <div style="font-size:0.82rem;color:#475569;">${escapeHtml(app.vullnetari_email)}</div>
+                    </div>
+                    <span class="db-badge db-badge--${statusClass}"${badgeExtra}>${escapeHtml(statusLabel(app.statusi))}</span>
+                </div>`;
+            }).join('')}</div>`
+            : '<div style="font-size:0.85rem;color:#475569;">Asnjë vullnetar i pranuar ende.</div>'}
     </div>`;
 
     // Bulk-action toolbar — shown when there are pending applications
@@ -614,7 +650,7 @@ window.viewEventApps = async function (eventId) {
     }
 
     showUserActivityModal('Duke ngarkuar…');
-    updateUserActivityModal('Aplikimet për Eventin', body);
+    updateUserActivityModal(event_title ? `Aplikimet për ${event_title}` : 'Aplikimet për Eventin', body);
 };
 
 // Override main.js updateAppStatus to refresh the modal with the correct eventId
@@ -971,11 +1007,11 @@ window.loadUserRequests = async function(userId, userName) {
         body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Data</th></tr></thead><tbody>';
         requests.forEach(r => {
             const tipClass = r.tipi === 'request' ? 'request' : 'offer';
-            const statClass = r.statusi === 'Open' ? 'open' : 'closed';
+            const statClass = ['open', 'filled', 'Open', 'Filled'].includes(r.statusi) ? 'open' : 'closed';
             body += `<tr>
                 <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
                 <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
-                <td><span class="db-badge db-badge--${statClass}">${escapeHtml(r.statusi)}</span></td>
+                <td><span class="db-badge db-badge--${statClass}">${escapeHtml(statusLabel(r.statusi))}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
             </tr>`;
         });
@@ -1079,12 +1115,14 @@ window.loadHelpRequests = async function (page = 1) {
     const filterStatus = document.getElementById('admin-req-filter-status')?.value || '';
     const filterType = document.getElementById('admin-req-filter-type')?.value || '';
     const filterFlagged = document.getElementById('admin-req-filter-flagged')?.checked ? '1' : '';
+    const filterModeration = document.getElementById('admin-req-filter-moderation')?.value || '';
 
     const filters = {};
     if (filterSearch) filters.search = filterSearch;
     if (filterStatus) filters.statusi = filterStatus;
     if (filterType) filters.tipi = filterType;
     if (filterFlagged) filters.flagged = filterFlagged;
+    if (filterModeration) filters.moderation_status = filterModeration;
 
     const params = new URLSearchParams({ action: 'list', page, limit: 10, ...filters });
     const json = await apiCall(`help_requests.php?${params}`);
@@ -1101,19 +1139,27 @@ window.loadHelpRequests = async function (page = 1) {
         <select id="admin-req-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
             <option value="open"${filterStatus === 'open' ? ' selected' : ''}>Hapur</option>
-            <option value="closed"${filterStatus === 'closed' ? ' selected' : ''}>Mbyllur</option>
+            <option value="filled"${filterStatus === 'filled' ? ' selected' : ''}>Mbushur</option>
+            <option value="completed"${filterStatus === 'completed' ? ' selected' : ''}>Përfunduar</option>
+            <option value="cancelled"${filterStatus === 'cancelled' ? ' selected' : ''}>Anuluar</option>
         </select>
         <select id="admin-req-filter-type" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
             <option value=""${!filterType ? ' selected' : ''}>Të gjitha tipet</option>
             <option value="request"${filterType === 'request' ? ' selected' : ''}>Kërkesë</option>
             <option value="offer"${filterType === 'offer' ? ' selected' : ''}>Ofertë</option>
         </select>
+        <select id="admin-req-filter-moderation" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
+            <option value=""${!filterModeration ? ' selected' : ''}>Të gjitha moderimi</option>
+            <option value="pending_review"${filterModeration === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
+            <option value="approved"${filterModeration === 'approved' ? ' selected' : ''}>Miratuar</option>
+            <option value="rejected"${filterModeration === 'rejected' ? ' selected' : ''}>Refuzuar</option>
+        </select>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;color:#ef4444;">
              <input type="checkbox" id="admin-req-filter-flagged" onchange="loadHelpRequests(1)" ${filterFlagged ? 'checked' : ''}>
              Vetëm të Raportuarat
         </label>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadHelpRequests(1)">Filtro</button>
-        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';document.getElementById('admin-req-filter-flagged').checked=false;loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-req-filter-search').value='';document.getElementById('admin-req-filter-status').value='';document.getElementById('admin-req-filter-type').value='';document.getElementById('admin-req-filter-moderation').value='';document.getElementById('admin-req-filter-flagged').checked=false;loadHelpRequests(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> kërkesa</div>`;
@@ -1125,27 +1171,36 @@ window.loadHelpRequests = async function (page = 1) {
     }
 
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Nga</th><th>Raportime</th><th>Data</th><th>Veprime</th>'
+        + '<th>Titulli</th><th>Tipi</th><th>Statusi</th><th>Moderimi</th><th>Nga</th><th>Raportime</th><th>Data</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     requests.forEach(r => {
         const tipClass = r.tipi === 'request' ? 'request' : 'offer';
-        const statClass = r.statusi === 'open' ? 'open' : 'closed';
+        const statClass = ['open', 'filled'].includes(r.statusi) ? 'open' : 'closed';
+        const modStatus = r.moderation_status || 'approved';
+        const modBadgeStyle = modStatus === 'pending_review'
+            ? 'background:#fef3c7;color:#92400e;'
+            : modStatus === 'rejected'
+                ? 'background:#fee2e2;color:#991b1b;'
+                : 'background:#dcfce7;color:#14532d;';
         const flagIndicator = r.flags > 0 ? `<span style="color:#ef4444; font-weight: bold; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${r.flags} Raportime</span>` : '<span style="color:#9ca3af;">0</span>';
 
-        html += `<tr ${r.statusi === 'closed' ? 'style="opacity:0.65"' : ''}>
+        html += `<tr ${['completed', 'cancelled', 'closed'].includes(r.statusi) ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
             <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
-            <td><span class="db-badge db-badge--${statClass}">${r.statusi === 'open' ? 'Hapur' : 'Mbyllur'}</span></td>
+            <td><span class="db-badge db-badge--${statClass}">${escapeHtml(statusLabel(r.statusi))}</span></td>
+            <td><span class="db-badge" style="${modBadgeStyle}">${escapeHtml(statusLabel(modStatus))}</span></td>
             <td>${escapeHtml(r.krijuesi_emri || '—')}</td>
             <td>${flagIndicator}</td>
             <td>${formatDate(r.krijuar_me)}</td>
             <td>
                 <div class="db-table__actions">
     <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
+${modStatus === 'pending_review' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button><button class="db-btn db-btn--danger db-btn--sm" onclick="rejectRequest(${r.id_kerkese_ndihme})">Refuzo</button>` : ''}
+${modStatus === 'rejected' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button>` : ''}
 ${r.flags > 0 ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="clearFlags(${r.id_kerkese_ndihme})">Pastro Raportimet</button>` : ''}
-${r.statusi === 'open' ?
-    `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Mbyll</button>` :
+${['open', 'filled'].includes(r.statusi) ?
+    `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Përfundo</button>` :
     `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
     <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
 </div>
@@ -1168,10 +1223,26 @@ window.clearFlags = async function (id) {
     if (json.success) loadHelpRequests();
 };
 
+// Approve a pending-review help request
+window.approveRequest = async function (id) {
+    if (!confirm('Miratoni këtë postim? Do të bëhet publik.')) return;
+    const json = await apiCall(`help_requests.php?action=approve_request&id=${id}`, 'PUT');
+    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) loadHelpRequests();
+};
+
+// Reject a pending-review help request
+window.rejectRequest = async function (id) {
+    if (!confirm('Refuzoni këtë postim? Nuk do të shfaqet publikisht.')) return;
+    const json = await apiCall(`help_requests.php?action=reject_request&id=${id}`, 'PUT');
+    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) loadHelpRequests();
+};
+
 // Close request action
 window.closeRequest = async function (id) {
-    if (!confirm('Mbyll këtë kërkesë?')) return;
-    const json = await apiCall(`help_requests.php?action=close&id=${id}`, 'PUT');
+    if (!confirm('Shënoje këtë postim si të përfunduar?')) return;
+    const json = await apiCall(`help_requests.php?action=complete&id=${id}`, 'PUT');
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     loadHelpRequests();
 };

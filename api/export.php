@@ -27,7 +27,7 @@ if ($type === 'report_html') {
     $totalApps    = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
     $approvedApps = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi WHERE statusi = 'approved'")->fetchColumn();
     $pendingApps  = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi WHERE statusi = 'pending'")->fetchColumn();
-    $openRequests = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open'")->fetchColumn();
+    $openRequests = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('open', 'filled') AND moderation_status = 'approved'")->fetchColumn();
     $approvalRate = $totalApps > 0 ? round($approvedApps / $totalApps * 100) : 0;
 
     $recentEvents = $pdo->query(
