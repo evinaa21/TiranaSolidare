@@ -1294,50 +1294,66 @@ switch ($action) {
 
     // ── FLAG (REPORT) REQUEST ──────────────────────
     case 'flag':
-        require_method('POST');
-        $user = require_auth();
-        $id = (int) ($_GET['id'] ?? 0);
+    require_method('POST');
+    $user = require_auth();
+    $id = (int) ($_GET['id'] ?? 0);
+    $body = get_json_body();
+    $arsye = trim((string) ($body['arsye'] ?? ''));
 
-        if ($id <= 0) {
-            json_error('ID e kërkesës e pavlefshme.', 400);
-        }
+    if ($id <= 0) {
+        json_error('ID e kërkesës e pavlefshme.', 400);
+    }
 
-        // One flag per user per request (30-day cooldown prevents duplicate counts)
-        $flagKey = 'flag_' . $user['id'] . '_' . $id;
-        if (!check_rate_limit($flagKey, 1, 2592000)) {
+    $flagKey = 'flag_' . $user['id'] . '_' . $id;
+    if (!check_rate_limit($flagKey, 1, 2592000)) {
+        json_error('E keni raportuar tashmë këtë kërkesë.', 429);
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT IGNORE INTO help_request_flags (id_kerkese_ndihme, id_perdoruesi, arsye)
+             VALUES (?, ?, ?)'
+        );
+        $stmt->execute([$id, $user['id'], $arsye !== '' ? $arsye : null]);
+
+        if ($stmt->rowCount() === 0) {
             json_error('E keni raportuar tashmë këtë kërkesë.', 429);
         }
 
-        try {
-            $flagStmt = $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = COALESCE(flags, 0) + 1 WHERE id_kerkese_ndihme = ?');
-            $flagStmt->execute([$id]);
-            if ($flagStmt->rowCount() === 0) {
-                json_error('Kërkesa nuk u gjet.', 404);
-            }
-            json_success(['message' => 'Kërkesa u raportua me sukses.']);
-        } catch (\Exception $e) {
-            error_log('help_requests flag: ' . $e->getMessage());
-            json_error('Gabim gjatë raportimit.', 500);
-        }
-        break;
+        $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = COALESCE(flags, 0) + 1 WHERE id_kerkese_ndihme = ?')
+            ->execute([$id]);
 
-    case 'clear_flags':
-        require_method('POST');
-        $user = require_admin();
-        $id = (int) ($_GET['id'] ?? 0);
+        json_success(['message' => 'Kërkesa u raportua me sukses.']);
+    } catch (\Exception $e) {
+        error_log('help_requests flag: ' . $e->getMessage());
+        json_error('Gabim gjatë raportimit.', 500);
+    }
+    break;
 
-        if ($id <= 0) {
-            json_error('ID e kërkesës e pavlefshme.', 400);
-        }
+case 'get_flags':
+    require_method('GET');
+    require_admin();
+    $id = (int) ($_GET['id'] ?? 0);
 
-        try {
-            $pdo->prepare('UPDATE Kerkesa_per_Ndihme SET flags = 0 WHERE id_kerkese_ndihme = ?')->execute([$id]);
-            json_success(['message' => 'Raportimet u fshinë.']);
-        } catch (\Exception $e) {
-            error_log('help_requests clear_flags: ' . $e->getMessage());
-            json_error('Gabim gjatë fshirjes së raportimeve.', 500);
-        }
-        break;
+    if ($id <= 0) {
+        json_error('ID e pavlefshme.', 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT hrf.arsye, hrf.krijuar_me,
+                    p.emri AS raportuesi_emri
+             FROM help_request_flags hrf
+             JOIN Perdoruesi p ON p.id_perdoruesi = hrf.id_perdoruesi
+             WHERE hrf.id_kerkese_ndihme = ?
+             ORDER BY hrf.krijuar_me DESC"
+        );
+        $stmt->execute([$id]);
+        json_success(['flags' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch (\Exception $e) {
+        json_error('Gabim.', 500);
+    }
+    break;
 
     // ── DELETE REQUEST ─────────────────────────────
 case 'delete':

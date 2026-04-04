@@ -1189,7 +1189,7 @@ window.loadHelpRequests = async function (page = 1) {
             : modStatus === 'rejected'
                 ? 'background:#fee2e2;color:#991b1b;'
                 : 'background:#dcfce7;color:#14532d;';
-        const flagIndicator = r.flags > 0 ? `<span style="color:#ef4444; font-weight: bold; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${r.flags} Raportime</span>` : '<span style="color:#9ca3af;">0</span>';
+        const flagIndicator = r.flags > 0 ? `<span style="color:#dc2626;font-weight:700;display:block;text-align:center;">${r.flags}</span>` : '';
 
         html += `<tr ${['completed', 'cancelled', 'closed'].includes(r.statusi) ? 'style="opacity:0.65"' : ''}>
             <td><strong>${escapeHtml(r.titulli)}</strong></td>
@@ -1204,11 +1204,8 @@ window.loadHelpRequests = async function (page = 1) {
     <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
 ${modStatus === 'pending_review' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button><button class="db-btn db-btn--danger db-btn--sm" onclick="rejectRequest(${r.id_kerkese_ndihme})">Refuzo</button>` : ''}
 ${modStatus === 'rejected' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button>` : ''}
-${r.flags > 0 ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="clearFlags(${r.id_kerkese_ndihme})">Pastro Raportimet</button>` : ''}
-${['open', 'filled'].includes(r.statusi) ?
-    `<button class="db-btn db-btn--warning db-btn--sm" onclick="closeRequest(${r.id_kerkese_ndihme})">Përfundo</button>` :
-    `<button class="db-btn db-btn--sm" style="display:none;">Mbyll</button>`}
-    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
+${r.flags > 0 ? `<button class="db-btn db-btn--sm" onclick="viewRequestFlags(${r.id_kerkese_ndihme})">Raportime</button>` : ''}
+<button class="db-btn db-btn--danger db-btn--sm" onclick="deleteRequest(${r.id_kerkese_ndihme})">Fshi</button>
 </div>
             </td>
         </tr>`;
@@ -1220,13 +1217,6 @@ ${['open', 'filled'].includes(r.statusi) ?
     }
 
     container.innerHTML = html;
-};
-
-window.clearFlags = async function (id) {
-    if (!confirm('Pastro të gjitha raportimet për këtë kërkesë/ofertë?')) return;
-    const json = await apiCall(`help_requests.php?action=clear_flags&id=${id}`, 'POST');
-    dbToast(json.message || 'U krye.', json.success ? 'success' : 'danger');
-    if (json.success) loadHelpRequests();
 };
 
 // Approve a pending-review help request
@@ -2046,6 +2036,29 @@ window.toggleBlock = async function(userId, action) {
             setTimeout(() => openUserDetail(userId), 300);
         }
     }
+};
+
+window.viewRequestFlags = async function(requestId) {
+    showUserActivityModal('Duke ngarkuar raportimet…');
+    const json = await apiCall(`help_requests.php?action=get_flags&id=${requestId}`);
+    if (!json.success) { dbToast('Gabim gjatë ngarkimit.', 'danger'); return; }
+
+    const flags = json.data.flags;
+    let body = '';
+    if (!flags.length) {
+        body = '<p style="color:#94a3b8;padding:20px 0;text-align:center;">Nuk ka raporte aktive.</p>';
+    } else {
+        body = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Raportuesi</th><th>Arsyeja</th><th>Data</th></tr></thead><tbody>';
+        flags.forEach(f => {
+            body += `<tr>
+                <td><strong>${escapeHtml(f.raportuesi_emri)}</strong></td>
+                <td>${f.arsye ? escapeHtml(f.arsye) : '<span style="color:#94a3b8;">Pa arsye</span>'}</td>
+                <td>${formatDate(f.krijuar_me)}</td>
+            </tr>`;
+        });
+        body += '</tbody></table></div>';
+    }
+    updateUserActivityModal('Raportimet e kërkesës', body);
 };
 
 // ── Change User Role (Super Admin only) ──

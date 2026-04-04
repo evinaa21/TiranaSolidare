@@ -1223,6 +1223,101 @@ if (deleteBtn) {
   trustItems.forEach(el => observer.observe(el));
 })();
 
+function reportHelpRequest(requestId) {
+    const existing = document.getElementById('rq-report-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'rq-report-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:28px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 8px;color:#dc2626;font-size:1.1rem;">Raporto këtë kërkesë</h3>
+            <p style="margin:0 0 16px;font-size:0.87rem;color:#6b7280;">Zgjidh arsyen e raportimit. Admini do ta shqyrtojë.</p>
+            
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+                ${[
+                    'Përmbajtje e rreme ose mashtruese',
+                    'Përmbajtje e papërshtatshme',
+                    'Postim i dubluar',
+                    'Spam',
+                    'Tjetër'
+                ].map(reason => `
+                    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e4e8ee;border-radius:10px;cursor:pointer;font-size:0.88rem;color:#374151;transition:border-color .15s;"
+                           onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#ef4444':'#e4e8ee'">
+                        <input type="radio" name="rq-report-reason" value="${reason}" style="accent-color:#ef4444;">
+                        ${reason}
+                    </label>`).join('')}
+            </div>
+
+            <textarea id="rq-report-custom" maxlength="300" rows="3" placeholder="Shpjego shkurtimisht (opsionale)..."
+                style="width:100%;padding:10px 12px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.88rem;resize:none;box-sizing:border-box;outline:none;display:none;"></textarea>
+
+            <div id="rq-report-status" style="min-height:1.2em;font-size:0.85rem;margin:8px 0;"></div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button id="rq-report-confirm" style="flex:1;padding:10px;background:#dc2626;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.9rem;">Dërgo raportin</button>
+                <button id="rq-report-cancel" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:1px solid #e4e8ee;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.9rem;">Anulo</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+
+    const customTextarea = modal.querySelector('#rq-report-custom');
+    const statusEl = modal.querySelector('#rq-report-status');
+    const confirmBtn = modal.querySelector('#rq-report-confirm');
+    const cancelBtn = modal.querySelector('#rq-report-cancel');
+
+    // Shfaq textarea vetëm kur zgjedh "Tjetër"
+    modal.querySelectorAll('input[name="rq-report-reason"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            customTextarea.style.display = radio.value === 'Tjetër' ? 'block' : 'none';
+            // Ngjyros borderin e zgjedhur
+            modal.querySelectorAll('label').forEach(l => {
+                l.style.borderColor = l.querySelector('input')?.checked ? '#ef4444' : '#e4e8ee';
+            });
+        });
+    });
+
+    cancelBtn.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+    confirmBtn.addEventListener('click', async () => {
+        const selected = modal.querySelector('input[name="rq-report-reason"]:checked');
+        if (!selected) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = 'Ju lutem zgjidhni një arsye.';
+            return;
+        }
+
+        const arsye = selected.value === 'Tjetër'
+            ? (customTextarea.value.trim() || 'Tjetër')
+            : selected.value;
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Duke dërguar...';
+        statusEl.textContent = '';
+
+        try {
+            const res = await fetch(API + '/help_requests.php?action=flag&id=' + requestId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin',
+                body: JSON.stringify({ arsye })
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.message || 'Gabim gjatë raportimit.');
+            statusEl.style.color = '#16a34a';
+            statusEl.textContent = 'Raporti u dërgua. Faleminderit!';
+            setTimeout(() => modal.remove(), 1500);
+        } catch (err) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = err.message;
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Dërgo raportin';
+        }
+    });
+}
+
 </script>
 <script src="/TiranaSolidare/public/assets/scripts/main.js?v=20260401a"></script>
 </body>

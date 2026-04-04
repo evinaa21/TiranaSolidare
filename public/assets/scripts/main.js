@@ -517,27 +517,3 @@ document.addEventListener('DOMContentLoaded', initPasswordVisibilityToggles);
     }, { passive: true });
   });
 })();
-
-async function reportHelpRequest(id) {
-    if (!confirm('Jeni të sigurt që doni të raportoni këtë kërkesë/ofertë si të papërshtatshme?')) return;
-    try {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        const token = meta ? meta.content : '';
-
-        const res = await fetch('/TiranaSolidare/api/help_requests.php?action=flag&id=' + encodeURIComponent(id), {
-            method: 'POST',
-            headers: {
-                'X-CSRF-Token': token,
-            },
-            credentials: 'same-origin'
-        });
-        const json = await res.json();
-        alert(json.message || 'Kërkesa u raportua!');
-        if (json.success) {
-            location.reload();
-        }
-    } catch (e) {
-        console.error(e);
-        alert('Ndodhi një gabim gjatë raportimit.');
-    }
-}
