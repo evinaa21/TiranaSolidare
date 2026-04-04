@@ -2018,20 +2018,6 @@ async function loadUnreadBadge() {
 
 
 
-// QR Scanner Mock
-window.openQrScanner = function() {
-  const input = prompt('Skanoni kodin QR ose shkruani ID e biletës (psh. TS-APP-123):');
-  if(!input) return;
-  const match = input.match(/TS-APP-(\d+)/i);
-  if(match && match[1]) {
-     const appId = match[1];
-     if (confirm('Konfirmoni prezencën për aplikimin #' + appId + '?')) {
-         window.markPresence(appId, 'present', null).then(() => alert('Prezenca u regjistrua me sukses!'));
-     }
-  } else {
-     alert('Kodi i pavlefshëm.');
-  }
-};
 
 // ── Change User Role (Super Admin only) ──
 window.changeUserRole = async function(userId, currentRole) {

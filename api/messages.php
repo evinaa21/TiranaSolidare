@@ -17,53 +17,57 @@ $action = $_GET['action'] ?? 'conversations';
 switch ($action) {
 
     // ── LIST CONVERSATIONS ─────────────────────────
-    case 'conversations':
-        require_method('GET');
-        $user = require_auth();
-        release_session();
+case 'conversations':
+    require_method('GET');
+    $user = require_auth();
+    release_session();
 
-        // Get list of users with whom the current user has exchanged messages,
-        // along with the last message and unread count.
-        // Uses MAX(id_mesazhi) + JOIN to avoid relying on MySQL's lenient GROUP BY
-        // which breaks under ONLY_FULL_GROUP_BY (default in MySQL 5.7.5+).
-        $stmt = $pdo->prepare(
-            "SELECT
-                c.other_id,
-                p.emri AS other_emri,
-                p.profile_color AS other_color,
-                m_last.mesazhi AS last_message,
-                c.last_time,
-                c.unread_count
-             FROM (
-                SELECT
-                    CASE WHEN derguesi_id = ? THEN marruesi_id ELSE derguesi_id END AS other_id,
-                    MAX(id_mesazhi) AS last_msg_id,
-                    MAX(krijuar_me) AS last_time,
-                    SUM(CASE WHEN marruesi_id = ? AND is_read = 0 THEN 1 ELSE 0 END) AS unread_count
-                FROM Mesazhi
-                WHERE derguesi_id = ? OR marruesi_id = ?
-                GROUP BY other_id
-             ) c
-             JOIN Perdoruesi p ON p.id_perdoruesi = c.other_id
-             JOIN Mesazhi m_last ON m_last.id_mesazhi = c.last_msg_id
-             ORDER BY c.last_time DESC"
-        );
-        $uid = $user['id'];
-        $stmt->execute([$uid, $uid, $uid, $uid]);
-        $conversations = ts_normalize_rows($stmt->fetchAll());
+    $stmt = $pdo->prepare(
+        "SELECT
+            c.other_id,
+            p.emri AS other_emri,
+            p.profile_color AS other_color,
+            m_last.mesazhi AS last_message,
+            c.last_time,
+            c.unread_count
+         FROM (
+            SELECT
+                CASE WHEN derguesi_id = ? THEN marruesi_id ELSE derguesi_id END AS other_id,
+                MAX(id_mesazhi) AS last_msg_id,
+                MAX(krijuar_me) AS last_time,
+                SUM(CASE WHEN marruesi_id = ? AND is_read = 0 THEN 1 ELSE 0 END) AS unread_count
+            FROM Mesazhi
+            WHERE derguesi_id = ? OR marruesi_id = ?
+            GROUP BY other_id
+         ) c
+         JOIN Perdoruesi p ON p.id_perdoruesi = c.other_id
+         JOIN Mesazhi m_last ON m_last.id_mesazhi = c.last_msg_id
+         WHERE NOT EXISTS (
+             SELECT 1 FROM user_blocks
+             WHERE blocker_id = c.other_id AND blocked_id = ?
+         )
+         ORDER BY c.last_time DESC"
+    );
+    $uid = $user['id'];
+    $stmt->execute([$uid, $uid, $uid, $uid, $uid]);
+    $conversations = ts_normalize_rows($stmt->fetchAll());
 
-        // Total unread count
-        $unreadStmt = $pdo->prepare(
-            "SELECT COUNT(*) FROM Mesazhi WHERE marruesi_id = ? AND is_read = 0"
-        );
-        $unreadStmt->execute([$uid]);
-        $totalUnread = (int) $unreadStmt->fetchColumn();
+    $unreadStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM Mesazhi 
+         WHERE marruesi_id = ? AND is_read = 0
+         AND NOT EXISTS (
+             SELECT 1 FROM user_blocks
+             WHERE blocker_id = derguesi_id AND blocked_id = ?
+         )"
+    );
+    $unreadStmt->execute([$uid, $uid]);
+    $totalUnread = (int) $unreadStmt->fetchColumn();
 
-        json_success([
-            'conversations' => $conversations,
-            'total_unread'  => $totalUnread,
-        ]);
-        break;
+    json_success([
+        'conversations' => $conversations,
+        'total_unread'  => $totalUnread,
+    ]);
+    break;
 
     // ── MESSAGE THREAD ─────────────────────────────
     case 'thread':
@@ -167,6 +171,24 @@ switch ($action) {
             json_error('Nuk mund t\'i dërgoni mesazh këtij përdoruesi.', 403);
         }
 
+        // Kontrollo nëse marrësi ka bllokuar dërguesin
+       $blockCheck = $pdo->prepare(
+           "SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
+);
+$blockCheck->execute([$receiverId, $user['id']]);
+if ($blockCheck->fetchColumn() > 0) {
+    json_error('Nuk mund të dërgosh mesazh këtij përdoruesi.', 403);
+}
+
+// Kontrollo nëse dërguesi ka bllokuar marrësin
+$blockCheck2 = $pdo->prepare(
+    "SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
+);
+$blockCheck2->execute([$user['id'], $receiverId]);
+if ($blockCheck2->fetchColumn() > 0) {
+    json_error('Ke bllokuar këtë përdorues. Zhbllokoje për të dërguar mesazhe.', 403);
+}
+
         try {
             $stmt = $pdo->prepare(
                 "INSERT INTO Mesazhi (derguesi_id, marruesi_id, mesazhi) VALUES (?, ?, ?)"
@@ -267,6 +289,90 @@ switch ($action) {
         json_success(['users' => $stmt->fetchAll()]);
         break;
 
+        // ── BLOCK USER ─────────────────────────────────
+case 'block_user':
+    require_method('POST');
+    $user = require_auth();
+    $body = get_json_body();
+    $blocked_id = (int) ($body['blocked_id'] ?? 0);
+
+    if (!$blocked_id || $blocked_id === $user['id']) {
+        json_error('ID e pavlefshme.', 400);
+    }
+
+    $stmt = $pdo->prepare(
+        "INSERT IGNORE INTO user_blocks (blocker_id, blocked_id) VALUES (?, ?)"
+    );
+    $stmt->execute([$user['id'], $blocked_id]);
+    json_success(['message' => 'Përdoruesi u bllokua.']);
+    break;
+
+// ── UNBLOCK USER ───────────────────────────────
+case 'unblock_user':
+    require_method('POST');
+    $user = require_auth();
+    $body = get_json_body();
+    $blocked_id = (int) ($body['blocked_id'] ?? 0);
+
+    if (!$blocked_id) {
+        json_error('ID e pavlefshme.', 400);
+    }
+
+    $stmt = $pdo->prepare(
+        "DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
+    );
+    $stmt->execute([$user['id'], $blocked_id]);
+    json_success(['message' => 'Përdoruesi u zhbllokua.']);
+    break;
+
+// ── CHECK IF BLOCKED ───────────────────────────
+case 'is_blocked':
+    require_method('GET');
+    $user = require_auth();
+    $other_id = (int) ($_GET['user_id'] ?? 0);
+
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
+    );
+    $stmt->execute([$user['id'], $other_id]);
+    $iBlocked = (bool) $stmt->fetchColumn();
+
+    // Kontrollo edhe nëse tjetri ka bllokuar mua
+    $stmt2 = $pdo->prepare(
+        "SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
+    );
+    $stmt2->execute([$other_id, $user['id']]);
+    $theyBlocked = (bool) $stmt2->fetchColumn();
+
+    json_success([
+        'i_blocked_them' => $iBlocked,
+        'they_blocked_me' => $theyBlocked,
+        'is_blocked' => $iBlocked || $theyBlocked,
+    ]);
+    break;
+    
+    // ── DELETE CONVERSATION ────────────────────────
+case 'delete_conversation':
+    require_method('DELETE');
+    $user = require_auth();
+    $withId = (int) ($_GET['with'] ?? 0);
+
+    if (!$withId) {
+        json_error('ID e pavlefshme.', 400);
+    }
+
+    // Fshi vetëm mesazhet ku ky përdorues është dërgues ose marrës
+    // Përdoruesi tjetër e sheh akoma bisedën
+    $stmt = $pdo->prepare(
+        "DELETE FROM Mesazhi 
+         WHERE (derguesi_id = ? AND marruesi_id = ?)
+            OR (derguesi_id = ? AND marruesi_id = ?)"
+    );
+    $stmt->execute([$user['id'], $withId, $withId, $user['id']]);
+
+    json_success(['message' => 'Biseda u fshi.']);
+    break;
+    
     default:
         json_error('Veprim i panjohur. Përdorni: conversations, thread, send, mark_read, search_users.', 400);
 }

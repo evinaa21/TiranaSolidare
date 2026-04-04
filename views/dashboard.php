@@ -174,10 +174,6 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     <div class="db-panel__header">
       <h3>Menaxho Eventet</h3>
         <div style="display:flex; gap:10px;">
-            <button class="db-btn db-btn--primary" onclick="window.openQrScanner()">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="5" height="5" x="7" y="7" rx="1"/><rect width="5" height="5" x="12" y="12" rx="1"/></svg>
-              Skano QR
-            </button>
             <button class="db-btn db-btn--primary" onclick="toggleCreateEvent()">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Krijo Event

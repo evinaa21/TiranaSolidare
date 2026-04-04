@@ -978,7 +978,7 @@
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 1;
-   line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -3105,6 +3105,7 @@
   .kbtn-dock-text p {
     font-size: 0.7rem;
     -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
 
   .kbtn-dock-arrow {
@@ -3320,6 +3321,7 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     overflow: hidden;
   }
 
@@ -3377,6 +3379,7 @@
   .cv-card__desc {
     font-size: 0.8rem;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .cv-scroll-btn {

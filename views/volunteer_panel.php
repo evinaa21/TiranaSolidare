@@ -623,7 +623,7 @@ $badgeIcons = [
                   <?php if ($app['statusi'] === 'pending'): ?>
                     <button class="btn_secondary vp-btn-sm vp-btn-danger" onclick="withdrawApp(<?= $app['id_aplikimi'] ?>)">Tërhiq</button>
                   <?php elseif ($app['statusi'] === 'approved'): ?>
-                    <button class="btn_primary vp-btn-sm" onclick="showQRCode('<?= $app['id_aplikimi'] ?>', '<?= htmlspecialchars(addslashes($app['eventi_titulli'])) ?>')">Hyrja (QR)</button>
+                      <span class="vp-muted">—</span>
                   <?php else: ?>
                     <span class="vp-muted">—</span>
                   <?php endif; ?>
@@ -1961,14 +1961,22 @@ if (avatarDeleteBtn) {
     const container = document.getElementById('vp-msg-content');
     const title = document.getElementById('vp-msg-title');
     const actions = document.getElementById('vp-msg-actions');
-    if (title) title.innerHTML = '<a href="?tab=messages" style="margin-right:8px;color:inherit;">← </a> ' + esc(userName);
-    if (actions) actions.style.display = 'none';
+ // Titulli pa buton fillimisht
+if (title) title.innerHTML = '<a href="?tab=messages" style="margin-right:8px;color:inherit;">← </a> ' + esc(userName);
+if (actions) actions.style.display = 'none';
 
     try {
       const json = await vpApiCall('messages.php?action=thread&with=' + userId + '&limit=50');
       if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
 
       const messages = json.data.messages;
+      // Shto butonin vetëm nëse ka mesazhe
+if (title && messages.length > 0) {
+    title.innerHTML += `<button onclick="vpDeleteConversation(${userId}, '${userName.replace(/'/g, "\\'")}')" 
+        style="margin-left:12px;font-size:0.76rem;padding:4px 10px;border-radius:8px;border:1.5px solid #ef4444;background:#fff1f2;color:#dc2626;cursor:pointer;">
+        Fshi bisedën
+      </button>`;
+}
       let html = '<div class="msg-thread" id="vp-msg-thread">';
       if (!messages.length) html += '<div style="text-align:center;color:#94a3b8;padding:2rem;">Shkruaj mesazhin e parë!</div>';
       messages.forEach(m => {
@@ -1977,11 +1985,15 @@ if (avatarDeleteBtn) {
           + '<div class="msg-bubble__text">' + esc(m.mesazhi) + '</div>'
           + '<div class="msg-bubble__time">' + fmtDate(m.krijuar_me) + '</div></div>';
       });
-      html += '</div><div class="msg-compose">'
-        + '<textarea id="vp-msg-input" class="msg-compose__input" placeholder="Shkruaj mesazhin…" rows="2" maxlength="2000" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();vpSendMessage(' + userId + ');}"></textarea>'
-        + '<button class="vp-notif-toolbar-btn" onclick="vpSendMessage(' + userId + ')" style="padding:10px 14px;background:var(--db-primary,#00715D);color:#fff;border-radius:12px;border:none;cursor:pointer;">'
-        + '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></div>';
+html += '</div>'
+  + '<div id="vp-msg-block-bar" style="padding:4px 0 8px;"></div>'
+  + '<div class="msg-compose" id="vp-msg-compose">'
+  + '<textarea id="vp-msg-input" class="msg-compose__input" placeholder="Shkruaj mesazhin…" rows="2" maxlength="2000" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();vpSendMessage(' + userId + ');}"></textarea>'
+  + '<button class="vp-notif-toolbar-btn" onclick="vpSendMessage(' + userId + ')" style="padding:10px 14px;background:var(--db-primary,#00715D);color:#fff;border-radius:12px;border:none;cursor:pointer;">'
+  + '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>'
+  + '</div>';
       container.innerHTML = html;
+      vpCheckAndRenderBlockBtn(userId, userName);
       const thread = document.getElementById('vp-msg-thread');
       if (thread) setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
       pollTimer = setInterval(() => vpRefreshThread(userId), 5000);
@@ -2083,33 +2095,99 @@ if (avatarDeleteBtn) {
     }
   });
 })();
-</script>
 
-<div id="qrModal" class="vp-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:#fff;padding:24px;border-radius:12px;max-width:320px;text-align:center;position:relative;">
-        <button onclick="document.getElementById('qrModal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-        <h3 id="qrModalTitle" style="margin-top:0;font-size:1.2rem;color:#0f172a;margin-bottom:16px;">Bileta juaj</h3>
-        <div id="qrModalCode" style="margin-bottom:16px;display:flex;justify-content:center;"></div>
-        <p style="font-size:0.85rem;color:#64748b;margin:0;">Tregojini këtë kod stafit në hyrje të eventit.</p>
-    </div>
-</div>
+async function vpCheckAndRenderBlockBtn(userId, userName) {
+    const blockBar = document.getElementById('vp-msg-block-bar');
+    const compose  = document.getElementById('vp-msg-compose');
+    if (!blockBar) return;
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-window.showQRCode = function(appId, eventTitle) {
-    document.getElementById('qrModalTitle').textContent = eventTitle;
-    const qrContainer = document.getElementById('qrModalCode');
-    qrContainer.innerHTML = '';
-    document.getElementById('qrModal').style.display = 'flex';
-    new QRCode(qrContainer, {
-        text: 'TS-APP-' + appId,
-        width: 200,
-        height: 200,
-        colorDark : "#0f172a",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
-};
+    try {
+        const res  = await fetch(`${API}/messages.php?action=is_blocked&user_id=${userId}`, {
+            credentials: 'same-origin'
+        });
+        const json = await res.json();
+        if (!json.success) return;
+
+        const iBlockedThem  = json.data.i_blocked_them;
+        const theyBlockedMe = json.data.they_blocked_me;
+
+        // Butoni blloko/zhblloko — shfaqet gjithmonë
+        blockBar.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:4px 0;">
+                <button onclick="${iBlockedThem ? `vpUnblockUser(${userId},'${userName.replace(/'/g,"\\'")}')` : `vpBlockUser(${userId},'${userName.replace(/'/g,"\\'")}')` }"
+                    style="font-size:0.76rem;padding:4px 11px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:5px;
+                           border:1.5px solid ${iBlockedThem ? '#10b981' : '#ef4444'};
+                           background:${iBlockedThem ? '#f0fdf4' : '#fff1f2'};
+                           color:${iBlockedThem ? '#059669' : '#dc2626'};">
+                    ${iBlockedThem
+                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" x2="6" y1="1" y2="4"/><line x1="10" x2="10" y1="1" y2="4"/><line x1="14" x2="14" y1="1" y2="4"/></svg> Zhblloko'
+                        : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg> Blloko'}
+                </button>
+            </div>
+            ${theyBlockedMe && !iBlockedThem
+                ? '<p style="text-align:center;font-size:0.8rem;color:#94a3b8;margin:4px 0 8px;">Ky përdorues nuk pranon mesazhe.</p>'
+                : iBlockedThem
+                ? '<p style="text-align:center;font-size:0.8rem;color:#94a3b8;margin:4px 0 8px;">Ke bllokuar këtë përdorues.</p>'
+                : ''}`;
+
+        // Fshih compose nëse ka bllok nga cilado anë
+        if (compose) {
+            compose.style.display = (iBlockedThem || theyBlockedMe) ? 'none' : '';
+        }
+    } catch(e) {}
+}
+
+async function vpBlockUser(userId, userName) {
+    if (!confirm(`Blloko ${userName}?\nNuk do të marrësh dhe nuk do të mund të dërgosh mesazhe.`)) return;
+    try {
+        const res  = await fetch(`${API}/messages.php?action=block_user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'same-origin',
+            body: JSON.stringify({ blocked_id: userId })
+        });
+        const json = await res.json();
+        if (json.success) vpCheckAndRenderBlockBtn(userId, userName);
+    } catch(e) {}
+}
+
+async function vpUnblockUser(userId, userName) {
+    if (!confirm(`Zhblloko ${userName}?`)) return;
+    try {
+        const res  = await fetch(`${API}/messages.php?action=unblock_user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'same-origin',
+            body: JSON.stringify({ blocked_id: userId })
+        });
+        const json = await res.json();
+        if (json.success) vpCheckAndRenderBlockBtn(userId, userName);
+    } catch(e) {}
+}
+
+async function vpDeleteConversation(userId, userName) {
+    if (!confirm(`Fshi bisedën me ${userName}?\nBiseda do të fshihet vetëm për ty.`)) return;
+    try {
+        const res = await fetch(`${API}/messages.php?action=delete_conversation&with=${userId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken },
+            credentials: 'same-origin'
+        });
+        const json = await res.json();
+        if (json.success) {
+            // Kthehu te lista e bisedave
+            vpLoadConversations();
+            const title = document.getElementById('vp-msg-title');
+            const actions = document.getElementById('vp-msg-actions');
+            if (title) title.textContent = 'Mesazhet';
+            if (actions) actions.style.display = '';
+        } else {
+            alert(json.message || 'Gabim gjatë fshirjes.');
+        }
+    } catch(e) {
+        alert('Gabim rrjeti.');
+    }
+}
 </script>
 <?php endif; ?>
 </body>
