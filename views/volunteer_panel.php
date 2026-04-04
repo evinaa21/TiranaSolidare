@@ -296,7 +296,6 @@ $badgeIcons = [
     <div class="vp-card">
       <div class="vp-card__header">
         <h3>Informacioni i profilit</h3>
-        <a href="<?= htmlspecialchars($publicProfileUrl) ?>" target="_blank" rel="noopener" class="btn_secondary">Shiko profilin tënd</a>
       </div>
       <div class="vp-card__body">
         <div class="vp-profile-avatar">

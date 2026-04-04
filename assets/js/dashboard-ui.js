@@ -378,15 +378,15 @@ window.loadDashboardStats = async function () {
             <div class="db-ov-card">
                 <div class="db-ov-card__head"><span class="db-ov-card__title">Aplikimet sipas Statusit</span></div>
                 <div class="db-ov-funnel">
-                    <div class="db-ov-fitem" style="background:#fef3c7;" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
+                    <div class="db-ov-fitem" style="background:#fef3c7;cursor:default;">
                         <div class="db-ov-fitem__val" style="color:#92400e;">${d.applications.ne_pritje || 0}</div>
                         <div class="db-ov-fitem__lbl" style="color:#a16207;">Pritje</div>
                     </div>
-                    <div class="db-ov-fitem" style="background:#dcfce7;">
+                    <div class="db-ov-fitem" style="background:#dcfce7;cursor:default;">
                         <div class="db-ov-fitem__val" style="color:#14532d;">${d.applications.pranuar || 0}</div>
                         <div class="db-ov-fitem__lbl" style="color:#166534;">Pranuar</div>
                     </div>
-                    <div class="db-ov-fitem" style="background:#fee2e2;">
+                    <div class="db-ov-fitem" style="background:#fee2e2;cursor:default;">
                         <div class="db-ov-fitem__val" style="color:#7f1d1d;">${d.applications.refuzuar || 0}</div>
                         <div class="db-ov-fitem__lbl" style="color:#991b1b;">Refuzuar</div>
                     </div>
@@ -442,7 +442,6 @@ window.loadDashboardStats = async function () {
             <div class="db-ov-card db-ov-card--wide">
                 <div class="db-ov-card__head">
                     <span class="db-ov-card__title">Aplikimet e Fundit</span>
-                    <a class="db-ov-card__link" href="#" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'));return false;">Shiko të gjitha →</a>
                 </div>
                 <div style="overflow-x:auto;">${recentAppsHtml}</div>
             </div>

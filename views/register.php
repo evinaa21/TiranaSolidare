@@ -3,6 +3,16 @@
 require_once __DIR__ . '/../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+if (isset($_SESSION['user_id'])) {
+    $roli = $_SESSION['roli'] ?? '';
+    if (in_array($roli, ['admin', 'super_admin'])) {
+        header('Location: /TiranaSolidare/views/dashboard.php');
+    } else {
+        header('Location: /TiranaSolidare/views/volunteer_panel.php');
+    }
+    exit();
+}
+
 $errorKey   = $_GET['error']   ?? '';
 $successKey = $_GET['success'] ?? '';
 $redirect   = $_GET['redirect'] ?? '';

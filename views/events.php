@@ -75,7 +75,10 @@ $sql = "SELECT e.*, k.emri AS kategoria_emri,
         LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
         $whereSQL
-        ORDER BY CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END ASC, e.data DESC
+        ORDER BY 
+    CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END ASC,
+    CASE WHEN e.data >= NOW() THEN e.data ELSE NULL END ASC,
+    CASE WHEN e.data < NOW() THEN e.data ELSE NULL END DESC
         LIMIT ? OFFSET ?";
 $params[] = $limit;
 $params[] = $offset;
