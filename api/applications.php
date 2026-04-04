@@ -405,7 +405,12 @@ switch ($action) {
             }
         }
 
-        json_success(['message' => "Statusi u përditësua në '$newStatus'."]);
+        $statusLabels = [
+    'approved' => 'Pranuar',
+    'rejected' => 'Refuzuar',
+];
+$label = $statusLabels[$newStatus] ?? $newStatus;
+json_success(['message' => "Statusi u përditësua në '$label'."]);
         break;
 
     // ── WITHDRAW APPLICATION ───────────────────────

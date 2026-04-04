@@ -527,7 +527,7 @@ $params[] = $user['id'];
 
         log_admin_action($admin['id'], 'deactivate_user', 'user', $id, []);
 
-        json_success(['message' => 'Llogaria u çaktivizua (soft-delete). Të dhënat ruhen.']);
+        json_success(['message' => 'Llogaria u çaktivizua. Të dhënat ruhen.']);
         break;
 
     // ── REACTIVATE USER ────────────────────────────

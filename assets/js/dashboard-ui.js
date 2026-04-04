@@ -485,7 +485,7 @@ window.loadAdminEvents = async function (page = 1) {
             <option value="">Të gjitha kategorite</option>
         </select>
         <select id="admin-ev-filter-daterange" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
-            <option value=""${!filterDateRange ? ' selected' : ''}>Të gjitha datat</option>
+            <option value=""${!filterDateRange ? ' selected' : ''}>Periudha</option>
             <option value="week"${filterDateRange === 'week' ? ' selected' : ''}>Kjo javë</option>
             <option value="month"${filterDateRange === 'month' ? ' selected' : ''}>Ky muaj</option>
             <option value="past3"${filterDateRange === 'past3' ? ' selected' : ''}>3 muajt e fundit</option>
@@ -625,19 +625,25 @@ window.viewEventApps = async function (eventId) {
             const badgeExtra = presenceBadgeStyle ? ` style="${presenceBadgeStyle}"` : '';
 
             let actions = '';
-            if (app.statusi === 'pending') {
-                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
-            } else if (app.statusi === 'approved' && isPast) {
-                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'present', ${eventId})">Prezent</button>
-                    <button class="db-btn db-btn--danger db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'absent', ${eventId})">Munguar</button>`;
-            } else if (app.statusi === 'approved') {
-                actions = `<button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
-            } else if (app.statusi === 'present' || app.statusi === 'absent') {
-                actions = '<span style="color:#94a3b8;font-size:0.8rem;">Prezenca e shënuar</span>';
-            } else {
-                actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>`;
-            }
+if (app.statusi === 'pending') {
+    if (!isPast) {
+        actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>
+            <button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
+    } else {
+        actions = '<span style="color:#94a3b8;font-size:0.8rem;">Eventi kaloi</span>';
+    }
+} else if (app.statusi === 'approved' && isPast) {
+    actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'present', ${eventId})">Prezent</button>
+        <button class="db-btn db-btn--danger db-btn--sm" onclick="markPresence(${app.id_aplikimi}, 'absent', ${eventId})">Munguar</button>`;
+} else if (app.statusi === 'approved' && !isPast) {
+    actions = `<button class="db-btn db-btn--danger db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'rejected', ${eventId})">Refuzo</button>`;
+} else if (app.statusi === 'present' || app.statusi === 'absent') {
+    actions = '<span style="color:#94a3b8;font-size:0.8rem;">Prezenca e shënuar</span>';
+} else if (app.statusi === 'rejected' && !isPast) {
+    actions = `<button class="db-btn db-btn--success db-btn--sm" onclick="updateAppStatus(${app.id_aplikimi}, 'approved', ${eventId})">Prano</button>`;
+} else {
+    actions = '<span style="color:#94a3b8;font-size:0.8rem;">—</span>';
+}
 
             body += `<tr>
                 <td><strong>${escapeHtml(app.vullnetari_emri)}</strong></td>
@@ -880,7 +886,7 @@ window.openUserDetail = async function (userId) {
                 <p class="ud-card__desc">Menaxhoni statusin e llogarisë. </p>
                 <div class="ud-card__body ud-card__body--row">
                     ${isActive ? `
-                        <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
+                       <button class="db-btn db-btn--warning" onclick="toggleBlock(${u.id_perdoruesi}, 'block')">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
                             Blloko
                         </button>
@@ -889,7 +895,7 @@ window.openUserDetail = async function (userId) {
                             Çaktivizo Llogarinë
                         </button>
                     ` : isBlocked ? `
-                        <button class="db-btn db-btn--success" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock'); setTimeout(() => openUserDetail(${u.id_perdoruesi}), 500)">
+                        <button class="db-btn db-btn--success" onclick="toggleBlock(${u.id_perdoruesi}, 'unblock')">
                             Zhblloko
                         </button>
                         <button class="db-btn db-btn--danger" onclick="deactivateUser(${u.id_perdoruesi})">
@@ -1076,7 +1082,7 @@ window.changeUserRoleFromDetail = async function (userId) {
 
 // Deactivate (soft-delete)
 window.deactivateUser = async function (userId) {
-    if (!confirm('Çaktivizo këtë llogari? (Soft-delete — të dhënat do të ruhen si në Facebook/Instagram)')) return;
+    if (!confirm('Çaktivizo këtë llogari? Të dhënat ruhen dhe mund të rikthehen.')) return;
 
     const json = await apiCall(`users.php?action=deactivate&id=${userId}`, 'PUT');
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
@@ -2017,7 +2023,30 @@ async function loadUnreadBadge() {
 }
 
 
+window.toggleBlock = async function(userId, action) {
+    let payload = null;
 
+    if (action === 'block') {
+        const reasonInput = await openBlockReasonModal();
+        if (reasonInput === null) return;
+        payload = reasonInput.trim() ? { arsye_bllokimi: reasonInput.trim() } : {};
+    }
+
+    if (action === 'unblock') {
+        if (!confirm('Jeni të sigurt që doni të zhbllokoni këtë përdorues?')) return;
+    }
+
+    const json = await apiCall(`users.php?action=${action}&id=${userId}`, 'PUT', payload);
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    
+    if (json.success) {
+        loadUsers();
+        const detailPanel = document.getElementById('panel-user-detail');
+        if (detailPanel && detailPanel.classList.contains('active')) {
+            setTimeout(() => openUserDetail(userId), 300);
+        }
+    }
+};
 
 // ── Change User Role (Super Admin only) ──
 window.changeUserRole = async function(userId, currentRole) {

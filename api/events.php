@@ -388,7 +388,7 @@ switch ($action) {
             }
 
             log_admin_action($admin['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
-            json_success(['message' => 'Eventi u arkivua (soft-delete) me sukses.']);
+            json_success(['message' => 'Eventi u fshi me sukses.']);
         } else {
             // Hard-delete: no applications
             $stmt = $pdo->prepare('DELETE FROM Eventi WHERE id_eventi = ?');
