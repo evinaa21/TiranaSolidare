@@ -66,7 +66,7 @@ $badgeIconMap = [
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
   <style>
     .lb-page { min-height: 100vh; background: linear-gradient(160deg, #f4f8f6 0%, #e8f0ec 50%, #f0f5f3 100%); }
-    .lb-container { max-width: 800px; margin: 0 auto; padding: 40px 20px 80px; }
+    .lb-container { max-width: 800px; margin: 0 auto; padding: 120px 20px 80px; }
 
     .lb-hero { text-align: center; margin-bottom: 48px; }
     .lb-hero__badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,113,93,0.08); color: #00715D; font-size: 0.82rem; font-weight: 600; padding: 6px 14px; border-radius: 20px; margin-bottom: 16px; }

@@ -195,7 +195,7 @@ $params[] = $user['id'];
         }
 
         $stmt = $pdo->prepare(
-            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, verified, krijuar_me, deaktivizuar_me
+            "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, verified, krijuar_me, deaktivizuar_me, profile_color
              FROM Perdoruesi WHERE id_perdoruesi = ?"
         );
         $stmt->execute([$id]);

@@ -563,7 +563,6 @@ window.viewEventApps = async function (eventId) {
         <span class="db-badge db-badge--pending">Në pritje: ${summary.ne_pritje}</span>
         <span class="db-badge db-badge--active">Pranuar: ${summary.pranuar}</span>
         <span class="db-badge db-badge--blocked">Refuzuar: ${summary.refuzuar}</span>
-        <span class="db-badge" style="background:#ecfdf5;color:#065f46;">Të konfirmuar: ${confirmedCountLabel}</span>
         ${isPast ? `<span class="db-badge" style="background:#d1fae5;color:#065f46;">Prezent: ${summary.prezent || 0}</span>
         <span class="db-badge" style="background:#fee2e2;color:#991b1b;">Munguar: ${summary.munguar || 0}</span>` : ''}
     </div>`;
@@ -571,10 +570,10 @@ window.viewEventApps = async function (eventId) {
     body += `<div style="margin-bottom:16px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;${confirmedApplicants.length ? 'margin-bottom:12px;' : ''}">
             <div>
-                <div style="font-size:0.95rem;font-weight:700;color:#166534;">Vullnetarët e konfirmuar</div>
+                <div style="font-size:0.95rem;font-weight:700;color:#166534;">Vullnetarët e pranuar</div>
                 <div style="font-size:0.82rem;color:#166534;">Këtu shfaqen menjëherë aplikantët e pranuar për këtë event.</div>
             </div>
-            <span class="db-badge db-badge--active">${capacity_total && capacity_total > 0 ? `${confirmedApplicants.length}/${capacity_total} vende të zëna` : `${confirmedApplicants.length} të konfirmuar`}</span>
+            <span class="db-badge db-badge--active">${capacity_total && capacity_total > 0 ? `${confirmedApplicants.length}/${capacity_total} vende të zëna` : `${confirmedApplicants.length} të pranuar`}</span>
         </div>
         ${confirmedApplicants.length > 0
             ? `<div style="display:grid;gap:8px;">${confirmedApplicants.map(app => {
@@ -823,6 +822,13 @@ window.openUserDetail = async function (userId) {
     }
 
     const u = json.data;
+    const colorMap = {
+    emerald:['#003229','#009e7e'],ocean:['#0b2a52','#2563eb'],sunset:['#7c2d12','#f97316'],
+    rose:['#881337','#e11d48'],violet:['#3b0764','#9333ea'],slate:['#1e293b','#475569'],
+    teal:['#134e4a','#14b8a6'],amber:['#78350f','#f59e0b'],indigo:['#312e81','#6366f1'],
+    pink:['#831843','#f472b6'],lime:['#365314','#a3e635'],cyan:['#082f49','#06b6d4'],
+};
+const [ufrom, uto] = colorMap[u.profile_color || 'emerald'] || colorMap.emerald;
     const isBlocked = u.statusi_llogarise === 'blocked';
     const isDeactivated = u.statusi_llogarise === 'deactivated';
     const isActive = u.statusi_llogarise === 'active';
@@ -833,7 +839,7 @@ window.openUserDetail = async function (userId) {
     container.innerHTML = `
         <!-- User Profile Header -->
         <div class="ud-header">
-            <div class="ud-avatar ud-avatar--${statusClass}">${escapeHtml(initial)}</div>
+            <div class="ud-avatar" style="background:linear-gradient(135deg,${ufrom},${uto});">${escapeHtml(initial)}</div>
             <div class="ud-header__info">
                 <h2 class="ud-header__name">${escapeHtml(u.emri)}</h2>
                 <p class="ud-header__email">${escapeHtml(u.email)}</p>
@@ -1812,10 +1818,17 @@ async function loadConversations() {
         convos.forEach(c => {
             const unread = c.unread_count > 0 ? `<span class="db-nav-badge" style="display:inline-flex;margin-left:auto;width:8px;height:8px;padding:0;font-size:0;min-width:0;border-radius:99px;"></span>` : '';
             const initial = (c.other_emri || 'P').charAt(0).toUpperCase();
+const colorMap = {
+    emerald:['#003229','#009e7e'],ocean:['#0b2a52','#2563eb'],sunset:['#7c2d12','#f97316'],
+    rose:['#881337','#e11d48'],violet:['#3b0764','#9333ea'],slate:['#1e293b','#475569'],
+    teal:['#134e4a','#14b8a6'],amber:['#78350f','#f59e0b'],indigo:['#312e81','#6366f1'],
+    pink:['#831843','#f472b6'],lime:['#365314','#a3e635'],cyan:['#082f49','#06b6d4'],
+};
+const [cfrom, cto] = colorMap[c.other_color || 'emerald'] || colorMap.emerald;
             const preview = c.last_message ? escapeHtml(c.last_message.substring(0, 60)) + (c.last_message.length > 60 ? '…' : '') : '';
             const timeAgo = formatDate(c.last_time);
             html += `<div class="msg-convo-item${c.unread_count > 0 ? ' msg-convo-item--unread' : ''}" onclick="openThread(${c.other_id}, '${escapeHtml(c.other_emri).replace(/'/g, "\\'")}')">
-                <div class="ud-avatar ud-avatar--active" style="width:40px;height:40px;font-size:1rem;flex-shrink:0;">${escapeHtml(initial)}</div>
+                <div class="ud-avatar ud-avatar--active" style="width:40px;height:40px;font-size:1rem;flex-shrink:0;background:linear-gradient(135deg,${cfrom},${cto});">${escapeHtml(initial)}</div>
                 <div class="msg-convo-info">
                     <div class="msg-convo-name">${escapeHtml(c.other_emri)} ${unread}</div>
                     <div class="msg-convo-preview">${preview}</div>
@@ -1989,8 +2002,15 @@ async function searchUsersForMsg(query) {
             let html = '';
             users.forEach(u => {
                 const initial = (u.emri || 'P').charAt(0).toUpperCase();
+                const colorMap = {
+    emerald:['#003229','#009e7e'],ocean:['#0b2a52','#2563eb'],sunset:['#7c2d12','#f97316'],
+    rose:['#881337','#e11d48'],violet:['#3b0764','#9333ea'],slate:['#1e293b','#475569'],
+    teal:['#134e4a','#14b8a6'],amber:['#78350f','#f59e0b'],indigo:['#312e81','#6366f1'],
+    pink:['#831843','#f472b6'],lime:['#365314','#a3e635'],cyan:['#082f49','#06b6d4'],
+};
+const [ufrom, uto] = colorMap[u.profile_color || 'emerald'] || colorMap.emerald;
                 html += `<div class="msg-convo-item" onclick="openThread(${u.id_perdoruesi}, '${escapeHtml(u.emri).replace(/'/g, "\\'")}')">
-                    <div class="ud-avatar ud-avatar--active" style="width:36px;height:36px;font-size:0.9rem;flex-shrink:0;">${escapeHtml(initial)}</div>
+                    <div class="ud-avatar ud-avatar--active" style="width:36px;height:36px;font-size:0.9rem;flex-shrink:0;background:linear-gradient(135deg,${ufrom},${uto});">${escapeHtml(initial)}</div>
                     <div class="msg-convo-info">
                         <div class="msg-convo-name">${escapeHtml(u.emri)}</div>
                     </div>
