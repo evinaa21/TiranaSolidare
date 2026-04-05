@@ -49,8 +49,10 @@ if ($publicHandle === '' && isset($_GET['id'])) {
     exit();
 }
 
-// Privacy check: if profile is private and viewer is not the owner
-if (!(int) $profile['profile_public'] && !$isOwner) {
+// Privacy check: if profile is private and viewer is not the owner or the admin
+$isAdmin = $isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true);
+
+if (!(int) $profile['profile_public'] && !$isOwner && !$isAdmin) {
     $privateProfile = true;
 } else {
     $privateProfile = false;
@@ -151,9 +153,9 @@ if (!$privateProfile) {
     } elseif ($totalVisibleActivity > 0) {
         $headerLead = $profile['emri'] . ' po ndërton një histori publike me pjesëmarrje në evente, kërkesa dhe kontribute të dukshme në komunitet.';
     } elseif ($badgeCount > 0) {
-        $headerLead = 'Badge-t e fituara janë shenja e para e prezencës në platformë. Sapo të nisë aktiviteti publik, këtu do të shfaqen edhe eventet dhe kërkesat përkatëse.';
+        $headerLead = 'Badge-t e fituara janë shenja e para e prezencës në platformë. Sapo të nisë aktiviteti publik, këtu do të shfaqen eventet dhe kërkesat përkatëse.';
     } else {
-        $headerLead = 'Ky profil është gati të mbledhë aktivitetin e parë publik. Pasi të nisë angazhimi, kjo zonë do të lidhet natyrshëm me historikun dhe arritjet e përdoruesit.';
+        $headerLead = 'Ky profil është gati të mbledhë aktivitetin e parë publik. Pasi të nisë angazhimi, kjo zonë do të lidhet me historikun dhe arritjet e përdoruesit.';
     }
 }
 ?>

@@ -837,9 +837,16 @@ window.openUserDetail = async function (userId) {
             <div class="ud-header__info">
                 <h2 class="ud-header__name">${escapeHtml(u.emri)}</h2>
                 <p class="ud-header__email">${escapeHtml(u.email)}</p>
-                <div class="ud-header__badges">
-                    <span class="db-badge db-badge--${roleClass}">${statusLabel(u.roli)}</span>
-                    <span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span>
+        <div class="ud-header__badges">
+               <span class="db-badge db-badge--${roleClass}">${statusLabel(u.roli)}</span>
+               <span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span>
+            </div>
+         <div style="margin-top:8px;">
+                 <a href="/TiranaSolidare/views/public_profile.php?id=${u.id_perdoruesi}" target="_blank" class="db-btn db-btn--info db-btn--sm">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Shiko Profilin Publik
+                     </a>
+                  </div>
                 </div>
             </div>
         </div>
@@ -1300,7 +1307,7 @@ window.loadNotifications = async function () {
     if (notifBadge) {
         const unreadCount = notifs.filter(n => !n.is_read).length;
         if (unreadCount > 0) {
-            notifBadge.textContent    = unreadCount > 99 ? '99+' : String(unreadCount);
+            notifBadge.textContent   = unreadCount > 99 ? '99+' : String(unreadCount);
             notifBadge.style.display  = 'inline-flex';
         } else {
             notifBadge.style.display  = 'none';

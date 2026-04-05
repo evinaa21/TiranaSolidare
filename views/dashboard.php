@@ -101,13 +101,13 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <span>Mesazhet</span>
     </button>
 
-    <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
-      <span class="db-nav-icon-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-        <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
-      </span>
-      <span>Njoftimet</span>
-    </button>
+<button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
+  <span class="db-nav-icon-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    <span class="db-nav-badge" id="notif-badge" style="display:none"></span>
+  </span>
+  <span>Njoftimet</span>
+</button>
 
     <button class="db-nav-item" data-panel="profile" onclick="switchPanel('profile', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
@@ -634,12 +634,12 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
         <h4>Informacion për Organizatën</h4>
       </div>
       <p class="ud-card__desc" style="font-size:0.88rem;line-height:1.6;">
-        Eventet publikohen si iniciativë e <strong>Bashkisë Tiranë</strong> — organizatës që qëndron pas platformës Tirana Solidare.
+        Eventet publikohen si iniciativë e <strong>Bashkisë Tiranë</strong>, organizatës që qëndron pas platformës Tirana Solidare.
         Profili personal i administratorit nuk është i dukshëm për vullnetarët. Çdo event tregon vetëm emrin e organizatës dhe kategorinë.
       </p>
       <div style="margin-top:12px;padding:12px;background:rgba(0,113,93,0.06);border-radius:10px;font-size:0.82rem;color:#00715D;display:flex;gap:8px;align-items:flex-start;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-        <span>Vullnetarët e shohin platformën si "Tirana Solidare" dhe bashkinë si organizatorin e çdo eventi — jo emrin tuaj personal.</span>
+        <span>Vullnetarët e shohin platformën si "Tirana Solidare" dhe bashkinë si organizatorin e çdo eventi, jo emrin tuaj personal.</span>
       </div>
     </div>
 

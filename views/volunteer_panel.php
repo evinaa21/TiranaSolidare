@@ -1146,7 +1146,7 @@ if (reqForm) {
       reqForm.reset();
       const coordDisplay = document.getElementById('req-coord-display');
       if (coordDisplay) coordDisplay.style.display = 'none';
-      vpStatus('vp-req-status', 'success', 'Kërkesa u krijuar me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave.');
+      vpStatus('vp-req-status', 'success', 'Kërkesa u krijua me sukses! Kërkesat tuaja do të shfaqen në faqen e kërkesave pas aprovimit.');
     } catch (err) { vpStatus('vp-req-status', 'error', err.message); }
   });
 }
