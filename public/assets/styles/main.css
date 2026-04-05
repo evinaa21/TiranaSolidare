@@ -1011,8 +1011,13 @@ body {
 @media screen and (max-width: 700px) {
   .footer {
     padding: 44px 20px 32px;
-    background-size: 180px;
     background-position: top 20px left 10%;
+    background-size: 180px;
+  }
+
+  .footer[data-custom-logo]::before {
+    background-position: top 20px left 10%;
+    background-size: 180px;
   }
 
   .footer-main {
@@ -1119,13 +1124,38 @@ body {
   background-color: #00715D;
 }
 
+/* Remove default background when custom logo is set */
+.footer[data-custom-logo] {
+  background-image: none;
+}
+
+/* Custom uploaded logo: use pseudo-element with filter */
+.footer[data-custom-logo]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--logo-url);
+  background-repeat: no-repeat;
+  background-position: top 50px left 15%;
+  background-size: 350px;
+  filter: brightness(0) invert(1);
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .footer-main{
   display: -ms-grid;
   display: grid;
   -ms-grid-columns: 350px 50px 1fr;
   grid-template-columns: 350px 1fr;
   gap: 50px;
- text-align: justify;
+  text-align: justify;
+  position: relative;
+  z-index: 1;
 }
 
 .footer-content{

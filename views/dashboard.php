@@ -50,7 +50,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
 <aside class="db-sidebar" id="db-sidebar">
   <div class="db-sidebar__header">
     <a href="/TiranaSolidare/public/" class="db-sidebar__logo">
-      <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare" style="width:32px;height:32px;object-fit:contain;">
+      <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="Tirana Solidare" style="width:32px;height:32px;object-fit:contain;">
       <span>Tirana Solidare</span>
     </a>
     <button class="db-sidebar__close" onclick="toggleSidebar()" aria-label="Close sidebar">
@@ -84,6 +84,10 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     <button class="db-nav-item" data-panel="categories" onclick="switchPanel('categories', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
       <span>Kategoritë</span>
+    </button>
+    <button class="db-nav-item" data-panel="settings" onclick="switchPanel('settings', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>Cilësimet</span>
     </button>
     <?php if ($isSuperAdmin): ?>
     <button class="db-nav-item" data-panel="audit" onclick="switchPanel('audit', this)">
@@ -419,6 +423,46 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
 
     <div id="category-list">
       <div class="db-loading">Duke ngarkuar kategoritë…</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: SETTINGS (Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-settings">
+    <div class="db-panel__header">
+      <div>
+        <h3>Cilësimet e Platformës</h3>
+        <p class="db-panel__subtitle">Menaxhoni platformën.</p>
+      </div>
+    </div>
+
+    <div class="ud-actions-grid">
+      <!-- Site Logo -->
+      <div class="ud-card">
+        <div class="ud-card__header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="m3 14 4.5-4.5c.94-.94 2.48-.94 3.42 0l5.58 5.58c.94.94 2.48.94 3.42 0L21 10"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+          <h4>Logoja e Faqes</h4>
+        </div>
+        <p class="ud-card__desc">Ndrysho logon e platformës. Do të shfaqet në krye të faqes publike dhe në panel.</p>
+        <div class="ud-card__body">
+          <div style="margin-bottom:1rem;padding:1rem;background:#f8fafc;border-radius:8px;text-align:center;border:2px dashed #cbd5e1;">
+            <img id="logo-preview" src="/TiranaSolidare/public/assets/images/logo.png" alt="Logoja e faqes" style="max-height:80px;max-width:100%;object-fit:contain;">
+          </div>
+          <div id="logo-preview-actions" style="display:none;gap:8px;margin-top:8px;">
+            <button class="db-btn db-btn--primary" onclick="adminUploadLogo(document.getElementById('logo-input'))">Ruaj</button>
+            <button class="db-btn db-btn--ghost" onclick="adminCancelLogo()">Anulo</button>
+          </div>
+          <label class="db-btn db-btn--primary" style="cursor:pointer;display:inline-block;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Ngarko Logon e Re
+            <input type="file" id="logo-input" accept="image/*" style="display:none;" onchange="adminPreviewLogo(this)">
+          </label>
+          <button class="db-btn db-btn--danger" onclick="adminDeleteLogo()" id="logo-delete-btn" style="display:none;margin-left:0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            Fshi Logon
+          </button>
+          <div id="admin-logo-status" style="font-size:13px;min-height:16px;margin-top:0.75rem;"></div>
+        </div>
+      </div>
     </div>
   </div>
 

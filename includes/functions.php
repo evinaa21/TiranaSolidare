@@ -1404,3 +1404,45 @@ function ts_public_profile_url(int $userId, ?string $displayName = null): string
     $slug = ts_slugify((string) ($displayName ?? 'user'));
     return '/TiranaSolidare/views/public_profile.php?u=' . rawurlencode($slug . '-' . $id);
 }
+
+/**
+ * Get the current site logo URL.
+ * Returns the latest uploaded custom logo if available, otherwise the default logo.
+ */
+function ts_get_site_logo_url(): string
+{
+    $upload_dir = __DIR__ . '/../public/assets/uploads';
+    $base_url = '/TiranaSolidare/public/assets/uploads';
+    
+    if (!is_dir($upload_dir)) {
+        return '/TiranaSolidare/public/assets/images/logo.png';
+    }
+    
+    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
+    if (empty($files)) {
+        return '/TiranaSolidare/public/assets/images/logo.png';
+    }
+    
+    usort($files, function ($a, $b) {
+        return filemtime($b) - filemtime($a);
+    });
+    
+    $latest = $files[0];
+    $filename = basename($latest);
+    return $base_url . '/' . $filename;
+}
+
+/**
+ * Check if a custom logo has been uploaded (not the default).
+ */
+function ts_has_custom_logo(): bool
+{
+    $upload_dir = __DIR__ . '/../public/assets/uploads';
+    
+    if (!is_dir($upload_dir)) {
+        return false;
+    }
+    
+    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
+    return !empty($files);
+}

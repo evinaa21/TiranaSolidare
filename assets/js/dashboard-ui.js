@@ -2186,6 +2186,9 @@ window.loadAdminProfile = async function() {
         applyAdminProfileColor(d.profile_color || 'emerald');
 
         setAdminProfileAvatar(d.profile_picture || '');
+        
+        // Load current logo
+        adminLoadCurrentLogo();
     } catch (e) {
         console.error('[loadAdminProfile]', e);
     }
@@ -2325,6 +2328,156 @@ window.adminDeletePicture = async function() {
         if (st) {
             st.style.color = '#dc2626';
             st.textContent = 'Gabim rrjeti.';
+        }
+    }
+};
+
+window.adminPreviewLogo = function(input) {
+    if (!input.files || !input.files[0]) return;
+    const preview = document.getElementById('logo-preview');
+    const actions = document.getElementById('logo-preview-actions');
+    
+    if (preview) {
+        preview.src = URL.createObjectURL(input.files[0]);
+    }
+    if (actions) actions.style.display = 'flex';
+};
+
+// ─── LOGO UPLOAD ───────────────────────────────────────
+window.adminUploadLogo = async function(input) {
+    if (!input.files || !input.files[0]) return;
+    const st = document.getElementById('admin-logo-status');
+    const preview = document.getElementById('logo-preview');
+    const deleteBtn = document.getElementById('logo-delete-btn');
+
+    if (st) { st.textContent = 'Duke ngarkuar logon...'; st.style.color = ''; }
+
+    const formData = new FormData();
+    formData.append('logo', input.files[0]);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    try {
+        const res = await fetch('/TiranaSolidare/api/settings.php?action=upload_logo', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrf },
+            credentials: 'same-origin',
+            body: formData,
+        });
+        const json = await res.json();
+        if (json.success) {
+            const url = json.data?.url;
+            if (preview && url) {
+                preview.src = url + '?t=' + Date.now();
+            }
+            if (deleteBtn) deleteBtn.style.display = 'inline-block';
+            if (st) {
+                st.style.color = '#16a34a';
+                st.textContent = 'Logoja u ngarkua me sukses! Faqja do të përditësohet në pak sekonda.';
+                setTimeout(() => {
+                    refreshAllLogos();
+                }, 500);
+            }
+        } else {
+            if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Ngarkimi dështoi.'; }
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti gjatë ngarkimit të logos.'; }
+    }
+    if (input) input.value = '';
+};
+
+window.adminDeleteLogo = async function() {
+    const st = document.getElementById('admin-logo-status');
+    const preview = document.getElementById('logo-preview');
+    const deleteBtn = document.getElementById('logo-delete-btn');
+
+    if (!confirm('Jeni i sigurt që doni të fshini logon e personalizuar dhe të ktheheni te logoja e paracaktuar?')) return;
+
+    if (st) { st.textContent = 'Duke fshirë logon...'; st.style.color = ''; }
+
+    try {
+        const json = await apiCall('settings.php?action=delete_logo', 'DELETE');
+        if (json.success) {
+            const defaultLogo = '/TiranaSolidare/public/assets/images/logo.png?t=' + Date.now();
+            if (preview) preview.src = defaultLogo;
+            if (deleteBtn) deleteBtn.style.display = 'none';
+            if (st) {
+                st.style.color = '#16a34a';
+                st.textContent = 'Logoja u fshi. Logoja e paracaktuar do të shfaqet në pak sekonda.';
+                setTimeout(() => {
+                    refreshAllLogos();
+                }, 500);
+            }
+        } else {
+            if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Fshirja dështoi.'; }
+        }
+    } catch (e) {
+        if (st) { st.style.color = '#dc2626'; st.textContent = 'Gabim rrjeti gjatë fshirjes të logos.'; }
+    }
+};
+
+window.refreshAllLogos = async function() {
+    try {
+        const json = await apiCall('settings.php?action=get_logo');
+        if (json.success && json.data.url) {
+            const logoUrl = json.data.url + '?t=' + Date.now();
+            
+            // Update all logo images
+            document.querySelectorAll('img[src*="logo"]').forEach(img => {
+                if (img.alt && img.alt.includes('Solidare')) {
+                    img.src = logoUrl;
+                }
+            });
+            
+            // Update footer custom logo attribute and CSS variable
+            const footer = document.getElementById('footer');
+            if (footer) {
+                if (json.data.has_custom_logo) {
+                    footer.setAttribute('data-custom-logo', 'true');
+                    footer.style.setProperty('--logo-url', `url('${logoUrl}')`);
+                } else {
+                    footer.removeAttribute('data-custom-logo');
+                    footer.style.removeProperty('--logo-url');
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[refreshAllLogos]', e);
+    }
+};
+
+// ─── LOAD CURRENT LOGO ───────────────────────────────────────
+window.adminLoadCurrentLogo = async function() {
+    const preview = document.getElementById('logo-preview');
+    const deleteBtn = document.getElementById('logo-delete-btn');
+    if (!preview) return;
+
+    try {
+        const json = await apiCall('settings.php?action=get_logo');
+        if (json.success && json.data.has_custom_logo) {
+            preview.src = json.data.url + '?t=' + Date.now();
+            if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        }
+    } catch (e) {}
+};
+
+window.adminCancelLogo = async function() {
+    const actions = document.getElementById('logo-preview-actions');
+    const input = document.getElementById('logo-input');
+    const preview = document.getElementById('logo-preview');
+    
+    if (actions) actions.style.display = 'none';
+    if (input) input.value = '';
+    
+    // Rivendos preview-n menjëherë pa pritur API
+    if (preview) {
+        try {
+            const json = await apiCall('settings.php?action=get_logo');
+            if (json.success) {
+                preview.src = json.data.url + '?t=' + Date.now();
+            }
+        } catch (e) {
+            preview.src = '/TiranaSolidare/public/assets/images/logo.png?t=' + Date.now();
         }
     }
 };

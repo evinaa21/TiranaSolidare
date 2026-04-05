@@ -32,7 +32,7 @@ $headerColorTheme = $headerColorResolved['theme'];
 <meta name="theme-color" content="#00715D">
 <header id="header" class="header">
   <a href="/TiranaSolidare/public/" class="header-logo">
-    <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare">
+    <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="Tirana Solidare">
     <span>Tirana<b>Solidare</b></span>
   </a>
   <nav class="header-nav">

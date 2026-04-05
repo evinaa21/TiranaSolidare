@@ -1,12 +1,18 @@
 <?php
 // Footer component
+if (!function_exists('ts_get_site_logo_url')) {
+  require_once dirname(__DIR__, 2) . '/includes/functions.php';
+}
+$logoUrl = ts_get_site_logo_url();
+$hasCustomLogo = ts_has_custom_logo();
+$dataAttr = $hasCustomLogo ? ' data-custom-logo="true"' : '';
 ?>
 
-<footer id="footer" class="footer">
+<footer id="footer" class="footer"<?php echo $dataAttr; ?><?php echo $hasCustomLogo ? ' style="--logo-url: url(\'' . htmlspecialchars($logoUrl) . '\')"' : ''; ?>>
   <div class="footer-main">
     <div class="footer-content">
       <div class="footer-logo">
-        <img src="/TiranaSolidare/public/assets/images/logo.png" alt="Tirana Solidare">
+        <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Tirana Solidare">
         <span>Tirana<b>Solidare</b></span>
       </div>
       <p>Ne besojmë se çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt. Platforma jonë është krijuar për të afruar njerëzit dhe për të ndërtuar një komunitet më të kujdesshëm dhe mbështetës.</p>
