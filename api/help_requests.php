@@ -254,7 +254,7 @@ switch ($action) {
                     ? "Aplikimi juaj për postimin \"{$request['titulli']}\" u regjistrua dhe jeni shtuar në listën e pritjes."
                     : "Aplikimi juaj për postimin \"{$request['titulli']}\" u regjistrua me sukses dhe është në pritje të shqyrtimit.")
                     . "\n\nDetaje:\n"
-                    . 'Tipi: ' . ($request['tipi'] === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                    . 'Tipi: ' . ts_help_request_type_label($request) . "\n"
                     . 'Vendndodhja: ' . (($request['vendndodhja'] ?? '') !== '' ? $request['vendndodhja'] : 'Do të shfaqet në platformë pasi të vazhdojë përputhja.');
 
                 send_notification_email(
@@ -274,7 +274,7 @@ switch ($action) {
                 ? "{$user['emri']} aplikoi për postimin \"{$request['titulli']}\" dhe u shtua në listën e pritjes."
                 : "{$user['emri']} aplikoi për postimin \"{$request['titulli']}\" dhe aplikimi është në pritje të shqyrtimit.")
                 . "\n\nDetaje:\n"
-                . 'Tipi: ' . ($request['tipi'] === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                . 'Tipi: ' . ts_help_request_type_label($request) . "\n"
                 . 'Vendndodhja: ' . (($request['vendndodhja'] ?? '') !== '' ? $request['vendndodhja'] : 'Do të shfaqet në platformë pasi të vazhdojë përputhja.');
 
             ts_send_guardian_activity_email(
@@ -925,7 +925,7 @@ switch ($action) {
                     ? "Postimi juaj \"{$titulli}\" u publikua me sukses."
                     : "Postimi juaj \"{$titulli}\" u regjistrua dhe po pret miratimin e administratorëve.")
                     . "\n\nDetaje:\n"
-                    . 'Tipi: ' . ($tipi === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                    . 'Tipi: ' . ts_help_request_type_label($tipi) . "\n"
                     . 'Vendndodhja: ' . (($vendndodhja ?? '') !== '' ? $vendndodhja : 'Nuk u specifikua') . "\n"
                     . 'Statusi: ' . ($moderationStatus === 'approved' ? 'Publikuar' : 'Në shqyrtim');
 

@@ -267,10 +267,11 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
 <main>
 
 <?php if (isset($request) && $request): ?>
+<?php $requestType = ts_help_request_type_value($request); ?>
 <!-- ═══════════════════════════════════════════════════════════
      SINGLE HELP REQUEST — DETAIL VIEW (Premium)
      ═══════════════════════════════════════════════════════════ -->
-<section class="rq-detail-hero <?= $request['tipi'] === 'offer' ? 'rq-detail-hero--offer' : 'rq-detail-hero--request' ?>">
+<section class="rq-detail-hero <?= $requestType === 'offer' ? 'rq-detail-hero--offer' : 'rq-detail-hero--request' ?>">
   <!-- Decorative blobs -->
   <svg class="rq-blob rq-blob--hero-1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.08)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
   <svg class="rq-blob rq-blob--hero-2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,215,0,0.06)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
@@ -281,9 +282,9 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
       Kthehu te kërkesat
     </a>
     <div class="rq-detail-hero__badges">
-      <span class="rq-badge rq-badge--<?= $request['tipi'] === 'offer' ? 'offer' : 'request' ?>">
+      <span class="rq-badge rq-badge--<?= $requestType === 'offer' ? 'offer' : 'request' ?>">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <?= $request['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+        <?= ts_help_request_type_label($requestType) ?>
       </span>
      <span class="rq-badge rq-badge--<?= $request['statusi'] ?>"><?= status_label($request['statusi']) ?></span>
      <?php
@@ -351,7 +352,7 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
             <div class="rq-info-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </div>
-            <div><span>Tipi</span><strong><?= $request['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></strong></div>
+            <div><span>Tipi</span><strong><?= ts_help_request_type_label($requestType) ?></strong></div>
           </li>
           <li>
             <div class="rq-info-icon">
@@ -440,7 +441,7 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
           <?php elseif ($canApplyToRequest && !$myRequestApplication): ?>
             <?php $applyLabel = ($requestMatching['resolved_status'] ?? 'open') === 'filled'
               ? 'Bashkohu në listën e pritjes'
-              : ($request['tipi'] === 'request' ? 'Dua të ndihmoj' : 'Kam nevojë për këtë'); ?>
+              : ($requestType === 'request' ? 'Dua të ndihmoj' : 'Kam nevojë për këtë'); ?>
             <button type="button" class="rq-btn-full" id="rq-apply-btn" data-request-id="<?= (int) $request['id_kerkese_ndihme'] ?>" data-default-label="<?= htmlspecialchars($applyLabel) ?>">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
               <?= htmlspecialchars($applyLabel) ?>
@@ -715,7 +716,7 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
         <p>Provo të zgjedhish një tab tjetër ose hiq filtrat.</p>
       </div>
       <?php foreach ($requests as $i => $req):
-        $cardType = $req['tipi'] === 'offer' ? 'offer' : 'request';
+        $cardType = ts_help_request_type_value($req);
         $isFeatured = ($i === 0 && $page <= 1);
         $matching = $listMatchingById[(int) $req['id_kerkese_ndihme']] ?? ts_help_request_matching_details($req);
         $cardCapacitySummary = $matching['has_capacity_limit']
@@ -735,14 +736,14 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
           <?php endif; ?>
           <div class="rq-card__header">
             <div class="rq-card__badges">
-              <span class="rq-badge rq-badge--<?= $cardType ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+              <span class="rq-badge rq-badge--<?= $cardType ?>"><?= ts_help_request_type_label($cardType) ?></span>
               <span class="rq-badge rq-badge--<?= $req['statusi'] ?>"><?= status_label($req['statusi']) ?></span>
               <?php if (!empty($req['kategoria_emri'])): ?>
               <span class="rq-badge rq-badge--category"><?= htmlspecialchars($req['kategoria_emri']) ?></span>
               <?php endif; ?>
             </div>
             <div class="rq-card__type-icon rq-card__type-icon--<?= $cardType ?>">
-              <?php if ($req['tipi'] === 'request'): ?>
+              <?php if ($cardType === 'request'): ?>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
               <?php else: ?>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/></svg>
@@ -1041,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', function() {
       lat: <?= json_encode($canViewRequestLocation ? ($request['latitude'] ?? null) : null) ?>,
       lng: <?= json_encode($canViewRequestLocation ? ($request['longitude'] ?? null) : null) ?>,
       label: <?= json_encode($request['titulli'] ?? '') ?>,
-      type: <?= json_encode(($request['tipi'] ?? '') === 'offer' ? 'offer' : 'request') ?>
+      type: <?= json_encode($requestType) ?>
     });
   }
 

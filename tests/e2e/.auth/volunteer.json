@@ -2,9 +2,9 @@
   "cookies": [
     {
       "name": "PHPSESSID",
-      "value": "ojpiuvrifhf431ej8b2o6ssj8c",
+      "value": "fphnlga6qq7db84bpfnmb1n5bj",
       "domain": "localhost",
-      "path": "/",
+      "path": "/TiranaSolidare/",
       "expires": -1,
       "httpOnly": true,
       "secure": false,

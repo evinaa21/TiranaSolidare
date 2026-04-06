@@ -938,7 +938,7 @@ if (!$privateProfile) {
                     <?php foreach ($recentRequests as $req): ?>
                         <tr>
                             <td><a href="/TiranaSolidare/views/help_requests.php?id=<?= (int) $req['id_kerkese_ndihme'] ?>"><?= htmlspecialchars($req['titulli']) ?></a></td>
-                            <td><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></td>
+                            <td><?= ts_help_request_type_label($req) ?></td>
                             <td><span class="pp-status pp-status--<?= strtolower($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span></td>
                             <td><?= date('d/m/Y', strtotime($req['krijuar_me'])) ?></td>
                         </tr>

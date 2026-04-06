@@ -537,12 +537,25 @@ END WHERE `statusi_llogarise` IN ('Aktiv','Bllokuar','Çaktivizuar');
 
 -- Kerkesa_per_Ndihme: tipi enum Albanian → English
 ALTER TABLE `kerkesa_per_ndihme` MODIFY COLUMN `tipi`
+  VARCHAR(20) DEFAULT NULL;
+UPDATE `kerkesa_per_ndihme` SET `tipi` = CASE
+  WHEN LOWER(TRIM(COALESCE(`tipi`, ''))) IN ('request', 'kerkese', 'kërkesë') THEN 'request'
+  WHEN LOWER(TRIM(COALESCE(`tipi`, ''))) IN ('offer', 'oferte', 'ofertë') THEN 'offer'
+  WHEN TRIM(COALESCE(`tipi`, '')) = ''
+       AND (
+         LOWER(COALESCE(`titulli`, '')) LIKE 'ofroj %'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'ofroj %'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'dua të ofroj%'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'dua te ofroj%'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'jam i disponueshëm të ofroj%'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'jam i disponueshem te ofroj%'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'jam e disponueshme të ofroj%'
+         OR LOWER(COALESCE(`pershkrimi`, '')) LIKE 'jam e disponueshme te ofroj%'
+       ) THEN 'offer'
+  ELSE 'request'
+END;
+ALTER TABLE `kerkesa_per_ndihme` MODIFY COLUMN `tipi`
   ENUM('request','offer') DEFAULT NULL;
-UPDATE `kerkesa_per_ndihme` SET `tipi` = CASE `tipi`
-  WHEN 'Kërkesë' THEN 'request'
-  WHEN 'Ofertë'  THEN 'offer'
-  ELSE `tipi`
-END WHERE `tipi` IN ('Kërkesë','Ofertë');
 
 -- --------------------------------------------------------
 -- Migration: Add updated_at timestamp to main tables

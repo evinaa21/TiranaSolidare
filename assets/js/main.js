@@ -595,7 +595,7 @@ async function loadHelpRequests(page = 1, filters = {}) {
             <div class="d-flex justify-content-between">
                 <h6>${escapeHtml(r.titulli)}</h6>
                 <div>
-                    <span class="badge bg-${r.tipi === 'request' ? 'primary' : 'success'}">${r.tipi === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj'}</span>
+                    <span class="badge bg-${r.tipi === 'request' ? 'primary' : 'success'}">${r.tipi === 'request' ? 'Kërkoj ndihmë' : 'Ofroj ndihmë'}</span>
                     <span class="badge bg-${isOpen ? 'warning' : 'secondary'}">${r.statusi}</span>
                 </div>
             </div>

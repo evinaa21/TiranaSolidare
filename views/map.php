@@ -73,21 +73,22 @@ foreach ($events as $ev) {
     ];
 }
 foreach ($requests as $req) {
+  $requestType = ts_help_request_type_value($req);
     $markers[] = [
         'lat'     => (float) $req['latitude'],
         'lng'     => (float) $req['longitude'],
         'title'   => $req['titulli'],
         'address' => $req['vendndodhja'] ?? '',
-        'type'    => $req['tipi'] === 'offer' ? 'offer' : 'request',
+    'type'    => $requestType,
         'category'=> $req['kategoria_emri'] ?? '',
         'url'     => '/TiranaSolidare/views/help_requests.php?id=' . $req['id_kerkese_ndihme'],
-        'extra'   => status_label($req['tipi']) . ($req['kategoria_emri'] ? ' • ' . $req['kategoria_emri'] : '') . ' • ' . status_label($req['statusi']),
+    'extra'   => ts_help_request_type_label($requestType) . ($req['kategoria_emri'] ? ' • ' . $req['kategoria_emri'] : '') . ' • ' . status_label($req['statusi']),
     ];
 }
 
     $visibleEventCount = count($events);
-    $visibleRequestCount = count(array_filter($requests, static fn (array $row): bool => ($row['tipi'] ?? 'request') === 'request'));
-    $visibleOfferCount = count(array_filter($requests, static fn (array $row): bool => ($row['tipi'] ?? 'request') === 'offer'));
+  $visibleRequestCount = count(array_filter($requests, static fn (array $row): bool => ts_help_request_type_value($row) === 'request'));
+  $visibleOfferCount = count(array_filter($requests, static fn (array $row): bool => ts_help_request_type_value($row) === 'offer'));
     $visibleMarkerCount = count($markers);
 ?>
 <!DOCTYPE html>
@@ -201,7 +202,7 @@ foreach ($requests as $req) {
   </div>
   <div class="map-legend-item">
     <div class="map-legend-dot map-legend-dot--offer"></div>
-    Dua të ndihmoj
+    Ofroj ndihmë
   </div>
 </div>
 

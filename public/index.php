@@ -410,10 +410,11 @@ $kategorite = $pdo->query(
 
       <!-- Featured Spotlight -->
       <?php $feat = $kerkesat[0]; ?>
-      <div class="cv-spotlight cv-spotlight--<?= $feat['tipi'] === 'offer' ? 'offer' : 'request' ?> reveal reveal-up">
+      <?php $featuredType = ts_help_request_type_value($feat); ?>
+      <div class="cv-spotlight cv-spotlight--<?= $featuredType ?> reveal reveal-up">
         <div class="cv-spotlight__deco" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.07">
-            <?php if ($feat['tipi'] === 'request'): ?>
+            <?php if ($featuredType === 'request'): ?>
               <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
             <?php else: ?>
               <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
@@ -423,13 +424,13 @@ $kategorite = $pdo->query(
         <div class="cv-spotlight__content">
           <div class="cv-spotlight__badge">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <?php if ($feat['tipi'] === 'request'): ?>
+              <?php if ($featuredType === 'request'): ?>
                 <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
               <?php else: ?>
                 <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
               <?php endif; ?>
             </svg>
-            <?= $feat['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+            <?= ts_help_request_type_label($featuredType) ?>
           </div>
           <?php if (!empty($feat['kategoria_emri'])): ?>
           <div class="cv-spotlight__category"><?= htmlspecialchars($feat['kategoria_emri']) ?></div>
@@ -458,17 +459,18 @@ $kategorite = $pdo->query(
       <div class="cv-gallery-wrap">
         <div class="cv-gallery" id="cv-gallery">
           <?php foreach (array_slice($kerkesat, 1) as $ki => $k): ?>
-          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="cv-card cv-card--<?= $k['tipi'] === 'offer' ? 'offer' : 'request' ?>" style="--card-delay: <?= $ki * 0.1 ?>s">
+          <?php $cardType = ts_help_request_type_value($k); ?>
+          <a href="/TiranaSolidare/views/help_requests.php?id=<?= $k['id_kerkese_ndihme'] ?>" class="cv-card cv-card--<?= $cardType ?>" style="--card-delay: <?= $ki * 0.1 ?>s">
             <div class="cv-card__top">
               <div class="cv-card__type">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <?php if ($k['tipi'] === 'request'): ?>
+                  <?php if ($cardType === 'request'): ?>
                     <path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/>
                   <?php else: ?>
                     <path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14"/><path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 13 6 6"/>
                   <?php endif; ?>
                 </svg>
-                <?= $k['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Ofroj ndihmë' ?>
+                <?= ts_help_request_type_label($cardType) ?>
               </div>
               <span class="cv-card__time"><?= koheParapake($k['krijuar_me']) ?></span>
             </div>

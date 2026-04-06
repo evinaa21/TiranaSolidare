@@ -674,8 +674,9 @@ $badgeIcons = [
                       </a>
                     </td>
                     <td>
-                      <span class="vp-badge vp-badge--<?= $app['kerkesa_tipi'] === 'offer' ? 'offer' : 'request' ?>">
-                        <?= $app['kerkesa_tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?>
+                      <?php $appRequestType = ts_help_request_type_value($app['kerkesa_tipi'] ?? null, $app['kerkesa_titulli'] ?? '', ''); ?>
+                      <span class="vp-badge vp-badge--<?= $appRequestType ?>">
+                        <?= ts_help_request_type_label($appRequestType) ?>
                       </span>
                     </td>
                     <td><?= htmlspecialchars($app['postuesi_emri']) ?></td>
@@ -738,7 +739,8 @@ $badgeIcons = [
             <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="vp-request-card">
               <div class="vp-request-card__header">
                 <div class="vp-request-card__badges">
-                  <span class="vp-badge vp-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
+                  <?php $requestType = ts_help_request_type_value($req); ?>
+                  <span class="vp-badge vp-badge--<?= $requestType ?>"><?= ts_help_request_type_label($requestType) ?></span>
                   <?php
                     $vpModStatus = $req['moderation_status'] ?? 'approved';
                     if ($vpModStatus === 'pending_review'): ?>

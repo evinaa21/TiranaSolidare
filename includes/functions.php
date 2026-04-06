@@ -116,6 +116,63 @@ function ts_normalize_row(array $row): array
     return $row;
 }
 
+function ts_normalize_text_for_matching(string $value): string
+{
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return '';
+    }
+
+    $ascii = function_exists('iconv') ? @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $trimmed) : false;
+    $normalized = is_string($ascii) ? $ascii : $trimmed;
+    $normalized = strtolower($normalized);
+    $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+    return trim($normalized);
+}
+
+function ts_help_request_type_value($requestOrType, ?string $title = null, ?string $description = null): string
+{
+    $rawType = $requestOrType;
+    if (is_array($requestOrType)) {
+        $rawType = $requestOrType['tipi'] ?? null;
+        $title = (string) ($requestOrType['titulli'] ?? $title ?? '');
+        $description = (string) ($requestOrType['pershkrimi'] ?? $description ?? '');
+    }
+
+    $normalized = ts_normalize_value(trim((string) $rawType));
+    if (in_array($normalized, ['request', 'offer'], true)) {
+        return $normalized;
+    }
+
+    $titleText = ts_normalize_text_for_matching((string) ($title ?? ''));
+    $descriptionText = ts_normalize_text_for_matching((string) ($description ?? ''));
+
+    $offerPrefixes = [
+        'ofroj ',
+        'dua te ofroj',
+        'jam i disponueshem te ofroj',
+        'jam e disponueshme te ofroj',
+    ];
+
+    foreach ([$titleText, $descriptionText] as $candidate) {
+        foreach ($offerPrefixes as $prefix) {
+            if ($candidate !== '' && str_starts_with($candidate, $prefix)) {
+                return 'offer';
+            }
+        }
+    }
+
+    return 'request';
+}
+
+function ts_help_request_type_label($requestOrType, ?string $title = null, ?string $description = null): string
+{
+    return ts_help_request_type_value($requestOrType, $title, $description) === 'offer'
+        ? 'Ofroj ndihmë'
+        : 'Kërkoj ndihmë';
+}
+
 const TS_HELP_REQUEST_MATCHING_MODES = ['single', 'limited', 'open'];
 const TS_HELP_REQUEST_ACTIVE_STATUSES = ['open', 'filled'];
 const TS_HELP_REQUEST_TERMINAL_STATUSES = ['completed', 'cancelled'];
@@ -794,7 +851,7 @@ function ts_help_request_summary(PDO $pdo, array $options = []): array
         $requestId = (int) ($request['id_kerkese_ndihme'] ?? 0);
         $details = ts_help_request_matching_details($request, $countsByRequest[$requestId] ?? []);
         $resolvedStatus = $details['resolved_status'];
-        $type = ts_normalize_value((string) ($request['tipi'] ?? 'request'));
+        $type = ts_help_request_type_value($request);
 
         if ($statusFilter !== [] && !in_array($resolvedStatus, $statusFilter, true)) {
             continue;
