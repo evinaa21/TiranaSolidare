@@ -16,6 +16,22 @@ require_once __DIR__ . '/helpers.php';
 
 $action = $_GET['action'] ?? 'list';
 
+function ts_load_event_for_application_manager(PDO $pdo, int $eventId, array $user): array
+{
+    $stmt = $pdo->prepare('SELECT id_eventi, id_perdoruesi, titulli, data, kapaciteti, statusi FROM Eventi WHERE id_eventi = ?');
+    $stmt->execute([$eventId]);
+    $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$event) {
+        json_error('Eventi nuk u gjet.', 404);
+    }
+    if (!ts_can_manage_event($user, $event)) {
+        json_error('Nuk keni leje për të menaxhuar aplikimet e këtij eventi.', 403);
+    }
+
+    return $event;
+}
+
 switch ($action) {
 
     // ── LIST APPLICATIONS ──────────────────────────
@@ -71,20 +87,14 @@ switch ($action) {
     // ── APPLICATIONS BY EVENT (A-05/A-06) ──────────
     case 'by_event':
         require_method('GET');
-        require_admin();
+        $manager = require_event_manager();
         $eventId = (int) ($_GET['id'] ?? 0);
 
         if ($eventId <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        // Verify event exists (A-05)
-        $evCheck = $pdo->prepare('SELECT id_eventi, titulli, data, kapaciteti FROM Eventi WHERE id_eventi = ?');
-        $evCheck->execute([$eventId]);
-        $eventRow = $evCheck->fetch();
-        if (!$eventRow) {
-            json_error('Eventi nuk u gjet.', 404);
-        }
+        $eventRow = ts_load_event_for_application_manager($pdo, $eventId, $manager);
 
         // Modal view does not paginate in the UI, so use a larger default page size.
         $pagination = get_pagination(100, 500);
@@ -164,8 +174,8 @@ switch ($action) {
         require_method('POST');
         $user = require_auth();
 
-        if (is_admin_role($user['roli'])) {
-            json_error('Administratorët nuk mund të aplikojnë si vullnetarë.', 403);
+        if (ts_is_dashboard_role_value($user['roli'] ?? null)) {
+            json_error('Përdoruesit me rol menaxhimi nuk mund të aplikojnë si vullnetarë.', 403);
         }
         // Rate limit: max 20 event applications per hour per user
         if (!check_rate_limit('apply_event_' . $user['id'], 20, 3600)) {
@@ -180,7 +190,7 @@ switch ($action) {
         }
 
         // Check event exists
-        $check = $pdo->prepare('SELECT id_eventi, titulli, data, kapaciteti, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
+        $check = $pdo->prepare('SELECT id_eventi, id_perdoruesi, titulli, data, kapaciteti, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
         $check->execute([$eventId]);
         $event = $check->fetch();
 
@@ -241,13 +251,19 @@ switch ($action) {
             json_error('Gabim gjatë dërgimit të aplikimit.', 500);
         }
 
-        // Create notification for admins
+        // Create notifications for admins and the organizer that owns the event.
         $admins = $pdo->query(
             "SELECT id_perdoruesi, emri, email
              FROM Perdoruesi
              WHERE roli IN ('admin','super_admin','Admin')
                AND statusi_llogarise IN ('active', 'Aktiv')"
-        );
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $organizer = null;
+        if (!empty($event['id_perdoruesi'])) {
+            $ownerStmt = $pdo->prepare('SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $ownerStmt->execute([(int) $event['id_perdoruesi']]);
+            $organizer = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
         $notifStmt = $pdo->prepare(
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
@@ -259,6 +275,22 @@ switch ($action) {
                 send_notification_email(
                     $admin['email'],
                     $admin['emri'] ?? 'Administrator',
+                    'Aplikim i ri për event — Tirana Solidare',
+                    $msg,
+                    [
+                        'action_url' => "/views/events.php?id={$eventId}",
+                        'action_label' => 'Shiko eventin',
+                    ]
+                );
+            }
+        }
+        $adminIds = array_map(static fn(array $row): int => (int) $row['id_perdoruesi'], $admins);
+        if ($organizer && !in_array((int) $organizer['id_perdoruesi'], $adminIds, true)) {
+            $notifStmt->execute([$organizer['id_perdoruesi'], $msg, 'aplikim_event', 'event', $eventId, $eventLink]);
+            if (filter_var($organizer['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $organizer['email'],
+                    $organizer['emri'] ?? 'Organizator',
                     'Aplikim i ri për event — Tirana Solidare',
                     $msg,
                     [
@@ -293,6 +325,24 @@ switch ($action) {
             );
         }
 
+        $guardianMessage = ($waitlisted
+            ? "{$user['emri']} u regjistrua për eventin \"{$event['titulli']}\" dhe u shtua në listën e pritjes."
+            : "{$user['emri']} u regjistrua për eventin \"{$event['titulli']}\" dhe aplikimi është në pritje të shqyrtimit.")
+            . "\n\nDetaje:\n"
+            . 'Data: ' . date('d/m/Y H:i', strtotime((string) $event['data'])) . "\n"
+            . 'Vendndodhja: ' . (($event['vendndodhja'] ?? '') !== '' ? $event['vendndodhja'] : 'Do të konfirmohet në faqen e eventit.');
+
+        ts_send_guardian_activity_email(
+            $pdo,
+            (int) $user['id'],
+            'Fëmija juaj aplikoi për një event — Tirana Solidare',
+            $guardianMessage,
+            [
+                'action_url' => "/views/events.php?id={$eventId}",
+                'action_label' => 'Shiko eventin',
+            ]
+        );
+
         $successMsg = $waitlisted
             ? 'Eventi është plot. Jeni shtuar në listën e pritjes.'
             : 'Aplikimi u dërgua me sukses.';
@@ -307,7 +357,7 @@ switch ($action) {
     // ── UPDATE APPLICATION STATUS ──────────────────
     case 'update_status':
         require_method('PUT');
-        require_admin();
+        $manager = require_event_manager();
         $id   = (int) ($_GET['id'] ?? 0);
         $body = get_json_body();
 
@@ -324,7 +374,7 @@ switch ($action) {
 
         // Fetch existing application
         $check = $pdo->prepare(
-            'SELECT a.*, e.titulli AS eventi_titulli
+            'SELECT a.*, e.titulli AS eventi_titulli, e.id_perdoruesi AS event_owner_id
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
              WHERE a.id_aplikimi = ?'
@@ -334,6 +384,9 @@ switch ($action) {
 
         if (!$app) {
             json_error('Aplikimi nuk u gjet.', 404);
+        }
+        if (!ts_can_manage_event($manager, ['id_perdoruesi' => $app['event_owner_id'] ?? 0])) {
+            json_error('Nuk keni leje për të menaxhuar këtë aplikim.', 403);
         }
 
         // Capacity re-check and status update are wrapped in a transaction to prevent
@@ -591,7 +644,7 @@ break;
     // ── MARK PRESENCE ─────────────────────────────
     case 'mark_presence':
         require_method('PUT');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $id    = (int) ($_GET['id'] ?? 0);
         $body  = get_json_body();
 
@@ -606,7 +659,7 @@ break;
 
         // Fetch application with event info
         $check = $pdo->prepare(
-            "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data, e.statusi AS eventi_statusi
+            "SELECT a.*, e.titulli AS eventi_titulli, e.data AS eventi_data, e.statusi AS eventi_statusi, e.id_perdoruesi AS event_owner_id
              FROM Aplikimi a
              JOIN Eventi e ON e.id_eventi = a.id_eventi
              WHERE a.id_aplikimi = ? AND a.statusi = 'approved'"
@@ -616,6 +669,9 @@ break;
 
         if (!$app) {
             json_error('Aplikimi nuk u gjet ose nuk është i pranuar.', 404);
+        }
+        if (!ts_can_manage_event($manager, ['id_perdoruesi' => $app['event_owner_id'] ?? 0])) {
+            json_error('Nuk keni leje për të menaxhuar këtë aplikim.', 403);
         }
 
         // Cannot mark presence for cancelled events
@@ -631,7 +687,7 @@ break;
         $stmt = $pdo->prepare('UPDATE Aplikimi SET statusi = ? WHERE id_aplikimi = ?');
         $stmt->execute([$presence, $id]);
 
-        log_admin_action($admin['id'], 'mark_presence', 'application', $id, [
+        log_admin_action($manager['id'], 'mark_presence', 'application', $id, [
             'eventi' => $app['eventi_titulli'],
             'statusi' => $presence,
         ]);
@@ -642,7 +698,7 @@ break;
     // ── BULK APPROVE ALL PENDING ───────────────────
     case 'bulk_approve':
         require_method('PUT');
-        $admin   = require_admin();
+        $manager = require_event_manager();
         $eventId = (int) ($_GET['event_id'] ?? 0);
 
         if ($eventId <= 0) {
@@ -652,13 +708,17 @@ break;
         try {
             $pdo->beginTransaction();
 
-            // Lock event row, read capacity
-            $evStmt = $pdo->prepare('SELECT titulli, kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
+            // Lock event row, read capacity and verify ownership.
+            $evStmt = $pdo->prepare('SELECT id_eventi, id_perdoruesi, titulli, kapaciteti FROM Eventi WHERE id_eventi = ? FOR UPDATE');
             $evStmt->execute([$eventId]);
             $ev = $evStmt->fetch();
             if (!$ev) {
                 $pdo->rollBack();
                 json_error('Eventi nuk u gjet.', 404);
+            }
+            if (!ts_can_manage_event($manager, $ev)) {
+                $pdo->rollBack();
+                json_error('Nuk keni leje për të menaxhuar këtë event.', 403);
             }
 
             $capacity = ($ev['kapaciteti'] !== null && (int) $ev['kapaciteti'] > 0)
@@ -717,7 +777,7 @@ break;
 
             $pdo->commit();
 
-            log_admin_action($admin['id'], 'bulk_approve', 'event', $eventId, [
+            log_admin_action($manager['id'], 'bulk_approve', 'event', $eventId, [
                 'approved' => $approved,
                 'skipped'  => $skipped,
             ]);
@@ -740,7 +800,7 @@ break;
     // ── BULK REJECT ALL PENDING ────────────────────
     case 'bulk_reject':
         require_method('PUT');
-        $admin   = require_admin();
+        $manager = require_event_manager();
         $eventId = (int) ($_GET['event_id'] ?? 0);
 
         if ($eventId <= 0) {
@@ -750,12 +810,16 @@ break;
         try {
             $pdo->beginTransaction();
 
-            $evStmt = $pdo->prepare('SELECT titulli FROM Eventi WHERE id_eventi = ?');
+            $evStmt = $pdo->prepare('SELECT id_eventi, id_perdoruesi, titulli FROM Eventi WHERE id_eventi = ?');
             $evStmt->execute([$eventId]);
             $ev = $evStmt->fetch();
             if (!$ev) {
                 $pdo->rollBack();
                 json_error('Eventi nuk u gjet.', 404);
+            }
+            if (!ts_can_manage_event($manager, $ev)) {
+                $pdo->rollBack();
+                json_error('Nuk keni leje për të menaxhuar këtë event.', 403);
             }
 
             $pendingStmt = $pdo->prepare(
@@ -801,7 +865,7 @@ break;
 
             $pdo->commit();
 
-            log_admin_action($admin['id'], 'bulk_reject', 'event', $eventId, [
+            log_admin_action($manager['id'], 'bulk_reject', 'event', $eventId, [
                 'rejected' => $rejected,
             ]);
 

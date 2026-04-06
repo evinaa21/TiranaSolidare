@@ -5,8 +5,8 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/status_labels.php';
 check_login();
 
-// If admin or super_admin, redirect to admin dashboard
-if (in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
+// Dashboard roles should use the shared dashboard instead of the volunteer panel.
+if (ts_is_dashboard_role_value($_SESSION['roli'] ?? '')) {
     header("Location: /TiranaSolidare/views/dashboard.php");
     exit();
 }

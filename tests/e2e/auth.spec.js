@@ -62,12 +62,13 @@ test.describe('Authentication flows', () => {
     await page.fill('#password', VOLUNTEER.password);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/volunteer_panel\.php/);
+    await page.waitForSelector('#header-user-menu form[action*="logout.php"]', { state: 'attached' });
 
     // Submit logout form directly (bypasses dropdown visibility issues)
     await Promise.all([
       page.waitForNavigation({ timeout: 15_000 }),
-      page.evaluate(() => {
-        document.querySelector('form[action*="logout.php"]').submit();
+      page.locator('#header-user-menu form[action*="logout.php"]').evaluate((form) => {
+        form.submit();
       }),
     ]);
     await expect(page).toHaveURL(/login\.php/);

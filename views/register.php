@@ -21,9 +21,15 @@ $errorMessages = [
   'empty_fields'       => 'Ju lutem plotësoni të gjitha fushat.',
   'invalid_email'      => 'Formati i email-it nuk është i saktë.',
   'invalid_name'       => 'Emri duhet të ketë të paktën 2 karaktere.',
+  'invalid_birthdate'  => 'Vendosni një datë lindjeje të vlefshme.',
   'password_mismatch'  => 'Fjalëkalimet nuk përputhen.',
   'password_weak'      => 'Fjalëkalimi duhet të ketë të paktën 8 karaktere, shkronjë të madhe, të vogël, numër dhe simbol.',
   'email_taken'        => 'Ky email është regjistruar tashmë.',
+  'guardian_details_required' => 'Për përdoruesit nën 16 vjeç kërkohen të dhënat e prindit ose kujdestarit.',
+  'invalid_guardian_name' => 'Emri i prindit ose kujdestarit duhet të ketë të paktën 2 karaktere.',
+  'invalid_guardian_email' => 'Email-i i prindit ose kujdestarit nuk është i saktë.',
+  'guardian_email_same_as_user' => 'Email-i i prindit ose kujdestarit duhet të jetë i ndryshëm nga email-i juaj.',
+  'invalid_guardian_relation' => 'Shënoni një lidhje të vlefshme me prindin ose kujdestarin.',
   'verification_email_failed' => 'Nuk u dërgua email-i i verifikimit. Kontrolloni konfigurimin e email-it dhe provoni përsëri.',
   'rate_limited'       => 'Shumë tentativa regjistrimi. Provoni përsëri më vonë.',
   'csrf_expired'       => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
@@ -81,6 +87,7 @@ $successMessages = [
             <li>Publikoni ose aplikoni në nisma dhe evente komunitare.</li>
             <li>Kontaktoni shpejt me njerëzit që kërkojnë ndihmë.</li>
             <li>Ndërtimi i profilit ndihmon besueshmërinë në komunitet.</li>
+            <li>Nëse je nën 16 vjeç, mjafton një konfirmim i thjeshtë me email nga prindi ose kujdestari.</li>
           </ul>
         </div>
       </div>
@@ -95,6 +102,29 @@ $successMessages = [
         <div class="auth-field">
           <label for="email">Email</label>
           <input class="auth-input" type="email" id="email" name="email" placeholder="emri@shembull.com" required>
+        </div>
+        <div class="auth-field">
+          <label for="birthdate">Data e lindjes</label>
+          <input class="auth-input" type="date" id="birthdate" name="birthdate" required max="<?= (new DateTime('-1 year'))->format('Y-m-d') ?>">
+          <small class="auth-field-help">Nëse je nën 16 vjeç, do të kërkojmë vetëm një konfirmim me email nga prindi ose kujdestari.</small>
+        </div>
+        <div class="auth-guardian-card" id="guardian-card" hidden>
+          <strong>Konfirmim prindëror i thjeshtë</strong>
+          <p>Ne do të dërgojmë një link të vetëm miratimi te prindi ose kujdestari. Llogaria jote do të aktivizohet sapo të konfirmohen email-i yt dhe pëlqimi i tyre.</p>
+        </div>
+        <div id="guardian-section" hidden>
+          <div class="auth-field">
+            <label for="guardian_name">Emri i prindit ose kujdestarit</label>
+            <input class="auth-input" type="text" id="guardian_name" name="guardian_name" placeholder="Emri Mbiemri" data-guardian-field>
+          </div>
+          <div class="auth-field">
+            <label for="guardian_email">Email-i i prindit ose kujdestarit</label>
+            <input class="auth-input" type="email" id="guardian_email" name="guardian_email" placeholder="prindi@shembull.com" data-guardian-field>
+          </div>
+          <div class="auth-field">
+            <label for="guardian_relation">Lidhja me ty</label>
+            <input class="auth-input" type="text" id="guardian_relation" name="guardian_relation" placeholder="P.sh. nënë, baba, kujdestar ligjor" data-guardian-field>
+          </div>
         </div>
         <div class="auth-field">
           <label for="password">Fjalëkalimi</label>
@@ -118,12 +148,21 @@ $successMessages = [
           .pw-rule.ok { color: #16a34a; }
           .pw-rule.ok::before { content: '\2713\00a0'; position: absolute; left: 0; }
           .pw-match-hint { font-size: 0.78rem; margin-top: 0.3rem; display: block; min-height: 1rem; }
+          .auth-field-help { display: block; margin-top: 0.45rem; font-size: 0.8rem; color: #5a6a64; line-height: 1.5; }
+          .auth-guardian-card { margin-bottom: 0.75rem; padding: 0.95rem 1rem; border-radius: 14px; border: 1px solid #d6ebe4; background: #f5faf8; color: #24423a; }
+          .auth-guardian-card strong { display: block; margin-bottom: 0.35rem; }
+          .auth-guardian-card p { margin: 0; font-size: 0.9rem; line-height: 1.55; }
         </style>
         <script>
           (function () {
             var pw   = document.getElementById('password');
             var cpw  = document.getElementById('confirm_password');
             var hint = document.getElementById('pw-match-hint');
+            var birthdate = document.getElementById('birthdate');
+            var guardianCard = document.getElementById('guardian-card');
+            var guardianSection = document.getElementById('guardian-section');
+            var guardianFields = Array.prototype.slice.call(document.querySelectorAll('[data-guardian-field]'));
+
             function check() {
               var v = pw.value;
               toggle('pw-len',  v.length >= 8);
@@ -135,6 +174,29 @@ $successMessages = [
             function toggle(id, ok) {
               document.getElementById(id).classList.toggle('ok', ok);
             }
+
+            function ageRequiresGuardian(value) {
+              if (!value) return false;
+              var birth = new Date(value + 'T00:00:00');
+              if (Number.isNaN(birth.getTime())) return false;
+              var today = new Date();
+              var age = today.getFullYear() - birth.getFullYear();
+              var monthDiff = today.getMonth() - birth.getMonth();
+              if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age -= 1;
+              }
+              return age < <?= TS_GUARDIAN_CONSENT_MIN_AGE ?>;
+            }
+
+            function syncGuardianSection() {
+              var showGuardian = ageRequiresGuardian(birthdate.value);
+              guardianCard.hidden = !showGuardian;
+              guardianSection.hidden = !showGuardian;
+              guardianFields.forEach(function (field) {
+                field.required = showGuardian;
+              });
+            }
+
             function matchCheck() {
               if (!cpw.value) { hint.textContent = ''; hint.style.color = ''; return; }
               if (pw.value === cpw.value) {
@@ -147,6 +209,9 @@ $successMessages = [
             }
             pw.addEventListener('input', function() { check(); matchCheck(); });
             cpw.addEventListener('input', matchCheck);
+            birthdate.addEventListener('input', syncGuardianSection);
+            birthdate.addEventListener('change', syncGuardianSection);
+            syncGuardianSection();
           })();
         </script>
         <div class="auth-field" style="margin-top:0.5rem">

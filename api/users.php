@@ -451,8 +451,8 @@ $params[] = $user['id'];
         }
 
         $newRole = $body['roli'] ?? '';
-        if (!in_array($newRole, ['admin', 'volunteer'], true)) {
-            json_error("Roli duhet të jetë 'admin' ose 'volunteer'.", 422);
+        if (!in_array($newRole, ['admin', 'volunteer', 'organizer'], true)) {
+            json_error("Roli duhet të jetë 'admin', 'organizer' ose 'volunteer'.", 422);
         }
 
         // Fix D-05: Use fetch() for role change
@@ -472,9 +472,13 @@ $params[] = $user['id'];
         $stmt->execute([$newRole, $id]);
 
         // Notify the affected user about their role change
-        $roleLabel = $newRole === 'admin' ? 'Administrator' : 'Vullnetar';
+        $roleLabel = match ($newRole) {
+            'admin' => 'Administrator',
+            'organizer' => 'Organizator',
+            default => 'Vullnetar',
+        };
         $roleMsg   = "Roli juaj në platformë u ndryshua në '{$roleLabel}' nga një Super Administrator.";
-        $panelLink = $newRole === 'admin'
+        $panelLink = in_array($newRole, ['admin', 'organizer'], true)
             ? '/TiranaSolidare/views/dashboard.php'
             : '/TiranaSolidare/views/volunteer_panel.php';
         $notifInsert = $pdo->prepare(

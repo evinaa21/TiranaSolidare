@@ -26,6 +26,7 @@ const STATUS_LABELS = [
     // Roles
     'admin'       => 'Admin',
     'super_admin' => 'Super Admin',
+    'organizer'   => 'Organizator',
     'volunteer'   => 'Vullnetar',
 
     // Help-request type

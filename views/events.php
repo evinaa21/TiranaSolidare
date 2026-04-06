@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
-$isAdmin = ($isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true));
+$isDashboardUser = ($isLoggedIn && ts_is_dashboard_role_value($_SESSION['roli'] ?? ''));
 $currentUserId = $_SESSION['user_id'] ?? null;
 
 // ── Single event detail ──
@@ -12,13 +12,17 @@ if (isset($_GET['id'])) {
     $id = (int) $_GET['id'];
     $stmt = $pdo->prepare(
         "SELECT e.*, k.emri AS kategoria_emri,
-          CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiranës' ELSE p.emri END AS krijuesi_emri,
+          CASE
+            WHEN p.roli = 'organizer' AND COALESCE(p.organization_name, '') <> '' THEN p.organization_name
+            WHEN p.roli IN ('admin', 'super_admin') THEN 'Tirana Solidare'
+            ELSE p.emri
+          END AS krijuesi_emri,
                 (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
                 (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
          FROM Eventi e
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
          LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
-         WHERE e.id_eventi = ? AND e.is_archived = 0"
+            WHERE e.id_eventi = ? AND " . ts_public_event_filter_sql('e')
     );
     $stmt->execute([$id]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -50,7 +54,7 @@ $category = (int) ($_GET['category'] ?? 0);
 // Fetch categories for filter dropdown
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
 
-$where  = ['e.is_archived = 0', "e.statusi != 'cancelled'"];
+$where  = [ts_public_event_filter_sql('e')];
 $params = [];
 if ($search !== '') {
     $where[]  = '(e.titulli LIKE ? OR e.pershkrimi LIKE ? OR e.vendndodhja LIKE ?)';
@@ -70,7 +74,11 @@ $total = (int) $countStmt->fetchColumn();
 $totalPages = (int) ceil($total / $limit);
 
 $sql = "SELECT e.*, k.emri AS kategoria_emri,
-  CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiranës' ELSE p.emri END AS krijuesi_emri
+  CASE
+    WHEN p.roli = 'organizer' AND COALESCE(p.organization_name, '') <> '' THEN p.organization_name
+    WHEN p.roli IN ('admin', 'super_admin') THEN 'Tirana Solidare'
+    ELSE p.emri
+  END AS krijuesi_emri
         FROM Eventi e
         LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
@@ -87,10 +95,10 @@ $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Trust stats
-$statTotalEvents = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
-$statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0 AND data >= NOW()")->fetchColumn();
+$statTotalEvents = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE " . ts_public_event_filter_sql('Eventi'))->fetchColumn();
+$statUpcoming    = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0 AND LOWER(statusi) = 'active' AND data >= NOW() ")->fetchColumn();
 $statPast        = $statTotalEvents - $statUpcoming;
-$statVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
+$statVullnetare  = ts_count_active_volunteers($pdo);
 $statApplications = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
 
 // ── Calendar data ──
@@ -237,8 +245,8 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
               Kyçu për të aplikuar
             </a>
             <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të aplikuar si vullnetar. <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="rq-hint-link">Kyçu këtu &rarr;</a></p>
-          <?php elseif ($isAdmin): ?>
-            <p class="rq-sidebar-hint">Administratorët nuk mund të aplikojnë si vullnetarë.</p>
+          <?php elseif ($isDashboardUser): ?>
+            <p class="rq-sidebar-hint">Llogaritë me akses në panel nuk mund të aplikojnë si vullnetarë për evente.</p>
           <?php elseif ($alreadyApplied): ?>
             <span class="rq-badge rq-badge--status"><?= htmlspecialchars($existingApp['statusi']) ?></span>
             <p class="rq-sidebar-hint">Ju keni aplikuar tashmë për këtë event.</p>
@@ -463,7 +471,7 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
     <h2>Dëshiron të marrësh pjesë?</h2>
     <p>Regjistrohu për të aplikuar në evente dhe për të qenë pjesë e komunitetit solidar të Tiranës. Është falas dhe e thjeshtë.</p>
     <?php if ($isLoggedIn): ?>
-      <a href="/TiranaSolidare/views/volunteer_panel.php" class="btn_primary">Shko te paneli</a>
+      <a href="<?= $isDashboardUser ? '/TiranaSolidare/views/dashboard.php' : '/TiranaSolidare/views/volunteer_panel.php' ?>" class="btn_primary">Shko te paneli</a>
     <?php else: ?>
       <a href="/TiranaSolidare/views/register.php" class="btn_primary">Regjistrohu tani</a>
     <?php endif; ?>

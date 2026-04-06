@@ -13,8 +13,13 @@ $errorMessages = [
   'account_blocked'     => 'Llogaria juaj është bllokuar. <a href="/TiranaSolidare/views/blocked.php">Pse jam bllokuar?</a>',
   'account_deactivated' => 'Llogaria juaj është çaktivizuar. Kontaktoni administratorin.',
   'email_not_verified'  => 'Konfirmoni email-in tuaj përpara se të kyçeni.',
+  'email_and_guardian_pending' => 'Konfirmoni email-in tuaj dhe prisni pëlqimin e prindit ose kujdestarit përpara se të kyçeni.',
+  'guardian_consent_pending' => 'Pëlqimi i prindit ose kujdestarit është ende në pritje.',
+  'guardian_consent_rejected' => 'Llogaria juaj pret ende pëlqimin prindëror. Kontaktoni ekipin ose kërkoni një link të ri miratimi.',
+  'invalid_guardian_consent_link' => 'Linku i pëlqimit prindëror është i pavlefshëm ose është përdorur tashmë.',
+  'guardian_consent_expired' => 'Linku i pëlqimit prindëror ka skaduar.',
   'invalid_verification_link' => 'Linku i verifikimit është i pavlefshëm ose është përdorur.',
-  'verification_expired' => 'Linku i verifikimit ka skaduar. Krijoni një llogari përsëri ose kontaktoni mbështetjen.',
+  'verification_expired' => 'Linku i verifikimit ka skaduar.',
   'rate_limited'        => 'Shumë tentativa. Provoni përsëri pas disa minutash.',
   'csrf_expired'        => 'Sesioni ka skaduar. Ju lutem provoni përsëri.',
   'sql_error'           => 'Ndodhi një gabim i brendshëm. Provoni përsëri më vonë.',
@@ -23,9 +28,21 @@ $errorMessages = [
 $successMessages = [
   'registered' => 'Llogaria u krijua me sukses. Tani mund të kyçeni.',
   'verify_email_sent' => 'Llogaria u krijua. Kontrolloni email-in dhe konfirmoni adresën para hyrjes.',
+  'verify_email_and_guardian_sent' => 'Llogaria u krijua. Konfirmoni email-in tuaj dhe kërkoni prindit ose kujdestarit të miratojë linkun që iu dërgua me email.',
   'email_verified' => 'Email-i u verifikua me sukses. Tani mund të kyçeni.',
+  'email_verified_guardian_pending' => 'Email-i juaj u verifikua. Hapi i fundit është miratimi me email nga prindi ose kujdestari.',
   'email_already_verified' => 'Email-i ishte konfirmuar më parë. Mund të kyçeni.',
+  'email_already_verified_guardian_pending' => 'Email-i juaj ishte konfirmuar më parë. Hapi i fundit është miratimi me email nga prindi ose kujdestari.',
+  'guardian_consent_verified' => 'Pëlqimi prindëror u konfirmua me sukses. Tani mund të kyçeni.',
+  'guardian_consent_verified_email_pending' => 'Pëlqimi prindëror u konfirmua. Hapi i fundit është verifikimi i email-it tuaj.',
+  'guardian_consent_already_verified' => 'Pëlqimi prindëror ishte konfirmuar më parë. Mund të kyçeni.',
+  'guardian_consent_already_verified_email_pending' => 'Pëlqimi prindëror ishte konfirmuar më parë. Hapi i fundit është verifikimi i email-it tuaj.',
   'password_updated' => 'Fjalëkalimi u rivendos me sukses. Mund të hysh tani.',
+];
+
+$rawMessageKeys = [
+  'account_blocked',
+  'guardian_consent_rejected',
 ];
 ?>
 <!DOCTYPE html>
@@ -58,7 +75,7 @@ $successMessages = [
         <?php if ($errorKey && isset($errorMessages[$errorKey])): ?>
           <div class="auth-alert auth-alert--error">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-            <?php if ($errorKey === 'account_blocked'): ?>
+            <?php if (in_array($errorKey, $rawMessageKeys, true)): ?>
               <span><?= $errorMessages[$errorKey] ?></span>
             <?php else: ?>
               <span><?= htmlspecialchars($errorMessages[$errorKey]) ?></span>
@@ -87,7 +104,8 @@ $successMessages = [
         </div>
         <button type="submit" class="btn_primary auth-submit">Hyr</button>
         <p class="auth-meta">Keni harruar fjalëkalimin? <a href="/TiranaSolidare/views/forgot_password.php">Rikuperoje</a></p>
-        <p class="auth-meta">Nuk keni marrë email-in e konfirmimit? <a href="/TiranaSolidare/views/resend_verification.php">Ridërgoje</a></p>
+        <p class="auth-meta">Nuk keni marrë email-in e verifikimit? <a href="/TiranaSolidare/views/resend_verification.php">Ridërgo verifikimin</a></p>
+        <p class="auth-meta">Nuk ka mbërritur linku për prindin ose kujdestarin? <a href="/TiranaSolidare/views/resend_guardian_consent.php">Ridërgo miratimin prindëror</a></p>
       </form>
 
       <div class="auth-sidecard">

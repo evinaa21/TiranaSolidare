@@ -3,13 +3,16 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+$siteSettings = ts_get_site_settings($pdo);
+$publicHelpStats = ts_help_request_summary($pdo, ['approved_only' => true]);
+
 // Fetch latest 8 help requests (Open only)
 $stmtReq = $pdo->prepare(
     "SELECT kn.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
-     WHERE kn.statusi IN ('open','Open') AND kn.moderation_status = 'approved'
+  WHERE LOWER(kn.statusi) = 'open' AND COALESCE(LOWER(kn.moderation_status), 'approved') = 'approved'
      ORDER BY kn.krijuar_me DESC
      LIMIT 8"
 );
@@ -21,7 +24,7 @@ $stmtEv = $pdo->prepare(
     "SELECT e.*, k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     WHERE e.is_archived = 0
+  WHERE " . ts_public_event_filter_sql('e') . "
      ORDER BY CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END, e.data ASC
      LIMIT 8"
 );
@@ -29,15 +32,15 @@ $stmtEv->execute();
 $eventet = $stmtEv->fetchAll(PDO::FETCH_ASSOC);
 
 // Counts for hero stats
-$totalVullnetare  = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
-$totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
-$totalNdihmuara   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('completed','closed') AND moderation_status = 'approved'")->fetchColumn();
+$totalVullnetare  = ts_count_active_volunteers($pdo);
+$totalEvente      = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE " . ts_public_event_filter_sql('Eventi'))->fetchColumn();
+$totalNdihmuara   = (int) ($publicHelpStats['completed_total'] ?? 0);
 
 // Categories with event counts
 $kategorite = $pdo->query(
   "SELECT k.id_kategoria, k.emri, k.banner_path, COUNT(e.id_eventi) AS event_count
      FROM Kategoria k
-     LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND e.is_archived = 0
+  LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND " . ts_public_event_filter_sql('e') . "
     GROUP BY k.id_kategoria, k.emri, k.banner_path
      ORDER BY event_count DESC"
 )->fetchAll(PDO::FETCH_ASSOC);
@@ -47,12 +50,13 @@ $kategorite = $pdo->query(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#00715D">
+  <meta name="theme-color" content="<?= htmlspecialchars($siteSettings['theme_primary']) ?>">
   <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
-  <title>Tirana Solidare</title>
+  <title><?= htmlspecialchars($siteSettings['organization_name']) ?></title>
   <link rel="stylesheet" href="assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="assets/styles/requests.css?v=202603213">
   <link rel="stylesheet" href="assets/styles/index.css?v=20260406h">
+  <?= ts_brand_theme_css() ?>
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
@@ -70,10 +74,10 @@ $kategorite = $pdo->query(
     <div id="main-content">
       <span class="hero-badge">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052z"/></svg>
-        Platforma Zyrtare e Vullnetarizmit — Bashkia Tiranë
+        <?= htmlspecialchars($siteSettings['hero_badge']) ?>
       </span>
-      <h1>Bashkohu me komunitetin<br> që ndryshon jetë</h1>
-      <p class="hero-subtitle">Së bashku mund të bëjmë më shumë. Ndihmo dikë sot dhe bëhu ndryshimi që dëshiron të shohësh.</p>
+      <h1><?= nl2br(htmlspecialchars($siteSettings['hero_title'])) ?></h1>
+      <p class="hero-subtitle"><?= htmlspecialchars($siteSettings['hero_subtitle']) ?></p>
     
       <div id="main-stats">
         <span>
@@ -150,8 +154,11 @@ $kategorite = $pdo->query(
           </article>
         </div>
 
-        <a href="/TiranaSolidare/views/register.php" class="btn_primary reveal reveal-up reveal-d3">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-        <p class="regjistrohu-note reveal reveal-up reveal-d3">Një profil i plotë i jep më shumë besim çdo kontakti të ri në platformë.</p>
+        <div class="reveal reveal-up reveal-d3" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          <a href="/TiranaSolidare/views/become_organizer.php" class="btn_secondary">Apliko si organizatë</a>
+        </div>
+        <p class="regjistrohu-note reveal reveal-up reveal-d3">Një profil i plotë i jep më shumë besim çdo kontakti të ri në platformë. Nëse përfaqësoni një OJF ose grup lokal, mund të kërkoni llogari organizatori.</p>
       </div>
   </section>
 
@@ -381,13 +388,13 @@ $kategorite = $pdo->query(
         <div class="cv-header__right">
           <div class="cv-stats">
             <div class="cv-stat">
-              <span class="cv-stat__num"><?= count($kerkesat) ?></span>
-              <span class="cv-stat__text">Kërkesa aktive</span>
+                <span class="cv-stat__num"><?= (int) ($publicHelpStats['request_open'] ?? 0) ?></span>
+                <span class="cv-stat__text">Kërkoj ndihmë</span>
             </div>
             <div class="cv-stat-divider"></div>
             <div class="cv-stat">
-              <span class="cv-stat__num"><?= count(array_filter($kerkesat, fn($k) => $k['tipi'] === 'offer')) ?></span>
-              <span class="cv-stat__text">Oferta ndihme</span>
+                <span class="cv-stat__num"><?= (int) ($publicHelpStats['offer_open'] ?? 0) ?></span>
+                <span class="cv-stat__text">Ofroj ndihmë</span>
             </div>
           </div>
           <a href="/TiranaSolidare/views/help_requests.php" class="cv-cta-btn">

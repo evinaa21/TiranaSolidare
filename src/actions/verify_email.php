@@ -30,12 +30,15 @@ try {
 
     if ($update->rowCount() === 0) {
         // Could be: wrong token, already verified, or expired — distinguish for UX
-        $check = $pdo->prepare('SELECT verified, verification_token_expires FROM Perdoruesi WHERE email = ? LIMIT 1');
+        $check = $pdo->prepare('SELECT verified, verification_token_expires, birthdate, guardian_consent_status FROM Perdoruesi WHERE email = ? LIMIT 1');
         $check->execute([$email]);
         $row = $check->fetch(PDO::FETCH_ASSOC);
 
         if ($row && (int) ($row['verified'] ?? 0) === 1) {
-            header('Location: /TiranaSolidare/views/login.php?success=email_already_verified');
+            $successKey = ts_user_activation_state($row) === 'guardian_pending'
+                ? 'email_already_verified_guardian_pending'
+                : 'email_already_verified';
+            header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
         } elseif ($row && !empty($row['verification_token_expires']) && strtotime($row['verification_token_expires']) < time()) {
             header('Location: /TiranaSolidare/views/login.php?error=verification_expired');
         } else {
@@ -44,7 +47,14 @@ try {
         exit();
     }
 
-    header('Location: /TiranaSolidare/views/login.php?success=email_verified');
+    $stateStmt = $pdo->prepare('SELECT verified, birthdate, guardian_consent_status FROM Perdoruesi WHERE email = ? LIMIT 1');
+    $stateStmt->execute([$email]);
+    $userState = $stateStmt->fetch(PDO::FETCH_ASSOC) ?: ['verified' => 1];
+    $successKey = ts_user_activation_state($userState) === 'guardian_pending'
+        ? 'email_verified_guardian_pending'
+        : 'email_verified';
+
+    header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
     exit();
 } catch (Throwable $e) {
     error_log('Email verification failed: ' . $e->getMessage());

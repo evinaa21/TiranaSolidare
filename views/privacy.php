@@ -36,6 +36,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <h2>2. Të dhënat që mbledhim</h2>
     <ul>
       <li><strong>Të dhëna identifikuese:</strong> emri i plotë, adresa e email-it — të nevojshme për krijimin e llogarisë.</li>
+      <li><strong>Të dhëna moshe dhe kujdestarie:</strong> data e lindjes dhe, kur përdoruesi është nën 16 vjeç, emri, email-i dhe lidhja e prindit ose kujdestarit për konfirmimin e pjesëmarrjes.</li>
       <li><strong>Të dhëna profili:</strong> biografia, foto profili, ngjyra e zgjedhur — vullnetare.</li>
       <li><strong>Të dhëna aktiviteti:</strong> aplikimet për evente, kërkesat për ndihmë, mesazhet, njoftimet.</li>
       <li><strong>Të dhëna teknike:</strong> adresa IP (për mbrojtje nga shpërdorime), kohëvula e sesionit.</li>
@@ -52,6 +53,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <ul>
       <li>Për krijimin dhe menaxhimin e llogarisë suaj</li>
       <li>Për procesimin e aplikimeve në evente vullnetare</li>
+      <li>Për verifikimin e pëlqimit prindëror ose të kujdestarit kur përdoruesi është nën 16 vjeç</li>
       <li>Për mundësimin e komunikimit ndërmjet përdoruesve</li>
       <li>Për dërgimin e njoftimeve me email (mund të çaktivizohen)</li>
       <li>Për mbrojtjen e sigurisë së platformës</li>

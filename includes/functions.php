@@ -119,6 +119,382 @@ function ts_normalize_row(array $row): array
 const TS_HELP_REQUEST_MATCHING_MODES = ['single', 'limited', 'open'];
 const TS_HELP_REQUEST_ACTIVE_STATUSES = ['open', 'filled'];
 const TS_HELP_REQUEST_TERMINAL_STATUSES = ['completed', 'cancelled'];
+const TS_GUARDIAN_CONSENT_MIN_AGE = 16;
+const TS_GUARDIAN_CONSENT_EXPIRY_HOURS = 168;
+
+function ts_public_event_filter_sql(string $alias = 'e'): string
+{
+    return sprintf(
+        "%s.is_archived = 0 AND LOWER(%s.statusi) IN ('active', 'completed')",
+        $alias,
+        $alias
+    );
+}
+
+function ts_default_site_settings(): array
+{
+    return [
+        'organization_name' => 'Tirana Solidare',
+        'hero_badge' => 'Platforma Zyrtare e Vullnetarizmit — Tirana Solidare',
+        'hero_title' => "Bashkohu me komunitetin\nqë ndryshon jetë",
+        'hero_subtitle' => 'Së bashku mund të bëjmë më shumë. Ndihmo dikë sot dhe bëhu ndryshimi që dëshiron të shohësh.',
+        'footer_blurb' => 'Ne besojmë se çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt. Platforma jonë është krijuar për të afruar njerëzit dhe për të ndërtuar një komunitet më të kujdesshëm dhe mbështetës.',
+        'contact_phone' => '+355 69 123 4567',
+        'contact_address' => 'Bashkia Tiranë, Tiranë',
+        'theme_primary' => '#00715D',
+        'theme_accent' => '#E17254',
+    ];
+}
+
+function ts_normalize_site_setting_text(?string $value, int $maxLength, string $default): string
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return $default;
+    }
+
+    $value = strip_tags($value);
+    return mb_substr($value, 0, $maxLength);
+}
+
+function ts_normalize_hex_color(?string $value, string $default): string
+{
+    $value = strtoupper(trim((string) $value));
+    return preg_match('/^#[0-9A-F]{6}$/', $value) ? $value : strtoupper($default);
+}
+
+function ts_sanitize_site_settings(array $raw): array
+{
+    $defaults = ts_default_site_settings();
+
+    return [
+        'organization_name' => ts_normalize_site_setting_text($raw['organization_name'] ?? null, 120, $defaults['organization_name']),
+        'hero_badge' => ts_normalize_site_setting_text($raw['hero_badge'] ?? null, 160, $defaults['hero_badge']),
+        'hero_title' => ts_normalize_site_setting_text($raw['hero_title'] ?? null, 160, $defaults['hero_title']),
+        'hero_subtitle' => ts_normalize_site_setting_text($raw['hero_subtitle'] ?? null, 320, $defaults['hero_subtitle']),
+        'footer_blurb' => ts_normalize_site_setting_text($raw['footer_blurb'] ?? null, 420, $defaults['footer_blurb']),
+        'contact_phone' => ts_normalize_site_setting_text($raw['contact_phone'] ?? null, 40, $defaults['contact_phone']),
+        'contact_address' => ts_normalize_site_setting_text($raw['contact_address'] ?? null, 160, $defaults['contact_address']),
+        'theme_primary' => ts_normalize_hex_color($raw['theme_primary'] ?? null, $defaults['theme_primary']),
+        'theme_accent' => ts_normalize_hex_color($raw['theme_accent'] ?? null, $defaults['theme_accent']),
+    ];
+}
+
+function ts_get_site_settings(?PDO $db = null): array
+{
+    static $cache = null;
+
+    if ($db === null && is_array($cache)) {
+        return $cache;
+    }
+
+    $settings = ts_default_site_settings();
+    $pdoRef = $db instanceof PDO ? $db : ($GLOBALS['pdo'] ?? null);
+    if (!($pdoRef instanceof PDO)) {
+        if ($db === null) {
+            $cache = $settings;
+        }
+        return $settings;
+    }
+
+    try {
+        $stmt = $pdoRef->query('SELECT setting_key, setting_value FROM site_settings');
+        $pairs = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+        if (is_array($pairs) && !empty($pairs)) {
+            $settings = ts_sanitize_site_settings($pairs);
+        }
+    } catch (Throwable $e) {
+        // Fall back to defaults before the migration has run.
+    }
+
+    if ($db === null) {
+        $cache = $settings;
+    }
+
+    return $settings;
+}
+
+function ts_get_site_setting(string $key, ?string $fallback = null): string
+{
+    $settings = ts_get_site_settings();
+    if (array_key_exists($key, $settings)) {
+        return (string) $settings[$key];
+    }
+
+    $defaults = ts_default_site_settings();
+    if ($fallback !== null) {
+        return $fallback;
+    }
+
+    return (string) ($defaults[$key] ?? '');
+}
+
+function ts_save_site_settings(PDO $pdo, array $raw): array
+{
+    $settings = ts_sanitize_site_settings($raw);
+    $stmt = $pdo->prepare(
+        'INSERT INTO site_settings (setting_key, setting_value, updated_at)
+         VALUES (?, ?, NOW())
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()'
+    );
+
+    foreach ($settings as $key => $value) {
+        $stmt->execute([$key, $value]);
+    }
+
+    return $settings;
+}
+
+function ts_brand_theme_css(): string
+{
+    $settings = ts_get_site_settings();
+    $primary = htmlspecialchars($settings['theme_primary'], ENT_QUOTES, 'UTF-8');
+    $accent = htmlspecialchars($settings['theme_accent'], ENT_QUOTES, 'UTF-8');
+
+    return '<style>'
+        . ':root{--ts-brand-primary:' . $primary . ';--ts-brand-accent:' . $accent . ';}'
+        . '.hero-badge,.contact-eyebrow,.auth-pill{background:color-mix(in srgb,var(--ts-brand-primary) 12%, white)!important;color:var(--ts-brand-primary)!important;}'
+        . '.footer-copy,.footer-partners__divider{border-color:color-mix(in srgb,var(--ts-brand-primary) 18%, #dbe5e1)!important;}'
+        . '#header .header-logo b,.footer-logo b,.regjistrohu-label,.sf-accent,.kbtn-accent{color:var(--ts-brand-primary)!important;}'
+        . '.sf-card__step,.story-step__index,.rq-badge--event{background:color-mix(in srgb,var(--ts-brand-accent) 16%, white)!important;color:var(--ts-brand-accent)!important;border-color:color-mix(in srgb,var(--ts-brand-accent) 30%, white)!important;}'
+        . '</style>';
+}
+
+function ts_is_organizer_role_value(?string $role): bool
+{
+    return ts_normalize_value((string) $role) === 'organizer';
+}
+
+function ts_is_dashboard_role_value(?string $role): bool
+{
+    return in_array(ts_normalize_value((string) $role), ['admin', 'super_admin', 'organizer'], true);
+}
+
+function ts_is_event_manager_role_value(?string $role): bool
+{
+    return in_array(ts_normalize_value((string) $role), ['admin', 'super_admin', 'organizer'], true);
+}
+
+function ts_organization_application_status(?string $status): string
+{
+    $normalized = ts_normalize_value((string) $status);
+    return in_array($normalized, ['pending', 'approved', 'rejected'], true)
+        ? $normalized
+        : 'pending';
+}
+
+function ts_submit_organization_application(PDO $pdo, int $userId, array $data): int
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO organization_applications (
+            applicant_user_id,
+            organization_name,
+            contact_name,
+            contact_email,
+            contact_phone,
+            website,
+            description,
+            status,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+    );
+
+    $stmt->execute([
+        $userId,
+        $data['organization_name'],
+        $data['contact_name'],
+        $data['contact_email'],
+        $data['contact_phone'],
+        $data['website'],
+        $data['description'],
+        'pending',
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+function ts_review_organization_application(PDO $pdo, int $applicationId, int $reviewerId, string $decision, string $reviewNotes = ''): array
+{
+    $decision = ts_organization_application_status($decision);
+    if (!in_array($decision, ['approved', 'rejected'], true)) {
+        throw new InvalidArgumentException('Vendimi duhet të jetë approved ose rejected.');
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT oa.*, p.emri AS applicant_name, p.email AS applicant_email, p.statusi_llogarise
+         FROM organization_applications oa
+         JOIN Perdoruesi p ON p.id_perdoruesi = oa.applicant_user_id
+         WHERE oa.id = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$applicationId]);
+    $application = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$application) {
+        throw new RuntimeException('Aplikimi i organizatës nuk u gjet.');
+    }
+
+    if (ts_organization_application_status($application['status'] ?? null) !== 'pending') {
+        throw new RuntimeException('Ky aplikim është shqyrtuar tashmë.');
+    }
+
+    if (ts_normalize_value($application['statusi_llogarise'] ?? '') !== 'active') {
+        throw new RuntimeException('Vetëm llogaritë aktive mund të miratohen si organizatorë.');
+    }
+
+    $pdo->beginTransaction();
+
+    try {
+        if ($decision === 'approved') {
+            $pdo->prepare(
+                'UPDATE Perdoruesi
+                 SET roli = ?,
+                     organization_name = ?,
+                     organization_website = ?,
+                     organization_phone = ?,
+                     organization_description = ?
+                 WHERE id_perdoruesi = ?'
+            )->execute([
+                'organizer',
+                $application['organization_name'],
+                $application['website'] ?: null,
+                $application['contact_phone'] ?: null,
+                $application['description'] ?: null,
+                $application['applicant_user_id'],
+            ]);
+        }
+
+        $pdo->prepare(
+            'UPDATE organization_applications
+             SET status = ?, review_notes = ?, reviewed_by_user_id = ?, reviewed_at = NOW()
+             WHERE id = ?'
+        )->execute([
+            $decision,
+            trim($reviewNotes) !== '' ? trim($reviewNotes) : null,
+            $reviewerId,
+            $applicationId,
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    $application['status'] = $decision;
+    $application['review_notes'] = trim($reviewNotes);
+    return $application;
+}
+
+function ts_can_manage_event(array $user, array $event): bool
+{
+    $role = ts_normalize_value($user['roli'] ?? '');
+    if (in_array($role, ['admin', 'super_admin'], true)) {
+        return true;
+    }
+
+    if ($role !== 'organizer') {
+        return false;
+    }
+
+    return (int) ($event['id_perdoruesi'] ?? 0) === (int) ($user['id'] ?? 0);
+}
+
+function ts_birthdate_age(?string $dob): ?int
+{
+    if ($dob === null || $dob === '') {
+        return null;
+    }
+
+    $birth = DateTime::createFromFormat('Y-m-d', $dob);
+    $errors = DateTime::getLastErrors();
+    if (
+        $birth === false
+        || ($errors !== false && (($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0))
+        || $birth->format('Y-m-d') !== $dob
+    ) {
+        return null;
+    }
+
+    $now = new DateTime();
+    if ($birth > $now) {
+        return null;
+    }
+
+    $age = (int) $now->diff($birth)->y;
+    return ($age >= 1 && $age <= 120) ? $age : null;
+}
+
+function ts_guardian_consent_status(?string $status): string
+{
+    $normalized = strtolower(trim((string) $status));
+    return in_array($normalized, ['not_required', 'pending', 'approved', 'rejected'], true)
+        ? $normalized
+        : 'not_required';
+}
+
+function ts_birthdate_requires_guardian_consent(?string $dob, int $minimumAge = TS_GUARDIAN_CONSENT_MIN_AGE): bool
+{
+    $age = ts_birthdate_age($dob);
+    return $age !== null && $age < $minimumAge;
+}
+
+function ts_user_requires_guardian_consent(array $user): bool
+{
+    $status = ts_guardian_consent_status($user['guardian_consent_status'] ?? null);
+    if (in_array($status, ['pending', 'approved', 'rejected'], true)) {
+        return true;
+    }
+
+    return ts_birthdate_requires_guardian_consent($user['birthdate'] ?? null);
+}
+
+function ts_user_guardian_consent_approved(array $user): bool
+{
+    if (!ts_user_requires_guardian_consent($user)) {
+        return true;
+    }
+
+    return ts_guardian_consent_status($user['guardian_consent_status'] ?? null) === 'approved';
+}
+
+function ts_user_activation_state(array $user): string
+{
+    $emailVerified = (int) ($user['verified'] ?? 0) === 1;
+    $needsGuardian = ts_user_requires_guardian_consent($user);
+    $guardianApproved = !$needsGuardian || ts_user_guardian_consent_approved($user);
+
+    if ($emailVerified && $guardianApproved) {
+        return 'ready';
+    }
+
+    if (!$emailVerified && $needsGuardian && !$guardianApproved) {
+        return 'email_and_guardian_pending';
+    }
+
+    if (!$emailVerified) {
+        return 'email_pending';
+    }
+
+    if (ts_guardian_consent_status($user['guardian_consent_status'] ?? null) === 'rejected') {
+        return 'guardian_rejected';
+    }
+
+    return 'guardian_pending';
+}
+
+function ts_guardian_consent_error_key(array $user): ?string
+{
+    return match (ts_user_activation_state($user)) {
+        'email_pending' => 'email_not_verified',
+        'email_and_guardian_pending' => 'email_and_guardian_pending',
+        'guardian_pending' => 'guardian_consent_pending',
+        'guardian_rejected' => 'guardian_consent_rejected',
+        default => null,
+    };
+}
 
 function ts_help_request_application_unlocks_location(?string $status): bool
 {
@@ -152,6 +528,32 @@ function ts_help_request_normalize_status(?string $status): string
 {
     $normalized = ts_normalize_value((string) $status);
     return $normalized === 'closed' ? 'completed' : $normalized;
+}
+
+function ts_help_request_status_filter_values(string $status): array
+{
+    return match (ts_help_request_normalize_status($status)) {
+        'completed' => ['completed', 'closed'],
+        'open' => ['open'],
+        'filled' => ['filled'],
+        'cancelled' => ['cancelled'],
+        default => [ts_help_request_normalize_status($status)],
+    };
+}
+
+function ts_help_request_normalize_moderation_status(?string $status): string
+{
+    $normalized = strtolower(trim((string) $status));
+    return in_array($normalized, ['approved', 'pending_review', 'rejected'], true) ? $normalized : 'approved';
+}
+
+function ts_help_request_has_coordinates(array $request): bool
+{
+    return isset($request['latitude'], $request['longitude'])
+        && $request['latitude'] !== null
+        && $request['latitude'] !== ''
+        && $request['longitude'] !== null
+        && $request['longitude'] !== '';
 }
 
 function ts_help_request_matching_mode(?string $matchingMode, ?int $capacityTotal = null): string
@@ -311,6 +713,168 @@ function ts_help_request_sync_status(PDO $pdo, int $requestId): ?array
     }
 
     return $details;
+}
+
+function ts_help_request_summary(PDO $pdo, array $options = []): array
+{
+    $options = array_merge([
+        'approved_only' => false,
+        'require_coordinates' => false,
+        'visible_only' => false,
+        'viewer_id' => null,
+        'viewer_role' => null,
+        'location_unlocked_ids' => [],
+        'statuses' => [],
+        'types' => [],
+    ], $options);
+
+    $statusFilter = array_values(array_unique(array_filter(array_map(
+        static fn ($status): string => ts_help_request_normalize_status((string) $status),
+        (array) $options['statuses']
+    ))));
+    $typeFilter = array_values(array_unique(array_filter(array_map(
+        static fn ($type): string => ts_normalize_value((string) $type),
+        (array) $options['types']
+    ))));
+
+    $summary = [
+        'all_total' => 0,
+        'approved_total' => 0,
+        'pending_moderation' => 0,
+        'rejected_total' => 0,
+        'active_total' => 0,
+        'open_total' => 0,
+        'filled_total' => 0,
+        'completed_total' => 0,
+        'cancelled_total' => 0,
+        'request_total' => 0,
+        'offer_total' => 0,
+        'request_active' => 0,
+        'offer_active' => 0,
+        'request_open' => 0,
+        'offer_open' => 0,
+        'request_filled' => 0,
+        'offer_filled' => 0,
+        'request_completed' => 0,
+        'offer_completed' => 0,
+        'request_cancelled' => 0,
+        'offer_cancelled' => 0,
+    ];
+
+    $stmt = $pdo->query(
+        'SELECT id_kerkese_ndihme, id_perdoruesi, tipi, statusi, moderation_status, matching_mode, capacity_total, latitude, longitude
+         FROM Kerkesa_per_Ndihme'
+    );
+    $requests = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+    $countsByRequest = ts_help_request_application_counts_by_request_ids(
+        $pdo,
+        array_map(static fn (array $row): int => (int) ($row['id_kerkese_ndihme'] ?? 0), $requests)
+    );
+
+    foreach ($requests as $request) {
+        $moderationStatus = ts_help_request_normalize_moderation_status($request['moderation_status'] ?? null);
+        if ($options['approved_only'] && $moderationStatus !== 'approved') {
+            continue;
+        }
+
+        if ($options['require_coordinates'] && !ts_help_request_has_coordinates($request)) {
+            continue;
+        }
+
+        if ($options['visible_only'] && !ts_can_view_help_request_location(
+            $request,
+            $options['viewer_id'] !== null ? (int) $options['viewer_id'] : null,
+            $options['viewer_role'] !== null ? (string) $options['viewer_role'] : null,
+            (array) $options['location_unlocked_ids']
+        )) {
+            continue;
+        }
+
+        $requestId = (int) ($request['id_kerkese_ndihme'] ?? 0);
+        $details = ts_help_request_matching_details($request, $countsByRequest[$requestId] ?? []);
+        $resolvedStatus = $details['resolved_status'];
+        $type = ts_normalize_value((string) ($request['tipi'] ?? 'request'));
+
+        if ($statusFilter !== [] && !in_array($resolvedStatus, $statusFilter, true)) {
+            continue;
+        }
+
+        if ($typeFilter !== [] && !in_array($type, $typeFilter, true)) {
+            continue;
+        }
+
+        $summary['all_total']++;
+        if ($moderationStatus === 'approved') {
+            $summary['approved_total']++;
+        } elseif ($moderationStatus === 'pending_review') {
+            $summary['pending_moderation']++;
+        } elseif ($moderationStatus === 'rejected') {
+            $summary['rejected_total']++;
+        }
+
+        if ($type === 'offer') {
+            $summary['offer_total']++;
+        } else {
+            $summary['request_total']++;
+        }
+
+        if (in_array($resolvedStatus, TS_HELP_REQUEST_ACTIVE_STATUSES, true)) {
+            $summary['active_total']++;
+            if ($type === 'offer') {
+                $summary['offer_active']++;
+            } else {
+                $summary['request_active']++;
+            }
+        }
+
+        switch ($resolvedStatus) {
+            case 'open':
+                $summary['open_total']++;
+                if ($type === 'offer') {
+                    $summary['offer_open']++;
+                } else {
+                    $summary['request_open']++;
+                }
+                break;
+            case 'filled':
+                $summary['filled_total']++;
+                if ($type === 'offer') {
+                    $summary['offer_filled']++;
+                } else {
+                    $summary['request_filled']++;
+                }
+                break;
+            case 'completed':
+                $summary['completed_total']++;
+                if ($type === 'offer') {
+                    $summary['offer_completed']++;
+                } else {
+                    $summary['request_completed']++;
+                }
+                break;
+            case 'cancelled':
+                $summary['cancelled_total']++;
+                if ($type === 'offer') {
+                    $summary['offer_cancelled']++;
+                } else {
+                    $summary['request_cancelled']++;
+                }
+                break;
+        }
+    }
+
+    return $summary;
+}
+
+function ts_count_active_volunteers(PDO $pdo): int
+{
+    return (int) $pdo->query(
+        "SELECT COUNT(*)
+         FROM Perdoruesi
+         WHERE LOWER(roli) IN ('volunteer', 'vullnetar')
+           AND LOWER(statusi_llogarise) IN ('active', 'aktiv')"
+    )->fetchColumn();
 }
 
 function ts_normalize_rows(array $rows): array
@@ -616,13 +1180,20 @@ function ts_support_email(): string
 
 function ts_support_name(): string
 {
-    $name = trim((string) (getenv('CONTACT_NAME') ?: getenv('SUPPORT_NAME') ?: 'Ekipi Tirana Solidare'));
+    $name = trim((string) (getenv('CONTACT_NAME') ?: getenv('SUPPORT_NAME') ?: ts_get_site_setting('organization_name', 'Ekipi Tirana Solidare')));
     return $name !== '' ? $name : 'Ekipi Tirana Solidare';
 }
 
 function ts_is_admin_role_value(?string $role): bool
 {
     return in_array(ts_normalize_value((string) $role), ['admin', 'super_admin'], true);
+}
+
+if (!function_exists('is_admin_role')) {
+    function is_admin_role(string $role): bool
+    {
+        return ts_is_admin_role_value($role);
+    }
 }
 
 function ts_can_message_user_roles(?string $senderRole, ?string $receiverRole): bool
@@ -937,6 +1508,126 @@ function send_password_reset_email(string $toEmail, string $toName, string $rese
     }
 
     return $sent;
+}
+
+function send_guardian_consent_email(
+        string $guardianEmail,
+        string $guardianName,
+        string $childName,
+        string $childEmail,
+        string $consentUrl,
+        ?string $guardianRelation = null
+): bool {
+        $safeGuardianName = htmlspecialchars($guardianName, ENT_QUOTES, 'UTF-8');
+        $safeChildName = htmlspecialchars($childName, ENT_QUOTES, 'UTF-8');
+        $safeChildEmail = htmlspecialchars($childEmail, ENT_QUOTES, 'UTF-8');
+        $safeUrl = htmlspecialchars($consentUrl, ENT_QUOTES, 'UTF-8');
+        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+        $safeSupportEmail = htmlspecialchars(ts_support_email(), ENT_QUOTES, 'UTF-8');
+        $relation = trim((string) $guardianRelation);
+        $relationText = $relation !== '' ? $relation : 'prind ose kujdestar';
+        $safeRelationText = htmlspecialchars($relationText, ENT_QUOTES, 'UTF-8');
+
+        $subject = 'Kërkohet pëlqimi prindëror - Tirana Solidare';
+        $bodyHtml = "
+                <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+                    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+                        <tr>
+                            <td align=\"center\" style=\"padding:24px 12px;\">
+                                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                                    <tr>
+                                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                                            <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                                            <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Konfirmim për vullnetarizëm nën moshën 16 vjeç</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style=\"padding:24px 30px 20px;\">
+                                            <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeGuardianName},</p>
+                                            <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkohet pëlqimi juaj</h2>
+                                            <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeChildName} është regjistruar në Tirana Solidare dhe ka deklaruar se është nën moshën " . TS_GUARDIAN_CONSENT_MIN_AGE . " vjeç. Për të vazhduar me aplikimet në evente dhe aktivitetet vullnetare, nevojitet miratimi i {$safeRelationText}.</p>
+                                            <div style=\"margin:0 0 18px; padding:14px 16px; background:#f4faf7; border:1px solid #dceee6; border-radius:10px;\">
+                                                <p style=\"margin:0 0 6px; color:#2b3a3a; font-size:14px;\"><strong>Përdoruesi:</strong> {$safeChildName}</p>
+                                                <p style=\"margin:0; color:#2b3a3a; font-size:14px;\"><strong>Email:</strong> {$safeChildEmail}</p>
+                                            </div>
+                                            <p style=\"margin:20px 0; text-align:center;\">
+                                                <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Jap pëlqimin</a>
+                                            </p>
+                                            <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px; line-height:1.6;\">Nëse nuk e njihni këtë regjistrim ose nuk dëshironi ta miratoni, thjesht injorojeni këtë email. Llogaria nuk do të aktivizohet plotësisht pa konfirmimin tuaj.</p>
+                                            <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style=\"padding:0 30px 22px; border-top:1px solid #e9f3ef;\">
+                                            <p style=\"margin:0; color:#6b6b6b; font-size:12px; line-height:1.4;\">Ky link skadon pas 7 ditësh. Për pyetje, na shkruani në <a href=\"mailto:{$safeSupportEmail}\" style=\"color:#00715D; text-decoration:none;\">{$safeSupportEmail}</a>.</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                                            <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>";
+        $bodyText = "Përshëndetje {$guardianName},\n\n{$childName} është regjistruar në Tirana Solidare dhe ka nevojë për pëlqimin e {$relationText} për të vazhduar me aktivitetet vullnetare.\n\nPër të miratuar regjistrimin, hapni këtë link:\n{$consentUrl}\n\nNëse nuk e njihni këtë regjistrim, injoroni këtë email. Linku skadon pas 7 ditësh.";
+
+        global $pdo;
+        $queueId = 0;
+        try {
+                if (queue_email($guardianEmail, $guardianName, $subject, $bodyHtml, $bodyText) && $pdo) {
+                        $queueId = (int) $pdo->lastInsertId();
+                }
+        } catch (Throwable $e) { /* non-critical */ }
+
+        $sent = send_email_direct($guardianEmail, $guardianName, $subject, $bodyHtml, $bodyText);
+
+        if ($sent && $queueId > 0) {
+                try {
+                        $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$queueId]);
+                } catch (Throwable $e) { /* non-critical */ }
+        }
+
+        return $sent;
+}
+
+function ts_send_guardian_activity_email(PDO $pdo, int $userId, string $subject, string $message, array $options = []): bool
+{
+    if ($userId <= 0) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT emri, birthdate, guardian_name, guardian_email, guardian_relation, guardian_consent_status
+         FROM Perdoruesi
+         WHERE id_perdoruesi = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user || !ts_user_requires_guardian_consent($user) || !ts_user_guardian_consent_approved($user)) {
+        return false;
+    }
+
+    $guardianEmail = trim((string) ($user['guardian_email'] ?? ''));
+    if (!filter_var($guardianEmail, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $guardianName = trim((string) ($user['guardian_name'] ?? ''));
+    if ($guardianName === '') {
+        $guardianName = 'Prind/Kujdestar';
+    }
+
+    $childName = trim((string) ($user['emri'] ?? 'Përdorues'));
+    $guardianMessage = "Ky është një njoftim për {$childName}.\n\n{$message}";
+    $mailOptions = $options;
+    $mailOptions['bypass_preferences'] = true;
+
+    return send_notification_email($guardianEmail, $guardianName, $subject, $guardianMessage, $mailOptions);
 }
 
 /**
@@ -1675,18 +2366,5 @@ function isUserBlocked(PDO $pdo, int $userId, int $otherUserId): bool
  */
 function ts_birthdate_is_reasonable(?string $dob): bool
 {
-    if ($dob === null || $dob === '') {
-        return false;
-    }
-    $birth = DateTime::createFromFormat('Y-m-d', $dob);
-    if ($birth === false) {
-        return false;
-    }
-    $now = new DateTime();
-    $age = (int) $now->diff($birth)->y;
-    // diff gives the absolute difference; ensure birth is in the past
-    if ($birth > $now) {
-        return false;
-    }
-    return $age >= 1 && $age <= 120;
+    return ts_birthdate_age($dob) !== null;
 }

@@ -45,8 +45,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         }
 
-        if ((int) ($user['verified'] ?? 0) !== 1) {
-            header("Location: /TiranaSolidare/views/login.php?error=email_not_verified" . ($redirect ? '&redirect=' . urlencode($redirect) : ''));
+        $activationErrorKey = ts_guardian_consent_error_key($user);
+        if ($activationErrorKey !== null) {
+            header("Location: /TiranaSolidare/views/login.php?error=" . $activationErrorKey . ($redirect ? '&redirect=' . urlencode($redirect) : ''));
             exit();
         }
 
@@ -60,6 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['emri'] = $user['emri'];
         $_SESSION['roli'] = ts_normalize_value($user['roli'] ?? 'volunteer');
         $_SESSION['email'] = $user['email'];
+        $_SESSION['organization_name'] = (string) ($user['organization_name'] ?? '');
         $_SESSION['profile_color'] = $user['profile_color'] ?? 'emerald';
         $_SESSION['profile_picture'] = (string) ($user['profile_picture'] ?? '');
 
@@ -67,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $normalizedRole = ts_normalize_value($user['roli'] ?? 'volunteer');
         if ($redirect && is_safe_redirect($redirect)) {
             header("Location: $redirect");
-        } elseif (in_array($normalizedRole, ['admin', 'super_admin'], true)) {
+        } elseif (ts_is_dashboard_role_value($normalizedRole)) {
             header("Location: /TiranaSolidare/views/dashboard.php");
         } else {
             header("Location: /TiranaSolidare/views/volunteer_panel.php");

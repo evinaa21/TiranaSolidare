@@ -26,7 +26,7 @@ $stmtEvents = $pdo->query(
             k.emri AS kategoria_emri
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-     WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND e.is_archived = 0 AND e.statusi != 'cancelled'
+  WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL AND " . ts_public_event_filter_sql('e') . "
      ORDER BY e.data DESC"
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
@@ -41,7 +41,7 @@ if ($currentMapUserId > 0) {
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
-     WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL AND kn.statusi = 'open'
+      WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL AND LOWER(kn.statusi) = 'open'
      ORDER BY kn.krijuar_me DESC"
   );
   $visibleRequests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));
@@ -57,10 +57,6 @@ if ($currentMapUserId > 0) {
 
 // Fetch categories for event filters
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
-
-// Total open help request counts (regardless of coordinates, for trust bar)
-$totalOpenRequests = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open' AND tipi = 'request'")->fetchColumn();
-$totalOpenOffers   = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open' AND tipi = 'offer'")->fetchColumn();
 
 // Build markers JSON
 $markers = [];
@@ -88,6 +84,11 @@ foreach ($requests as $req) {
         'extra'   => status_label($req['tipi']) . ($req['kategoria_emri'] ? ' • ' . $req['kategoria_emri'] : '') . ' • ' . status_label($req['statusi']),
     ];
 }
+
+    $visibleEventCount = count($events);
+    $visibleRequestCount = count(array_filter($requests, static fn (array $row): bool => ($row['tipi'] ?? 'request') === 'request'));
+    $visibleOfferCount = count(array_filter($requests, static fn (array $row): bool => ($row['tipi'] ?? 'request') === 'offer'));
+    $visibleMarkerCount = count($markers);
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -124,27 +125,30 @@ foreach ($requests as $req) {
     <p class="rq-hero__subtitle" style="max-width:760px;margin-top:10px;color:#476061;">
       Për privatësi, vendndodhjet e sakta të kërkesave shfaqen vetëm për postuesin, administratorët ose pasi të keni aplikuar në atë postim. Eventet mbeten të dukshme normalisht në hartë.
     </p>
+    <p class="rq-hero__subtitle" style="max-width:760px;margin-top:8px;color:#5f7470;font-size:0.95rem;">
+      Shifrat më poshtë tregojnë vetëm të dhënat që mund të shfaqen realisht në hartë për ju në këtë moment.
+    </p>
 
     <!-- Trust stats -->
     <div class="rq-trust-bar">
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-        <div><strong><?= count($events) ?></strong><span>Evente</span></div>
+        <div><strong><?= $visibleEventCount ?></strong><span>Evente në hartë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= $totalOpenRequests ?></strong><span>Kërkoj Ndihmë</span></div>
+        <div><strong><?= $visibleRequestCount ?></strong><span>Kërkoj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <div><strong><?= $totalOpenOffers ?></strong><span>Ofroj Ndihmë</span></div>
+        <div><strong><?= $visibleOfferCount ?></strong><span>Ofroj Ndihmë</span></div>
       </div>
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-        <div><strong><?= count($markers) ?></strong><span>Në Hartë</span></div>
+        <div><strong><?= $visibleMarkerCount ?></strong><span>Në Hartë</span></div>
       </div>
     </div>
   </div>
@@ -154,22 +158,22 @@ foreach ($requests as $req) {
 <div class="map-page-filters">
   <button class="map-filter-btn active" data-filter="all" onclick="filterMarkers('all', this)">
     Të gjitha
-    <span class="filter-count"><?= count($markers) ?></span>
+    <span class="filter-count"><?= $visibleMarkerCount ?></span>
   </button>
   <button class="map-filter-btn" data-filter="event" onclick="filterMarkers('event', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
     Evente
-    <span class="filter-count"><?= count($events) ?></span>
+    <span class="filter-count"><?= $visibleEventCount ?></span>
   </button>
   <button class="map-filter-btn" data-filter="request" onclick="filterMarkers('request', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
     Kërkoj Ndihmë
-    <span class="filter-count"><?= $totalOpenRequests ?></span>
+    <span class="filter-count"><?= $visibleRequestCount ?></span>
   </button>
   <button class="map-filter-btn" data-filter="offer" onclick="filterMarkers('offer', this)">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
     Ofroj Ndihmë
-    <span class="filter-count"><?= $totalOpenOffers ?></span>
+    <span class="filter-count"><?= $visibleOfferCount ?></span>
   </button>
 </div>
 

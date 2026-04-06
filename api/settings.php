@@ -11,19 +11,43 @@
  */
 require_once __DIR__ . '/helpers.php';
 
-$user = require_auth();
-
-// Only admins can modify settings
-if (!in_array(ts_normalize_value($user['roli'] ?? ''), ['admin', 'super_admin'], true)) {
-    json_error('Vetëm administratorët mund të modifikojnë cilësimet.', 403);
-}
+$user = require_dashboard_user();
+$isSuperAdmin = ts_normalize_value($user['roli'] ?? '') === 'super_admin';
 
 // CSRF is enforced by helpers.php for POST/PUT/DELETE
 
 $action = $_GET['action'] ?? 'unknown';
 
+if ($action === 'get_site_settings') {
+    require_method('GET');
+    json_success([
+        'settings' => ts_get_site_settings($pdo),
+        'can_edit' => $isSuperAdmin,
+    ]);
+}
+
+if ($action === 'update_site_settings' && $_SERVER['REQUEST_METHOD'] === 'PUT') {
+    if (!$isSuperAdmin) {
+        json_error('Vetëm super administratori mund të modifikojë identitetin e platformës.', 403);
+    }
+
+    $body = get_json_body();
+    $settings = ts_save_site_settings($pdo, $body);
+
+    log_admin_action($user['id'], 'update_site_settings', 'settings', null, $settings);
+
+    json_success([
+        'message' => 'Cilësimet e platformës u ruajtën me sukses.',
+        'settings' => $settings,
+    ]);
+}
+
 // ─── UPLOAD LOGO ───────────────────────────────────────
 if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$isSuperAdmin) {
+        json_error('Vetëm super administratori mund të ndryshojë logon e platformës.', 403);
+    }
+
     if (!isset($_FILES['logo'])) {
         json_error('Asnjë skedar nuk u zgjodh.', 400);
     }
@@ -77,6 +101,8 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    log_admin_action($user['id'], 'upload_site_logo', 'settings', null, ['filename' => $logo_filename]);
+
     json_success([
         'message' => 'Logoja u ngarku me sukses.',
         'url' => $base_url . '/' . $logo_filename,
@@ -86,6 +112,7 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ─── GET CURRENT LOGO ───────────────────────────────────────
 else if ($action === 'get_logo') {
+    require_method('GET');
     $upload_dir = __DIR__ . '/../public/assets/uploads';
     $base_url = '/TiranaSolidare/public/assets/uploads';
     
@@ -114,6 +141,10 @@ else if ($action === 'get_logo') {
 
 // ─── DELETE LOGO ───────────────────────────────────────
 else if ($action === 'delete_logo' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    if (!$isSuperAdmin) {
+        json_error('Vetëm super administratori mund të fshijë logon e platformës.', 403);
+    }
+
     $upload_dir = __DIR__ . '/../public/assets/uploads';
     
     // Delete all custom logos
@@ -127,6 +158,8 @@ else if ($action === 'delete_logo' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
         }
     }
 
+    log_admin_action($user['id'], 'delete_site_logo', 'settings');
+
     json_success([
         'message' => 'Logoja u fshi me sukses.',
         'deleted_count' => $deleted_count,
@@ -135,5 +168,5 @@ else if ($action === 'delete_logo' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
 }
 
 else {
-    json_error('Veprim i panjohur. Përdorni: upload_logo, get_logo, delete_logo.', 400);
+    json_error('Veprim i panjohur. Përdorni: get_site_settings, update_site_settings, upload_logo, get_logo, delete_logo.', 400);
 }

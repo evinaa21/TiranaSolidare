@@ -9,7 +9,9 @@ if (!function_exists('ts_resolve_profile_color')) {
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $isLoggedIn ? ($_SESSION['emri'] ?? 'Përdorues') : '';
-$isAdminUser = (isset($_SESSION['roli']) && in_array(ts_normalize_value($_SESSION['roli']), ['admin', 'super_admin'], true));
+$isDashboardUser = (isset($_SESSION['roli']) && ts_is_dashboard_role_value($_SESSION['roli']));
+$siteName = ts_get_site_setting('organization_name', 'Tirana Solidare');
+$themePrimary = ts_get_site_setting('theme_primary', '#00715D');
 
 $firstChar = function_exists('mb_substr') ? mb_substr($userName ?: 'P', 0, 1) : substr($userName ?: 'P', 0, 1);
 $userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : strtoupper($firstChar);
@@ -29,11 +31,12 @@ $headerColorResolved = ts_resolve_profile_color($_SESSION['profile_color'] ?? 'e
 $headerColorTheme = $headerColorResolved['theme'];
 ?>
 <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
-<meta name="theme-color" content="#00715D">
+<meta name="theme-color" content="<?= htmlspecialchars($themePrimary) ?>">
+<?= ts_brand_theme_css() ?>
 <header id="header" class="header">
   <a href="/TiranaSolidare/public/" class="header-logo">
-    <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="Tirana Solidare">
-    <span>Tirana<b>Solidare</b></span>
+    <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="<?= htmlspecialchars($siteName) ?>">
+    <span><?= htmlspecialchars($siteName) ?></span>
   </a>
   <nav class="header-nav">
     <button onclick="toggleMenu()">
@@ -45,9 +48,10 @@ $headerColorTheme = $headerColorResolved['theme'];
     <a href="/TiranaSolidare/views/events.php" class="header-main-link">Evente</a>
     <a href="/TiranaSolidare/views/help_requests.php" class="header-main-link">Kërkesat</a>
     <a href="/TiranaSolidare/views/map.php" class="header-main-link">Harta</a>
+    <a href="/TiranaSolidare/views/become_organizer.php" class="header-main-link">Për Organizata</a>
     <span></span>
     <?php if ($isLoggedIn): ?>
-        <?php if (!$isAdminUser): ?>
+      <?php if (!$isDashboardUser): ?>
         <div class="header-notif-wrap" id="header-notif-wrap">
           <button type="button" class="header-notif-bell" id="header-notif-btn"
                   aria-label="Njoftimet" title="Njoftimet"
@@ -83,12 +87,12 @@ $headerColorTheme = $headerColorResolved['theme'];
             <div class="header-user-dropdown" id="header-user-dropdown">
             <div class="header-user-dropdown__head">
               <strong><?= htmlspecialchars($userName) ?></strong>
-              <small><?= $isAdminUser ? 'Administrator' : 'Paneli i vullnetarit' ?></small>
+              <small><?= $isDashboardUser ? 'Paneli i menaxhimit' : 'Paneli i vullnetarit' ?></small>
             </div>
-            <?php if ($isAdminUser): ?>
+            <?php if ($isDashboardUser): ?>
             <a href="/TiranaSolidare/views/dashboard.php" class="header-dropdown-admin-link">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-              Paneli Admin
+              Paneli
             </a>
             <?php else: ?>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile">Profili</a>
@@ -98,6 +102,7 @@ $headerColorTheme = $headerColorResolved['theme'];
             <a href="/TiranaSolidare/views/leaderboard.php">Renditja</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
             <a href="/TiranaSolidare/views/volunteer_panel.php?tab=settings">Cilësimet</a>
+            <a href="/TiranaSolidare/views/become_organizer.php">Apliko si organizatë</a>
             <?php endif; ?>
             <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
               <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">

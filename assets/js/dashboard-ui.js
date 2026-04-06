@@ -14,7 +14,7 @@ const STATUS_LABELS = {
     waitlisted: 'Në listë pritjeje', withdrawn: 'Tërhequr',
     present: 'Prezent', absent: 'Munguar',
     active: 'Aktiv', blocked: 'Bllokuar', deactivated: 'Çaktivizuar',
-    admin: 'Admin', super_admin: 'Super Admin', volunteer: 'Vullnetar',
+    admin: 'Admin', super_admin: 'Super Admin', organizer: 'Organizator', volunteer: 'Vullnetar',
     request: 'Kërkesë', offer: 'Ofertë',
     open: 'Hapur', filled: 'Mbushur', closed: 'Mbyllur', completed: 'Përfunduar', cancelled: 'Anuluar',
     pending_review: 'Në shqyrtim'
@@ -49,6 +49,13 @@ function _loadPanelData(panelId) {
             break;
         case 'categories':
             loadCategories();
+            break;
+        case 'organizations':
+            loadOrganizationApplications();
+            break;
+        case 'settings':
+            loadSiteSettings();
+            adminLoadCurrentLogo();
             break;
         case 'audit':
             loadAuditLog();
@@ -257,7 +264,46 @@ window.loadDashboardStats = async function () {
 
     const d = json.data;
 
-    container.innerHTML = `
+    const isOrganizerScope = (d.scope || '').toLowerCase() === 'organizer' || CURRENT_USER_ROLE === 'organizer';
+    const primaryCards = isOrganizerScope
+        ? `
+        <div class="db-stat" style="animation-delay: 0s">
+            <div class="db-stat__icon db-stat__icon--users">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="db-stat__info">
+                <div class="db-stat__value">${d.users.total_perdorues}</div>
+                <div class="db-stat__label">Pjesëmarrës unikë</div>
+            </div>
+        </div>
+        <div class="db-stat" style="animation-delay: 0.05s">
+            <div class="db-stat__icon db-stat__icon--events">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            </div>
+            <div class="db-stat__info">
+                <div class="db-stat__value">${d.events.total_evente}</div>
+                <div class="db-stat__label">Evente të mia</div>
+            </div>
+        </div>
+        <div class="db-stat" style="animation-delay: 0.1s">
+            <div class="db-stat__icon db-stat__icon--apps">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+            </div>
+            <div class="db-stat__info">
+                <div class="db-stat__value">${d.applications.ne_pritje || 0}</div>
+                <div class="db-stat__label">Aplikime në pritje</div>
+            </div>
+        </div>
+        <div class="db-stat" style="animation-delay: 0.15s">
+            <div class="db-stat__icon db-stat__icon--requests">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+            </div>
+            <div class="db-stat__info">
+                <div class="db-stat__value">${d.events.ne_shqyrtim || 0}</div>
+                <div class="db-stat__label">Evente në shqyrtim</div>
+            </div>
+        </div>`
+        : `
         <div class="db-stat" style="animation-delay: 0s">
             <div class="db-stat__icon db-stat__icon--users">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -290,10 +336,12 @@ window.loadDashboardStats = async function () {
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </div>
             <div class="db-stat__info">
-                <div class="db-stat__value">${d.help_requests.total_kerkesa}</div>
-                <div class="db-stat__label">Kërkesa</div>
+                <div class="db-stat__value">${d.help_requests.active_total ?? d.help_requests.total_kerkesa ?? 0}</div>
+                <div class="db-stat__label">Postime aktive</div>
             </div>
         </div>`;
+
+    container.innerHTML = primaryCards;
 
     // Sub-stats grid — premium redesign
     if (subContainer) {
@@ -336,6 +384,51 @@ window.loadDashboardStats = async function () {
 .db-ov-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#00715D,#26a898);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.74rem;font-weight:700;flex-shrink:0;}
             `;
             document.head.appendChild(sty);
+        }
+
+        if (isOrganizerScope) {
+            const organizerRecentHtml = (d.recent_applications || []).length === 0
+                ? '<p style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:20px 0;">Nuk ka aplikime ende.</p>'
+                : `<table class="db-ov-rtbl">
+                    <thead><tr><th>Vullnetari</th><th>Eventi</th><th>Statusi</th><th>Data</th></tr></thead>
+                    <tbody>${(d.recent_applications || []).map(a => {
+                        const sl = (a.statusi || '').toLowerCase();
+                        const ini = (a.vullnetari_emri || '?').charAt(0).toUpperCase();
+                        return `<tr>
+                            <td><div style="display:flex;align-items:center;gap:8px;"><div class="db-ov-avatar">${escapeHtml(ini)}</div><strong>${escapeHtml(a.vullnetari_emri || '')}</strong></div></td>
+                            <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;" title="${escapeHtml(a.eventi_titulli||'')}">${escapeHtml(a.eventi_titulli || '')}</td>
+                            <td><span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.69rem;font-weight:700;background:${sl === 'approved' ? '#dcfce7' : sl === 'rejected' ? '#fee2e2' : '#fef3c7'};color:${sl === 'approved' ? '#16a34a' : sl === 'rejected' ? '#dc2626' : '#b45309'};">${statusLabel(a.statusi)}</span></td>
+                            <td style="color:#94a3b8;white-space:nowrap;font-size:0.79rem;">${(a.aplikuar_me||'').substring(0,10)}</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table>`;
+
+            subContainer.innerHTML = `
+                <div class="db-ov-grid">
+                    <div class="db-ov-card">
+                        <div class="db-ov-card__head"><div class="db-ov-card__title">Statusi i Eventeve</div><a href="#" class="db-ov-card__link" onclick="switchPanel('events',document.querySelector('[data-panel=events]'));return false;">Shiko eventet</a></div>
+                        <div class="db-ov-row"><div class="db-ov-row__lbl"><span class="db-ov-dot" style="background:#00715D"></span>Aktive</div><div class="db-ov-row__val">${d.events.total_evente - (d.events.ne_shqyrtim || 0)}</div></div>
+                        <div class="db-ov-row"><div class="db-ov-row__lbl"><span class="db-ov-dot" style="background:#f59e0b"></span>Në shqyrtim</div><div class="db-ov-row__val">${d.events.ne_shqyrtim || 0}</div></div>
+                        <div class="db-ov-row"><div class="db-ov-row__lbl"><span class="db-ov-dot" style="background:#0ea5e9"></span>Të ardhshme</div><div class="db-ov-row__val">${d.events.evente_te_ardhshme || 0}</div></div>
+                    </div>
+                    <div class="db-ov-card">
+                        <div class="db-ov-card__head"><div class="db-ov-card__title">Aplikimet</div></div>
+                        <div class="db-ov-funnel">
+                            <div class="db-ov-fitem" style="background:#fffbeb;"><div class="db-ov-fitem__val" style="color:#b45309;">${d.applications.ne_pritje || 0}</div><div class="db-ov-fitem__lbl">Në pritje</div></div>
+                            <div class="db-ov-fitem" style="background:#ecfdf5;"><div class="db-ov-fitem__val" style="color:#15803d;">${d.applications.pranuar || 0}</div><div class="db-ov-fitem__lbl">Pranuar</div></div>
+                            <div class="db-ov-fitem" style="background:#fef2f2;"><div class="db-ov-fitem__val" style="color:#dc2626;">${d.applications.refuzuar || 0}</div><div class="db-ov-fitem__lbl">Refuzuar</div></div>
+                        </div>
+                    </div>
+                    <div class="db-ov-card">
+                        <div class="db-ov-card__head"><div class="db-ov-card__title">Kategoritë kryesore</div></div>
+                        <div class="db-ov-cat">${(d.top_categories || []).length === 0 ? '<div style="color:#94a3b8;font-size:0.84rem;">Nuk ka të dhëna ende.</div>' : (d.top_categories || []).map(c => `<div class="db-ov-cat-item"><div class="db-ov-cat-item__head"><span class="db-ov-cat-item__name">${escapeHtml(c.emri)}</span><span class="db-ov-cat-item__cnt">${c.event_count}</span></div><div class="db-ov-catbar"><div class="db-ov-catbar__fill" style="width:${Math.max(12, (parseInt(c.event_count, 10) || 0) * 100 / Math.max(...(d.top_categories || []).map(tc => parseInt(tc.event_count, 10) || 0), 1))}%;"></div></div></div>`).join('')}</div>
+                    </div>
+                    <div class="db-ov-card db-ov-card--wide">
+                        <div class="db-ov-card__head"><div class="db-ov-card__title">Aplikimet e fundit</div></div>
+                        ${organizerRecentHtml}
+                    </div>
+                </div>`;
+            return;
         }
 
         const totalApps = (d.applications.ne_pritje || 0) + (d.applications.pranuar || 0) + (d.applications.refuzuar || 0);
@@ -396,8 +489,12 @@ window.loadDashboardStats = async function () {
                     <span class="db-ov-row__val" style="color:#00715D;">${d.users.vullnetar_count || 0}</span>
                 </div>
                 <div class="db-ov-row" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
-                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#f59e0b;"></div>Kërkesa të hapura</span>
+                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#f59e0b;"></div>Kërkoj ndihmë</span>
                     <span class="db-ov-row__val" style="color:#f59e0b;">${d.help_requests.kerkese_open || 0}</span>
+                </div>
+                <div class="db-ov-row" onclick="switchPanel('requests',document.querySelector('[data-panel=requests]'))">
+                    <span class="db-ov-row__lbl"><div class="db-ov-dot" style="background:#ef6c57;"></div>Ofroj ndihmë</span>
+                    <span class="db-ov-row__val" style="color:#ef6c57;">${d.help_requests.oferte_open || 0}</span>
                 </div>
                 ${(d.users.bllokuar_count || 0) > 0
                     ? `<div class="db-ov-row" onclick="switchPanel('users',document.querySelector('[data-panel=users]'))">
@@ -451,11 +548,13 @@ window.loadAdminEvents = async function (page = 1) {
     const filterSearch = document.getElementById('admin-ev-filter-search')?.value.trim() || '';
     const filterCategory = document.getElementById('admin-ev-filter-category')?.value || '';
     const filterDateRange = document.getElementById('admin-ev-filter-daterange')?.value || '';
+    const filterStatus = document.getElementById('admin-ev-filter-status')?.value || '';
 
-    const params = new URLSearchParams({ action: 'list', page, limit: 10 });
+    const params = new URLSearchParams({ action: 'manage_list', page, limit: 10 });
     if (filterSearch) params.set('search', filterSearch);
     if (filterCategory) params.set('category', filterCategory);
     if (filterDateRange) params.set('dateRange', filterDateRange);
+    if (filterStatus) params.set('status', filterStatus);
 
     const json = await apiCall(`events.php?${params}`);
     if (!json.success) {
@@ -477,30 +576,42 @@ window.loadAdminEvents = async function (page = 1) {
             <option value="month"${filterDateRange === 'month' ? ' selected' : ''}>Ky muaj</option>
             <option value="past3"${filterDateRange === 'past3' ? ' selected' : ''}>3 muajt e fundit</option>
         </select>
+        <select id="admin-ev-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
+            <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
+            <option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktive</option>
+            <option value="pending_review"${filterStatus === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
+            <option value="completed"${filterStatus === 'completed' ? ' selected' : ''}>Përfunduara</option>
+            <option value="cancelled"${filterStatus === 'cancelled' ? ' selected' : ''}>Anuluara</option>
+        </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAdminEvents(1)">Filtro</button>
-        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';document.getElementById('admin-ev-filter-daterange').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
+        <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';document.getElementById('admin-ev-filter-daterange').value='';document.getElementById('admin-ev-filter-status').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
     </div>`;
 
     let html = filterHtml;
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> evente</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>Titulli</th><th>Kategoria</th><th>Data</th><th>Veprime</th>'
+        + '<th>Titulli</th><th>Kategoria</th><th>Data</th><th>Statusi</th><th>Aplikime</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     events.forEach(ev => {
         const isPast = ev.data && new Date(ev.data) < new Date();
+        const statusClass = ev.statusi === 'pending_review' ? 'pending' : ev.statusi === 'cancelled' ? 'blocked' : ev.statusi === 'completed' ? 'vol' : 'active';
+        const canApprove = CAN_REVIEW_EVENTS && ev.statusi === 'pending_review';
         html += `<tr${isPast ? ' style="opacity:0.6"' : ''}>
             
             <td>${escapeHtml(ev.titulli)}</td>
             <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
             <td>${formatDate(ev.data)}</td>
+            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(ev.statusi))}</span></td>
+            <td>${parseInt(ev.total_aplikime || 0, 10)}</td>
             <td>
                 <div class="db-table__actions">
-    ${!isPast 
+    ${!isPast && ev.statusi !== 'cancelled' && ev.statusi !== 'completed'
         ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
         : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
+    ${canApprove ? `<button class="db-btn db-btn--success db-btn--sm" onclick="approveEvent(${ev.id_eventi})">Mirato</button>` : ''}
     <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})">Aplikime</button>
+    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})" ${ev.statusi === 'pending_review' ? 'disabled' : ''}>Aplikime</button>
 </div>
             </td>
         </tr>`;
@@ -529,6 +640,13 @@ window.loadAdminEvents = async function (page = 1) {
             }
         } catch (e) { /* ignore */ }
     }
+};
+
+window.approveEvent = async function(id) {
+    if (!confirm('Miratoni këtë event dhe bëjeni publik?')) return;
+    const json = await apiCall(`events.php?action=approve&id=${id}`, 'PUT');
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) loadAdminEvents();
 };
 
 
@@ -710,6 +828,7 @@ window.loadUsers = async function (page = 1) {
             <option value=""${!filterRole ? ' selected' : ''}>Të gjitha rolet</option>
             <option value="admin"${filterRole === 'admin' ? ' selected' : ''}>Admin</option>
             <option value="super_admin"${filterRole === 'super_admin' ? ' selected' : ''}>Super Admin</option>
+            <option value="organizer"${filterRole === 'organizer' ? ' selected' : ''}>Organizator</option>
             <option value="volunteer"${filterRole === 'volunteer' ? ' selected' : ''}>Vullnetar</option>
         </select>
         <select id="admin-usr-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadUsers(1)">
@@ -729,7 +848,7 @@ window.loadUsers = async function (page = 1) {
     users.forEach(u => {
         const isBlocked = u.statusi_llogarise === 'blocked';
         const isDeactivated = u.statusi_llogarise === 'deactivated';
-        const roleClass = (u.roli === 'admin' || u.roli === 'super_admin') ? 'admin' : 'vol';
+        const roleClass = u.roli === 'volunteer' ? 'vol' : 'admin';
         const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
         
         // Role change button (super_admin only, cannot change self or other super_admins)
@@ -820,7 +939,7 @@ const [ufrom, uto] = colorMap[u.profile_color || 'emerald'] || colorMap.emerald;
     const isBlocked = u.statusi_llogarise === 'blocked';
     const isDeactivated = u.statusi_llogarise === 'deactivated';
     const isActive = u.statusi_llogarise === 'active';
-    const roleClass = (u.roli === 'admin' || u.roli === 'super_admin') ? 'admin' : 'vol';
+    const roleClass = u.roli === 'volunteer' ? 'vol' : 'admin';
     const statusClass = isBlocked ? 'blocked' : isDeactivated ? 'deactivated' : 'active';
     const initial = (u.emri || 'P').charAt(0).toUpperCase();
 
@@ -2074,7 +2193,10 @@ window.viewRequestFlags = async function(requestId) {
 
 // ── Change User Role (Super Admin only) ──
 window.changeUserRole = async function(userId, currentRole) {
-    const newRole = currentRole === 'admin' ? 'volunteer' : 'admin';
+    const desired = window.prompt('Vendosni rolin e ri: admin, organizer ose volunteer', currentRole === 'admin' ? 'volunteer' : currentRole === 'organizer' ? 'volunteer' : 'organizer');
+    if (!desired) return;
+    const newRole = desired.trim().toLowerCase();
+    if (!['admin', 'organizer', 'volunteer'].includes(newRole) || newRole === currentRole) return;
     const label = STATUS_LABELS[newRole] || newRole;
     if (!confirm(`Ndryshoni rolin e përdoruesit në "${label}"?`)) return;
 
@@ -2338,6 +2460,10 @@ window.adminDeletePicture = async function() {
 };
 
 window.adminPreviewLogo = function(input) {
+    if (!window.CAN_EDIT_SITE_SETTINGS) {
+        if (input) input.value = '';
+        return;
+    }
     if (!input.files || !input.files[0]) return;
     const preview = document.getElementById('logo-preview');
     const actions = document.getElementById('logo-preview-actions');
@@ -2350,6 +2476,15 @@ window.adminPreviewLogo = function(input) {
 
 // ─── LOGO UPLOAD ───────────────────────────────────────
 window.adminUploadLogo = async function(input) {
+    if (!window.CAN_EDIT_SITE_SETTINGS) {
+        const st = document.getElementById('admin-logo-status');
+        if (st) {
+            st.style.color = '#475569';
+            st.textContent = 'Vetëm super administratori mund të ndryshojë logon.';
+        }
+        if (input) input.value = '';
+        return;
+    }
     if (!input.files || !input.files[0]) return;
     const st = document.getElementById('admin-logo-status');
     const preview = document.getElementById('logo-preview');
@@ -2392,6 +2527,14 @@ window.adminUploadLogo = async function(input) {
 };
 
 window.adminDeleteLogo = async function() {
+    if (!window.CAN_EDIT_SITE_SETTINGS) {
+        const st = document.getElementById('admin-logo-status');
+        if (st) {
+            st.style.color = '#475569';
+            st.textContent = 'Vetëm super administratori mund të fshijë logon.';
+        }
+        return;
+    }
     const st = document.getElementById('admin-logo-status');
     const preview = document.getElementById('logo-preview');
     const deleteBtn = document.getElementById('logo-delete-btn');
@@ -2461,9 +2604,195 @@ window.adminLoadCurrentLogo = async function() {
         const json = await apiCall('settings.php?action=get_logo');
         if (json.success && json.data.has_custom_logo) {
             preview.src = json.data.url + '?t=' + Date.now();
-            if (deleteBtn) deleteBtn.style.display = 'inline-block';
+            if (deleteBtn) {
+                deleteBtn.style.display = window.CAN_EDIT_SITE_SETTINGS ? 'inline-block' : 'none';
+            }
+        } else if (deleteBtn) {
+            deleteBtn.style.display = 'none';
         }
     } catch (e) {}
+};
+
+window.applySiteSettingsPermissions = function(canEdit) {
+    const fieldIds = [
+        'site-organization-name',
+        'site-hero-badge',
+        'site-hero-title',
+        'site-hero-subtitle',
+        'site-footer-blurb',
+        'site-contact-phone',
+        'site-contact-address',
+        'site-theme-primary',
+        'site-theme-accent'
+    ];
+
+    fieldIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !canEdit;
+    });
+
+    const saveBtn = document.getElementById('site-settings-save-btn');
+    if (saveBtn) {
+        saveBtn.disabled = !canEdit;
+        saveBtn.style.opacity = canEdit ? '1' : '0.55';
+        saveBtn.style.cursor = canEdit ? 'pointer' : 'not-allowed';
+    }
+
+    const uploadTrigger = document.getElementById('site-logo-upload-trigger');
+    if (uploadTrigger) {
+        uploadTrigger.style.opacity = canEdit ? '1' : '0.55';
+        uploadTrigger.style.pointerEvents = canEdit ? 'auto' : 'none';
+        uploadTrigger.setAttribute('aria-disabled', canEdit ? 'false' : 'true');
+    }
+
+    const logoInput = document.getElementById('logo-input');
+    if (logoInput) {
+        logoInput.disabled = !canEdit;
+    }
+
+    const deleteBtn = document.getElementById('logo-delete-btn');
+    if (deleteBtn) {
+        deleteBtn.disabled = !canEdit;
+        deleteBtn.style.opacity = canEdit ? '1' : '0.55';
+        deleteBtn.style.cursor = canEdit ? 'pointer' : 'not-allowed';
+        if (!canEdit) {
+            deleteBtn.style.display = 'none';
+        }
+    }
+
+    const note = document.getElementById('site-settings-permission-note');
+    if (note) {
+        note.style.display = canEdit ? 'none' : 'block';
+    }
+
+    window.CAN_EDIT_SITE_SETTINGS = !!canEdit;
+};
+
+window.loadSiteSettings = async function() {
+    const json = await apiCall('settings.php?action=get_site_settings');
+    if (!json.success) return;
+
+    const settings = json.data.settings || {};
+    const canEdit = !!json.data.can_edit;
+    const map = {
+        organization_name: 'site-organization-name',
+        hero_badge: 'site-hero-badge',
+        hero_title: 'site-hero-title',
+        hero_subtitle: 'site-hero-subtitle',
+        footer_blurb: 'site-footer-blurb',
+        contact_phone: 'site-contact-phone',
+        contact_address: 'site-contact-address',
+        theme_primary: 'site-theme-primary',
+        theme_accent: 'site-theme-accent'
+    };
+
+    Object.entries(map).forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = settings[key] || '';
+    });
+
+    window.applySiteSettingsPermissions(canEdit);
+};
+
+window.saveSiteSettings = async function() {
+    const status = document.getElementById('site-settings-status');
+    if (!window.CAN_EDIT_SITE_SETTINGS) {
+        if (status) {
+            status.style.color = '#475569';
+            status.textContent = 'Vetëm super administratori mund t\'i ndryshojë këto cilësime.';
+        }
+        return;
+    }
+
+    const body = {
+        organization_name: document.getElementById('site-organization-name')?.value || '',
+        hero_badge: document.getElementById('site-hero-badge')?.value || '',
+        hero_title: document.getElementById('site-hero-title')?.value || '',
+        hero_subtitle: document.getElementById('site-hero-subtitle')?.value || '',
+        footer_blurb: document.getElementById('site-footer-blurb')?.value || '',
+        contact_phone: document.getElementById('site-contact-phone')?.value || '',
+        contact_address: document.getElementById('site-contact-address')?.value || '',
+        theme_primary: document.getElementById('site-theme-primary')?.value || '',
+        theme_accent: document.getElementById('site-theme-accent')?.value || ''
+    };
+
+    if (status) {
+        status.style.color = '#64748b';
+        status.textContent = 'Duke ruajtur cilësimet…';
+    }
+
+    const json = await apiCall('settings.php?action=update_site_settings', 'PUT', body);
+    if (status) {
+        status.style.color = json.success ? '#15803d' : '#b91c1c';
+        status.textContent = json.message || json.data?.message || (json.success ? 'Cilësimet u ruajtën.' : 'Ruajtja dështoi.');
+    }
+    if (json.success) {
+        refreshAllLogos();
+    }
+};
+
+window.loadOrganizationApplications = async function(page = 1) {
+    const container = document.getElementById('organization-application-list');
+    if (!container) return;
+
+    const status = document.getElementById('org-app-filter-status')?.value || 'pending';
+    const search = document.getElementById('org-app-filter-search')?.value.trim() || '';
+    const params = new URLSearchParams({ action: 'list', page, limit: 10, status });
+    if (search) params.set('search', search);
+
+    const json = await apiCall(`organizations.php?${params}`);
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të aplikimeve.')}</div>`;
+        return;
+    }
+
+    const { applications, total, total_pages } = json.data;
+    let html = `<div class="db-table-count">Gjithsej: <strong>${total}</strong> aplikime</div>`;
+    if (!applications.length) {
+        container.innerHTML = html + '<div class="db-loading">Nuk ka aplikime për këtë filtër.</div>';
+        return;
+    }
+
+    html += '<div style="display:grid;gap:14px;">';
+    applications.forEach((app) => {
+        const statusClass = app.status === 'approved' ? 'active' : app.status === 'rejected' ? 'blocked' : 'pending';
+        html += `<div class="ud-card">
+            <div class="ud-card__header">
+                <div>
+                    <h4>${escapeHtml(app.organization_name)}</h4>
+                    <p class="ud-card__desc" style="margin:6px 0 0;">${escapeHtml(app.contact_name || '')} · ${escapeHtml(app.contact_email || '')}</p>
+                </div>
+                <span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(app.status))}</span>
+            </div>
+            <div class="ud-card__body" style="display:grid;gap:12px;">
+                <div style="font-size:0.9rem;color:#475569;line-height:1.6;">${escapeHtml(app.description || '')}</div>
+                <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.84rem;color:#64748b;">
+                    <span><strong>Website:</strong> ${app.website ? escapeHtml(app.website) : '—'}</span>
+                    <span><strong>Telefon:</strong> ${app.contact_phone ? escapeHtml(app.contact_phone) : '—'}</span>
+                    <span><strong>Kërkuesi:</strong> ${escapeHtml(app.applicant_name || '')}</span>
+                </div>
+                ${app.review_notes ? `<div style="padding:12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.84rem;color:#475569;"><strong>Shënimi:</strong> ${escapeHtml(app.review_notes)}</div>` : ''}
+                ${app.status === 'pending' ? `<div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="db-btn db-btn--success db-btn--sm" onclick="reviewOrganizationApplication(${app.id}, 'approved')">Mirato</button>
+                    <button class="db-btn db-btn--danger db-btn--sm" onclick="reviewOrganizationApplication(${app.id}, 'rejected')">Refuzo</button>
+                </div>` : ''}
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+
+    if (total_pages > 1) {
+        html += dbPagination(page, total_pages, 'loadOrganizationApplications');
+    }
+
+    container.innerHTML = html;
+};
+
+window.reviewOrganizationApplication = async function(id, decision) {
+    const reviewNotes = window.prompt('Shënim për aplikantin (opsional):', '') || '';
+    const json = await apiCall(`organizations.php?action=review&id=${id}`, 'PUT', { decision, review_notes: reviewNotes });
+    dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
+    if (json.success) loadOrganizationApplications();
 };
 
 window.adminCancelLogo = async function() {

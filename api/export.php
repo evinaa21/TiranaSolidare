@@ -22,12 +22,13 @@ if (!in_array($type, ['users', 'events', 'applications', 'report_html'], true)) 
 
 // HTML PRINT REPORT
 if ($type === 'report_html') {
-    $totalUsers   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE statusi_llogarise = 'active'")->fetchColumn();
-    $totalEvents  = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE is_archived = 0")->fetchColumn();
+  $totalUsers   = ts_count_active_volunteers($pdo);
+    $totalEvents  = (int) $pdo->query("SELECT COUNT(*) FROM Eventi WHERE " . ts_public_event_filter_sql('Eventi'))->fetchColumn();
     $totalApps    = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi")->fetchColumn();
     $approvedApps = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi WHERE statusi = 'approved'")->fetchColumn();
     $pendingApps  = (int) $pdo->query("SELECT COUNT(*) FROM Aplikimi WHERE statusi = 'pending'")->fetchColumn();
-    $openRequests = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('open', 'filled') AND moderation_status = 'approved'")->fetchColumn();
+  $helpStats = ts_help_request_summary($pdo, ['approved_only' => true]);
+  $openRequests = (int) ($helpStats['active_total'] ?? 0);
     $approvalRate = $totalApps > 0 ? round($approvedApps / $totalApps * 100) : 0;
 
     $recentEvents = $pdo->query(

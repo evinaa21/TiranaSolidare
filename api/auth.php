@@ -48,16 +48,25 @@ switch ($action) {
             json_error('Email ose fjalëkalimi i gabuar.', 401);
         }
 
-        if ($user['statusi_llogarise'] === 'blocked') {
+        $accountStatus = ts_normalize_value($user['statusi_llogarise'] ?? '');
+
+        if ($accountStatus === 'blocked') {
             json_error('Llogaria juaj është bllokuar. Kontaktoni administratorin.', 403);
         }
 
-        if ($user['statusi_llogarise'] === 'deactivated') {
+        if ($accountStatus === 'deactivated') {
             json_error('Llogaria juaj është çaktivizuar. Kontaktoni administratorin për ta riaktivizuar.', 403);
         }
 
-        if ((int) ($user['verified'] ?? 0) !== 1) {
-            json_error('Duhet të konfirmoni email-in para hyrjes.', 403);
+        $activationErrorKey = ts_guardian_consent_error_key($user);
+        if ($activationErrorKey !== null) {
+            $activationMessages = [
+                'email_not_verified' => 'Duhet të konfirmoni email-in para hyrjes.',
+                'email_and_guardian_pending' => 'Duhet të konfirmoni email-in dhe të prisni pëlqimin e prindit ose kujdestarit para hyrjes.',
+                'guardian_consent_pending' => 'Duhet të presim pëlqimin e prindit ose kujdestarit para hyrjes.',
+                'guardian_consent_rejected' => 'Pëlqimi prindëror nuk është miratuar ende. Kontaktoni ekipin ose kërkoni ridërgimin e linkut.',
+            ];
+            json_error($activationMessages[$activationErrorKey] ?? 'Llogaria juaj nuk është ende gati për hyrje.', 403, ['code' => $activationErrorKey]);
         }
 
         // Regenerate session ID to prevent fixation attacks
@@ -68,6 +77,7 @@ switch ($action) {
         $_SESSION['emri']    = $user['emri'];
         $_SESSION['roli']    = ts_normalize_value($user['roli']);
         $_SESSION['email']   = $user['email'];
+        $_SESSION['organization_name'] = (string) ($user['organization_name'] ?? '');
         $_SESSION['profile_color']   = $user['profile_color'] ?? 'emerald';
         $_SESSION['profile_picture'] = (string) ($user['profile_picture'] ?? '');
 
@@ -89,6 +99,10 @@ switch ($action) {
         $email            = required_field($body, 'email', $errors);
         $password         = required_field($body, 'password', $errors);
         $confirm_password = required_field($body, 'confirm_password', $errors);
+        $birthdate        = required_field($body, 'birthdate', $errors);
+        $guardianName     = trim((string) ($body['guardian_name'] ?? ''));
+        $guardianEmail    = trim((string) ($body['guardian_email'] ?? ''));
+        $guardianRelation = trim((string) ($body['guardian_relation'] ?? ''));
 
         if (!empty($errors)) {
             json_error('Të dhëna të pavlefshme.', 422, $errors);
@@ -116,6 +130,37 @@ switch ($action) {
             json_error('Fjalëkalimet nuk përputhen.', 422);
         }
 
+        if (!ts_birthdate_is_reasonable($birthdate)) {
+            json_error('Data e lindjes nuk është e vlefshme.', 422, ['birthdate' => 'invalid']);
+        }
+
+        $requiresGuardianConsent = ts_birthdate_requires_guardian_consent($birthdate);
+        if ($requiresGuardianConsent) {
+            if ($guardianName === '' || $guardianEmail === '' || $guardianRelation === '') {
+                json_error('Për përdoruesit nën 16 vjeç kërkohen të dhënat e prindit ose kujdestarit.', 422);
+            }
+
+            if (validate_length($guardianName, 2, 100, 'guardian_name')) {
+                json_error('Emri i prindit ose kujdestarit nuk është i vlefshëm.', 422, ['guardian_name' => 'invalid']);
+            }
+
+            if (!filter_var($guardianEmail, FILTER_VALIDATE_EMAIL)) {
+                json_error('Email-i i prindit ose kujdestarit nuk është i vlefshëm.', 422, ['guardian_email' => 'invalid']);
+            }
+
+            if (strcasecmp($guardianEmail, $email) === 0) {
+                json_error('Email-i i prindit ose kujdestarit duhet të jetë i ndryshëm nga email-i i përdoruesit.', 422, ['guardian_email' => 'same_as_user']);
+            }
+
+            if (validate_length($guardianRelation, 2, 60, 'guardian_relation')) {
+                json_error('Lidhja me prindin ose kujdestarin nuk është e vlefshme.', 422, ['guardian_relation' => 'invalid']);
+            }
+        } else {
+            $guardianName = '';
+            $guardianEmail = '';
+            $guardianRelation = '';
+        }
+
         // Rate limit: max 3 registrations per 30 minutes
         if (!check_rate_limit('register', 3, 1800)) {
             json_error('Shumë tentativa regjistrimi. Provoni përsëri më vonë.', 429);
@@ -133,31 +178,65 @@ switch ($action) {
         $plainToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $plainToken);
         $expiresAt = (new DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+        $guardianPlainToken = null;
+        $guardianTokenHash = null;
+        $guardianExpiresAt = null;
+        $guardianStatus = $requiresGuardianConsent ? 'pending' : 'not_required';
+
+        if ($requiresGuardianConsent) {
+            $guardianPlainToken = bin2hex(random_bytes(32));
+            $guardianTokenHash = hash('sha256', $guardianPlainToken);
+            $guardianExpiresAt = (new DateTimeImmutable('+' . TS_GUARDIAN_CONSENT_EXPIRY_HOURS . ' hours'))->format('Y-m-d H:i:s');
+        }
+
         $verifyUrl = app_base_url() . '/src/actions/verify_email.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+        $guardianVerifyUrl = $requiresGuardianConsent
+            ? app_base_url() . '/src/actions/verify_guardian_consent.php?token=' . urlencode((string) $guardianPlainToken) . '&email=' . urlencode($email) . '&guardian=' . urlencode($guardianEmail)
+            : '';
 
         try {
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare(
-                 "INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires)
-                VALUES (?, ?, ?, 'volunteer', 'active', 0, 0, 'emerald', ?, ?)"
+                 "INSERT INTO Perdoruesi (emri, email, birthdate, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, verification_token_hash, verification_token_expires, guardian_name, guardian_email, guardian_relation, guardian_consent_status, guardian_consent_token_hash, guardian_consent_token_expires, guardian_consent_verified_at)
+                VALUES (?, ?, ?, ?, 'volunteer', 'active', 0, 0, 'emerald', ?, ?, ?, ?, ?, ?, ?, ?, NULL)"
             );
-            $stmt->execute([$emri, $email, $hashed, $tokenHash, $expiresAt]);
-
-            if (!send_verification_email($email, $emri, $verifyUrl)) {
-                $pdo->rollBack();
-                json_error('Nuk u dërgua email-i i verifikimit. Kontrolloni konfigurimin SMTP.', 500);
-            }
+            $stmt->execute([
+                $emri,
+                $email,
+                $birthdate,
+                $hashed,
+                $tokenHash,
+                $expiresAt,
+                $guardianName !== '' ? $guardianName : null,
+                $guardianEmail !== '' ? $guardianEmail : null,
+                $guardianRelation !== '' ? $guardianRelation : null,
+                $guardianStatus,
+                $guardianTokenHash,
+                $guardianExpiresAt,
+            ]);
 
             $newId = (int) $pdo->lastInsertId();
             $pdo->commit();
+
+            if (!send_verification_email($email, $emri, $verifyUrl)) {
+                error_log('API registration verification email send failed immediately for: ' . $email);
+            }
+
+            if ($requiresGuardianConsent && !send_guardian_consent_email($guardianEmail, $guardianName, $emri, $email, $guardianVerifyUrl, $guardianRelation)) {
+                error_log('API registration guardian consent email send failed immediately for: ' . $email);
+            }
 
             json_success([
                 'id'      => $newId,
                 'emri'    => $emri,
                 'email'   => $email,
                 'roli'    => 'volunteer',
-                'message' => 'Llogaria u krijua. Konfirmoni email-in para hyrjes.',
+                'requires_guardian_consent' => $requiresGuardianConsent,
+                'activation_state' => $requiresGuardianConsent ? 'email_and_guardian_pending' : 'email_pending',
+                'message' => $requiresGuardianConsent
+                    ? 'Llogaria u krijua. Konfirmoni email-in dhe kërkoni prindit ose kujdestarit të miratojë regjistrimin.'
+                    : 'Llogaria u krijua. Konfirmoni email-in para hyrjes.',
             ], 201);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -360,7 +439,8 @@ switch ($action) {
         $user = require_auth();
 
         $stmt = $pdo->prepare(
-            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, profile_color, email_notifications, roli, statusi_llogarise, krijuar_me
+            'SELECT id_perdoruesi, emri, email, bio, profile_picture, profile_public, profile_color, email_notifications, roli, statusi_llogarise, krijuar_me,
+                    organization_name, organization_website, organization_phone, organization_description
              FROM Perdoruesi WHERE id_perdoruesi = ?'
         );
         $stmt->execute([$user['id']]);

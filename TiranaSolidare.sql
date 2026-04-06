@@ -205,6 +205,7 @@ CREATE TABLE `perdoruesi` (
   `id_perdoruesi` int(11) NOT NULL,
   `emri` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
+  `birthdate` date DEFAULT NULL,
   `bio` text DEFAULT NULL,
   `profile_picture` varchar(500) DEFAULT NULL,
   `profile_public` tinyint(1) NOT NULL DEFAULT 0,
@@ -216,6 +217,13 @@ CREATE TABLE `perdoruesi` (
   `verified` tinyint(1) NOT NULL DEFAULT 0,
   `verification_token_hash` varchar(64) DEFAULT NULL,
   `verification_token_expires` datetime DEFAULT NULL,
+  `guardian_name` varchar(100) DEFAULT NULL,
+  `guardian_email` varchar(150) DEFAULT NULL,
+  `guardian_relation` varchar(60) DEFAULT NULL,
+  `guardian_consent_status` varchar(20) NOT NULL DEFAULT 'not_required',
+  `guardian_consent_token_hash` varchar(64) DEFAULT NULL,
+  `guardian_consent_token_expires` datetime DEFAULT NULL,
+  `guardian_consent_verified_at` datetime DEFAULT NULL,
   `password_reset_token_hash` varchar(64) DEFAULT NULL,
   `password_reset_token_expires` datetime DEFAULT NULL,
   `krijuar_me` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -627,3 +635,80 @@ UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 2 WHERE `id_kerkese_ndihme` IN 
 UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 3 WHERE `id_kerkese_ndihme` IN (3,6,7,8);
 UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 5 WHERE `id_kerkese_ndihme` = 4;
 UPDATE `kerkesa_per_ndihme` SET `id_kategoria` = 4 WHERE `id_kerkese_ndihme` = 5;
+
+-- --------------------------------------------------------
+-- Migration: Platform branding and organization onboarding
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `site_settings` (
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` text NOT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
+('organization_name', 'Tirana Solidare'),
+('hero_badge', 'Platforma Zyrtare e Vullnetarizmit — Tirana Solidare'),
+('hero_title', 'Bashkohu me komunitetin\nqë ndryshon jetë'),
+('hero_subtitle', 'Së bashku mund të bëjmë më shumë. Ndihmo dikë sot dhe bëhu ndryshimi që dëshiron të shohësh.'),
+('footer_blurb', 'Ne besojmë se çdo akt i vogël mirësie ka fuqinë të ndryshojë jetën e dikujt. Platforma jonë është krijuar për të afruar njerëzit dhe për të ndërtuar një komunitet më të kujdesshëm dhe mbështetës.'),
+('contact_phone', '+355 69 123 4567'),
+('contact_address', 'Bashkia Tiranë, Tiranë'),
+('theme_primary', '#00715D'),
+('theme_accent', '#E17254')
+ON DUPLICATE KEY UPDATE `setting_value` = `setting_value`;
+
+CREATE TABLE IF NOT EXISTS `organization_applications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `applicant_user_id` int(11) NOT NULL,
+  `organization_name` varchar(160) NOT NULL,
+  `contact_name` varchar(120) NOT NULL,
+  `contact_email` varchar(160) NOT NULL,
+  `contact_phone` varchar(40) DEFAULT NULL,
+  `website` varchar(255) DEFAULT NULL,
+  `description` text NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `review_notes` text DEFAULT NULL,
+  `reviewed_by_user_id` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_org_app_status` (`status`),
+  KEY `idx_org_app_user` (`applicant_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `perdoruesi`
+  ADD COLUMN IF NOT EXISTS `organization_name` varchar(160) DEFAULT NULL AFTER `guardian_consent_verified_at`;
+
+ALTER TABLE `perdoruesi`
+  ADD COLUMN IF NOT EXISTS `organization_website` varchar(255) DEFAULT NULL AFTER `organization_name`;
+
+ALTER TABLE `perdoruesi`
+  ADD COLUMN IF NOT EXISTS `organization_phone` varchar(40) DEFAULT NULL AFTER `organization_website`;
+
+ALTER TABLE `perdoruesi`
+  ADD COLUMN IF NOT EXISTS `organization_description` text DEFAULT NULL AFTER `organization_phone`;
+
+ALTER TABLE `perdoruesi` MODIFY COLUMN `roli`
+  VARCHAR(30) NOT NULL DEFAULT 'volunteer';
+UPDATE `perdoruesi` SET `roli` = CASE LOWER(`roli`)
+  WHEN 'admin' THEN 'admin'
+  WHEN 'super admin' THEN 'super_admin'
+  WHEN 'super_admin' THEN 'super_admin'
+  WHEN 'organizator' THEN 'organizer'
+  WHEN 'organizer' THEN 'organizer'
+  ELSE 'volunteer'
+END;
+ALTER TABLE `perdoruesi` MODIFY COLUMN `roli`
+  ENUM('admin','volunteer','super_admin','organizer') NOT NULL DEFAULT 'volunteer';
+
+ALTER TABLE `eventi`
+  ADD COLUMN IF NOT EXISTS `statusi` varchar(30) NOT NULL DEFAULT 'active' AFTER `banner`;
+
+ALTER TABLE `eventi`
+  ADD COLUMN IF NOT EXISTS `is_archived` tinyint(1) NOT NULL DEFAULT 0 AFTER `statusi`;
+
+UPDATE `eventi` SET `statusi` = 'active' WHERE `statusi` IS NULL OR `statusi` = '';
+ALTER TABLE `eventi` MODIFY COLUMN `statusi`
+  ENUM('active','completed','cancelled','pending_review') NOT NULL DEFAULT 'active';

@@ -19,27 +19,112 @@ switch ($action) {
     // ── ADMIN OVERVIEW ─────────────────────────────
     case 'overview':
         require_method('GET');
-        require_admin();
+        $user = require_dashboard_user();
         release_session();
+
+        if (ts_is_organizer_role_value($user['roli'] ?? null)) {
+            $eventStatsStmt = $pdo->prepare(
+                "SELECT
+                    COUNT(*) AS total_evente,
+                    COALESCE(SUM(CASE WHEN statusi = 'pending_review' THEN 1 ELSE 0 END), 0) AS ne_shqyrtim,
+                    COALESCE(SUM(CASE WHEN statusi = 'active' AND data >= NOW() THEN 1 ELSE 0 END), 0) AS evente_te_ardhshme,
+                    COALESCE(SUM(CASE WHEN statusi = 'completed' OR data < NOW() THEN 1 ELSE 0 END), 0) AS evente_te_kaluara
+                 FROM Eventi
+                 WHERE is_archived = 0 AND id_perdoruesi = ?"
+            );
+            $eventStatsStmt->execute([$user['id']]);
+
+            $appStatsStmt = $pdo->prepare(
+                "SELECT
+                    COUNT(*) AS total_aplikime,
+                    COALESCE(SUM(CASE WHEN a.statusi = 'pending' THEN 1 ELSE 0 END), 0) AS ne_pritje,
+                    COALESCE(SUM(CASE WHEN a.statusi = 'approved' THEN 1 ELSE 0 END), 0) AS pranuar,
+                    COALESCE(SUM(CASE WHEN a.statusi = 'rejected' THEN 1 ELSE 0 END), 0) AS refuzuar
+                 FROM Aplikimi a
+                 JOIN Eventi e ON e.id_eventi = a.id_eventi
+                 WHERE e.id_perdoruesi = ? AND e.is_archived = 0"
+            );
+            $appStatsStmt->execute([$user['id']]);
+
+            $participantStatsStmt = $pdo->prepare(
+                "SELECT COUNT(DISTINCT a.id_perdoruesi) AS total_perdorues
+                 FROM Aplikimi a
+                 JOIN Eventi e ON e.id_eventi = a.id_eventi
+                 WHERE e.id_perdoruesi = ?"
+            );
+            $participantStatsStmt->execute([$user['id']]);
+
+            $topCategoriesStmt = $pdo->prepare(
+                "SELECT k.emri, COUNT(e.id_eventi) AS event_count
+                 FROM Kategoria k
+                 LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND e.id_perdoruesi = ? AND e.is_archived = 0
+                 GROUP BY k.id_kategoria
+                 HAVING event_count > 0
+                 ORDER BY event_count DESC
+                 LIMIT 5"
+            );
+            $topCategoriesStmt->execute([$user['id']]);
+
+            $recentAppsStmt = $pdo->prepare(
+                "SELECT a.id_aplikimi, a.statusi, a.aplikuar_me,
+                        p.emri AS vullnetari_emri, e.titulli AS eventi_titulli
+                 FROM Aplikimi a
+                 JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                 JOIN Eventi e ON e.id_eventi = a.id_eventi
+                 WHERE e.id_perdoruesi = ? AND e.is_archived = 0
+                 ORDER BY a.aplikuar_me DESC
+                 LIMIT 10"
+            );
+            $recentAppsStmt->execute([$user['id']]);
+
+            json_success([
+                'scope' => 'organizer',
+                'users' => [
+                    'total_perdorues' => (int) $participantStatsStmt->fetchColumn(),
+                    'admin_count' => 0,
+                    'vullnetar_count' => 0,
+                    'bllokuar_count' => 0,
+                ],
+                'events' => $eventStatsStmt->fetch(PDO::FETCH_ASSOC),
+                'applications' => $appStatsStmt->fetch(PDO::FETCH_ASSOC),
+                'help_requests' => [
+                    'total_kerkesa' => 0,
+                    'kerkese_open' => 0,
+                    'kerkese_filled' => 0,
+                    'kerkese_completed' => 0,
+                    'kerkese_cancelled' => 0,
+                    'kerkese_closed' => 0,
+                    'oferte_open' => 0,
+                    'oferte_filled' => 0,
+                    'oferte_completed' => 0,
+                    'oferte_cancelled' => 0,
+                    'oferte_closed' => 0,
+                    'pending_moderation' => 0,
+                ],
+                'top_categories' => ts_normalize_rows($topCategoriesStmt->fetchAll(PDO::FETCH_ASSOC)),
+                'recent_applications' => ts_normalize_rows($recentAppsStmt->fetchAll(PDO::FETCH_ASSOC)),
+            ]);
+        }
 
         // User counts
         $userStats = $pdo->query(
             "SELECT
                 COUNT(*) AS total_perdorues,
-                SUM(CASE WHEN roli IN ('admin', 'super_admin') THEN 1 ELSE 0 END) AS admin_count,
-                SUM(CASE WHEN roli = 'volunteer' THEN 1 ELSE 0 END) AS vullnetar_count,
-                SUM(CASE WHEN statusi_llogarise = 'blocked' THEN 1 ELSE 0 END) AS bllokuar_count
+                SUM(CASE WHEN LOWER(roli) IN ('admin', 'super_admin', 'super admin') THEN 1 ELSE 0 END) AS admin_count,
+                SUM(CASE WHEN LOWER(roli) IN ('volunteer', 'vullnetar') AND LOWER(statusi_llogarise) IN ('active', 'aktiv') THEN 1 ELSE 0 END) AS vullnetar_count,
+                SUM(CASE WHEN LOWER(statusi_llogarise) IN ('blocked', 'bllokuar') THEN 1 ELSE 0 END) AS bllokuar_count
             FROM Perdoruesi"
-        )->fetch();
+        )->fetch(PDO::FETCH_ASSOC);
 
         // Event counts (A-04: COALESCE to prevent NULL)
         $eventStats = $pdo->query(
             "SELECT
-                COUNT(*) AS total_evente,
-                COALESCE(SUM(CASE WHEN data >= NOW() THEN 1 ELSE 0 END), 0) AS evente_te_ardhshme,
-                COALESCE(SUM(CASE WHEN data < NOW() THEN 1 ELSE 0 END), 0) AS evente_te_kaluara
+                COALESCE(SUM(CASE WHEN is_archived = 0 AND LOWER(statusi) IN ('active', 'completed') THEN 1 ELSE 0 END), 0) AS total_evente,
+                COALESCE(SUM(CASE WHEN is_archived = 0 AND LOWER(statusi) = 'active' AND data >= NOW() THEN 1 ELSE 0 END), 0) AS evente_te_ardhshme,
+                COALESCE(SUM(CASE WHEN is_archived = 0 AND (LOWER(statusi) = 'completed' OR (LOWER(statusi) = 'active' AND data < NOW())) THEN 1 ELSE 0 END), 0) AS evente_te_kaluara,
+                COALESCE(SUM(CASE WHEN is_archived = 0 AND LOWER(statusi) = 'pending_review' THEN 1 ELSE 0 END), 0) AS ne_shqyrtim
             FROM Eventi"
-        )->fetch();
+        )->fetch(PDO::FETCH_ASSOC);
 
         // Application counts (A-04: COALESCE)
         $appStats = $pdo->query(
@@ -51,27 +136,33 @@ switch ($action) {
             FROM Aplikimi"
         )->fetch();
 
-        $helpStats = $pdo->query(
-            "SELECT
-                COUNT(*) AS total_kerkesa,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'open' THEN 1 ELSE 0 END), 0) AS kerkese_open,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'filled' THEN 1 ELSE 0 END), 0) AS kerkese_filled,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('completed', 'closed') THEN 1 ELSE 0 END), 0) AS kerkese_completed,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) = 'cancelled' THEN 1 ELSE 0 END), 0) AS kerkese_cancelled,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('request', 'kërkesë', 'kerkese') AND LOWER(statusi) IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END), 0) AS kerkese_closed,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'open' THEN 1 ELSE 0 END), 0) AS oferte_open,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'filled' THEN 1 ELSE 0 END), 0) AS oferte_filled,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('completed', 'closed') THEN 1 ELSE 0 END), 0) AS oferte_completed,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) = 'cancelled' THEN 1 ELSE 0 END), 0) AS oferte_cancelled,
-                COALESCE(SUM(CASE WHEN LOWER(tipi) IN ('offer', 'ofertë', 'oferte') AND LOWER(statusi) IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END), 0) AS oferte_closed,
-                COALESCE(SUM(CASE WHEN moderation_status = 'pending_review' THEN 1 ELSE 0 END), 0) AS pending_moderation
-             FROM Kerkesa_per_Ndihme"
-        )->fetch(PDO::FETCH_ASSOC);
+        $approvedHelpStats = ts_help_request_summary($pdo, ['approved_only' => true]);
+        $allHelpStats = ts_help_request_summary($pdo);
+        $helpStats = [
+            'total_kerkesa' => (int) ($allHelpStats['all_total'] ?? 0),
+            'active_total' => (int) ($approvedHelpStats['active_total'] ?? 0),
+            'approved_total' => (int) ($approvedHelpStats['all_total'] ?? 0),
+            'request_total' => (int) ($approvedHelpStats['request_total'] ?? 0),
+            'offer_total' => (int) ($approvedHelpStats['offer_total'] ?? 0),
+            'open_total' => (int) ($approvedHelpStats['open_total'] ?? 0),
+            'completed_total' => (int) ($approvedHelpStats['completed_total'] ?? 0),
+            'kerkese_open' => (int) ($approvedHelpStats['request_open'] ?? 0),
+            'kerkese_filled' => (int) ($approvedHelpStats['request_filled'] ?? 0),
+            'kerkese_completed' => (int) ($approvedHelpStats['request_completed'] ?? 0),
+            'kerkese_cancelled' => (int) ($approvedHelpStats['request_cancelled'] ?? 0),
+            'kerkese_closed' => (int) (($approvedHelpStats['request_completed'] ?? 0) + ($approvedHelpStats['request_cancelled'] ?? 0)),
+            'oferte_open' => (int) ($approvedHelpStats['offer_open'] ?? 0),
+            'oferte_filled' => (int) ($approvedHelpStats['offer_filled'] ?? 0),
+            'oferte_completed' => (int) ($approvedHelpStats['offer_completed'] ?? 0),
+            'oferte_cancelled' => (int) ($approvedHelpStats['offer_cancelled'] ?? 0),
+            'oferte_closed' => (int) (($approvedHelpStats['offer_completed'] ?? 0) + ($approvedHelpStats['offer_cancelled'] ?? 0)),
+            'pending_moderation' => (int) ($allHelpStats['pending_moderation'] ?? 0),
+        ];
 
         $topCategories = $pdo->query(
             "SELECT k.emri, COUNT(e.id_eventi) AS event_count
              FROM Kategoria k
-             LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria
+             LEFT JOIN Eventi e ON e.id_kategoria = k.id_kategoria AND " . ts_public_event_filter_sql('e') . "
              GROUP BY k.id_kategoria
              ORDER BY event_count DESC
              LIMIT 5"
@@ -93,6 +184,7 @@ switch ($action) {
         // (the require_once here is a no-op but left for clarity).
 
         json_success([
+            'scope' => 'admin',
             'users'              => $userStats,
             'events'             => $eventStats,
             'applications'       => $appStats,

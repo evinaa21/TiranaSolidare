@@ -154,6 +154,7 @@ $page = $limit = $offset = $total = $totalPages = 0;
 $requests = [];
 $search = $tipi = $statusi = '';
 $statTotalKerkesa = $statCompleted = $statVullnetare = $statOferta = 0;
+$publicHelpStats = ts_help_request_summary($pdo, ['approved_only' => true]);
 
 if (!isset($_GET['id'])) {
 $page   = max(1, (int) ($_GET['page'] ?? 1));
@@ -172,7 +173,7 @@ $params = [];
 
 // Moderation visibility: public list shows only approved posts
 if (!$isAdmin) {
-    $where[] = "k.moderation_status = 'approved'";
+  $where[] = "COALESCE(LOWER(k.moderation_status), 'approved') = 'approved'";
 }
 
 // Fshih kërkesat e përdoruesve të bllokuar
@@ -196,8 +197,11 @@ if ($tipi !== '') {
     $params[] = $tipi;
 }
 if ($statusi !== '') {
-    $where[] = 'k.statusi = ?';
-    $params[] = $statusi;
+  $statusValues = ts_help_request_status_filter_values($statusi);
+  $where[] = 'LOWER(k.statusi) IN (' . implode(',', array_fill(0, count($statusValues), '?')) . ')';
+  foreach ($statusValues as $statusValue) {
+    $params[] = $statusValue;
+  }
 }
 if ($kategoria !== '') {
     $where[] = 'k.id_kategoria = ?';
@@ -238,12 +242,12 @@ foreach ($requests as &$req) {
 unset($req);
 
 // Trust stats (only approved posts in public counts)
-$statTotalKerkesa = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE moderation_status = 'approved'")->fetchColumn();
-$statOpen         = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi = 'open' AND moderation_status = 'approved'")->fetchColumn();
-$statCompleted    = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE statusi IN ('completed', 'closed') AND moderation_status = 'approved'")->fetchColumn();
-$statVullnetare   = (int) $pdo->query("SELECT COUNT(*) FROM Perdoruesi WHERE roli = 'volunteer'")->fetchColumn();
-$statOferta       = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'offer' AND moderation_status = 'approved'")->fetchColumn();
-$statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme WHERE tipi = 'request' AND moderation_status = 'approved'")->fetchColumn();} // end if (!isset($_GET['id']))
+$statTotalKerkesa = (int) ($publicHelpStats['all_total'] ?? 0);
+$statOpen         = (int) ($publicHelpStats['open_total'] ?? 0);
+$statCompleted    = (int) ($publicHelpStats['completed_total'] ?? 0);
+$statVullnetare   = ts_count_active_volunteers($pdo);
+$statOferta       = (int) ($publicHelpStats['offer_total'] ?? 0);
+$statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (!isset($_GET['id']))
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -632,7 +636,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
       <div class="rq-trust-divider"></div>
       <div class="rq-trust-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-        <div><strong><?= $statOferta ?></strong><span>Kontribute</span></div>
+        <div><strong><?= $statOferta ?></strong><span>Ofroj Ndihmë</span></div>
       </div>
     </div>
   </div>

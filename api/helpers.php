@@ -3,10 +3,9 @@
  * api/helpers.php
  * ---------------------------------------------------
  * Shared helper functions for all API endpoints.
- * Handles JSON responses, authentication, RBAC,
- * input validation, and CORS headers.
- * ---------------------------------------------------
  */
+
+require_once __DIR__ . '/../includes/functions.php';
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
@@ -140,7 +139,7 @@ function require_auth(): array
     $now = time();
     if (!isset($_SESSION['_auth_verified_at']) || ($now - $_SESSION['_auth_verified_at']) > 60) {
         global $pdo;
-        $stmt = $pdo->prepare('SELECT roli, statusi_llogarise, password_changed_at FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT roli, statusi_llogarise, password_changed_at, organization_name FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $stmt->execute([(int) $_SESSION['user_id']]);
         $dbUser = $stmt->fetch();
 
@@ -179,22 +178,26 @@ function require_auth(): array
 
         // Sync role from DB into session (handles multiple string cases)
         $_SESSION['roli'] = ts_normalize_value($dbUser['roli'] ?? 'volunteer');
+        $_SESSION['organization_name'] = (string) ($dbUser['organization_name'] ?? '');
         $_SESSION['_auth_verified_at'] = $now;
     }
 
     return [
-        'id'   => (int) $_SESSION['user_id'],
+        'id' => (int) $_SESSION['user_id'],
         'emri' => $_SESSION['emri'] ?? '',
         'roli' => ts_normalize_value($_SESSION['roli'] ?? 'volunteer'),
+        'organization_name' => (string) ($_SESSION['organization_name'] ?? ''),
     ];
 }
 
 /**
  * Check if a role string represents an admin-level role.
  */
-function is_admin_role(string $role): bool
-{
-    return ts_is_admin_role_value($role);
+if (!function_exists('is_admin_role')) {
+    function is_admin_role(string $role): bool
+    {
+        return ts_is_admin_role_value($role);
+    }
 }
 
 /**
@@ -229,6 +232,30 @@ function require_super_admin(): array
     $user = require_auth();
     if ($user['roli'] !== 'super_admin') {
         json_error('Kjo veprim kërkon privilegje super administratori. / Forbidden.', 403);
+    }
+    return $user;
+}
+
+/**
+ * Require access to the dashboard surface (admin, super_admin, organizer).
+ */
+function require_dashboard_user(): array
+{
+    $user = require_auth();
+    if (!ts_is_dashboard_role_value($user['roli'] ?? null)) {
+        json_error('Kjo veprim kërkon akses në panel. / Forbidden.', 403);
+    }
+    return $user;
+}
+
+/**
+ * Require an event manager role (admin, super_admin, organizer).
+ */
+function require_event_manager(): array
+{
+    $user = require_auth();
+    if (!ts_is_event_manager_role_value($user['roli'] ?? null)) {
+        json_error('Kjo veprim kërkon privilegje për menaxhimin e eventeve. / Forbidden.', 403);
     }
     return $user;
 }

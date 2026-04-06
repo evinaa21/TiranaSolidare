@@ -17,6 +17,32 @@ require_once __DIR__ . '/helpers.php';
 
 $action = $_GET['action'] ?? 'list';
 
+function ts_event_creator_display_sql(): string
+{
+    return "CASE
+        WHEN p.roli = 'organizer' AND COALESCE(p.organization_name, '') <> '' THEN p.organization_name
+        WHEN p.roli IN ('admin', 'super_admin') THEN 'Tirana Solidare'
+        ELSE p.emri
+    END AS krijuesi_emri";
+}
+
+function ts_load_managed_event(PDO $pdo, int $eventId, array $manager): array
+{
+    $stmt = $pdo->prepare('SELECT id_eventi, id_perdoruesi, titulli, data, statusi, is_archived FROM Eventi WHERE id_eventi = ?');
+    $stmt->execute([$eventId]);
+    $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$event) {
+        json_error('Eventi nuk u gjet.', 404);
+    }
+
+    if (!ts_can_manage_event($manager, $event)) {
+        json_error('Nuk keni leje për të menaxhuar këtë event.', 403);
+    }
+
+    return $event;
+}
+
 switch ($action) {
 
     // ── LIST / FILTER EVENTS ───────────────────────
@@ -31,7 +57,7 @@ switch ($action) {
         $dateFrom   = $_GET['date_from'] ?? null;
         $dateTo     = $_GET['date_to'] ?? null;
 
-        $where  = ['e.is_archived = 0', "e.statusi != 'cancelled'"];
+        $where  = [ts_public_event_filter_sql('e')];
         $params = [];
 
         if ($categoryId) {
@@ -71,7 +97,7 @@ switch ($action) {
 
         // Fetch page
         $sql = "SELECT e.*, k.emri AS kategoria_emri,
-            CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiranës' ELSE p.emri END AS krijuesi_emri
+            " . ts_event_creator_display_sql() . "
                 FROM Eventi e
                 LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
                 LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
@@ -98,6 +124,76 @@ switch ($action) {
         ]);
         break;
 
+    // ── DASHBOARD LIST / MANAGE EVENTS ───────────
+    case 'manage_list':
+        require_method('GET');
+        $manager = require_event_manager();
+        release_session();
+        $pagination = get_pagination(20, 100);
+
+        $where = ['e.is_archived = 0'];
+        $params = [];
+        $status = trim((string) ($_GET['status'] ?? ''));
+        $search = trim((string) ($_GET['search'] ?? ''));
+        $categoryId = isset($_GET['category']) ? (int) $_GET['category'] : 0;
+        $dateRange = $_GET['dateRange'] ?? null;
+
+        if (ts_is_organizer_role_value($manager['roli'] ?? null)) {
+            $where[] = 'e.id_perdoruesi = ?';
+            $params[] = $manager['id'];
+        }
+        if ($status !== '') {
+            $where[] = 'e.statusi = ?';
+            $params[] = $status;
+        }
+        if ($search !== '') {
+            $where[] = '(e.titulli LIKE ? OR e.vendndodhja LIKE ? OR e.pershkrimi LIKE ?)';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+        if ($categoryId > 0) {
+            $where[] = 'e.id_kategoria = ?';
+            $params[] = $categoryId;
+        }
+        if ($dateRange === 'week') {
+            $where[] = 'e.data >= DATE_SUB(CURDATE(), INTERVAL (WEEKDAY(CURDATE())) DAY) AND e.data < DATE_ADD(DATE_SUB(CURDATE(), INTERVAL (WEEKDAY(CURDATE())) DAY), INTERVAL 7 DAY)';
+        } elseif ($dateRange === 'month') {
+            $where[] = 'e.data >= DATE_FORMAT(CURDATE(), "%Y-%m-01") AND e.data < DATE_ADD(DATE_FORMAT(CURDATE(), "%Y-%m-01"), INTERVAL 1 MONTH)';
+        } elseif ($dateRange === 'past3') {
+            $where[] = 'e.data >= DATE_SUB(DATE_FORMAT(CURDATE(), "%Y-%m-01"), INTERVAL 3 MONTH) AND e.data <= CURDATE()';
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM Eventi e $whereSql");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $stmt = $pdo->prepare(
+            "SELECT e.*, k.emri AS kategoria_emri,
+                    " . ts_event_creator_display_sql() . ",
+                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime
+             FROM Eventi e
+             LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
+             LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
+             $whereSql
+             ORDER BY e.krijuar_me DESC, e.id_eventi DESC
+             LIMIT ? OFFSET ?"
+        );
+        $params[] = $pagination['limit'];
+        $params[] = $pagination['offset'];
+        $stmt->execute($params);
+
+        json_success([
+            'events' => ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC)),
+            'total' => $total,
+            'page' => $pagination['page'],
+            'limit' => $pagination['limit'],
+            'total_pages' => (int) ceil($total / $pagination['limit']),
+        ]);
+        break;
+
     // ── GET SINGLE EVENT ───────────────────────────
     case 'get':
         require_method('GET');
@@ -109,16 +205,35 @@ switch ($action) {
 
         $stmt = $pdo->prepare(
             "SELECT e.*, k.emri AS kategoria_emri,
-                CASE WHEN p.roli IN ('admin', 'super_admin') THEN 'Bashkia Tiranës' ELSE p.emri END AS krijuesi_emri,
+                " . ts_event_creator_display_sql() . ",
                     (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
                     (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
              FROM Eventi e
              LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
              LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
-             WHERE e.id_eventi = ? AND e.is_archived = 0"
+            WHERE e.id_eventi = ? AND " . ts_public_event_filter_sql('e')
         );
         $stmt->execute([$id]);
         $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$event && isset($_SESSION['user_id']) && ts_is_event_manager_role_value($_SESSION['roli'] ?? '')) {
+            $manager = require_event_manager();
+            $managerStmt = $pdo->prepare(
+                "SELECT e.*, k.emri AS kategoria_emri,
+                    " . ts_event_creator_display_sql() . ",
+                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
+                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi AND a.statusi = 'approved') AS pranuar_count
+                 FROM Eventi e
+                 LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
+                 LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
+                 WHERE e.id_eventi = ? AND e.is_archived = 0"
+            );
+            $managerStmt->execute([$id]);
+            $managedEvent = $managerStmt->fetch(PDO::FETCH_ASSOC);
+            if ($managedEvent && ts_can_manage_event($manager, $managedEvent)) {
+                $event = $managedEvent;
+            }
+        }
 
         if (!$event) {
             json_error('Eventi nuk u gjet.', 404);
@@ -128,15 +243,9 @@ switch ($action) {
         json_success($event);
         break;
 
-    // ── CREATE EVENT ───────────────────────────────
-    // ASSUMPTION: Events are created by admins only. There is no organisation
-    // role in the current schema (roles: volunteer, admin, super_admin).
-    // If an organisation/partner role is introduced in future, add a flag /
-    // approval step analogous to help_requests.php before enabling org-posted
-    // events, so admins retain moderation control.
     case 'create':
         require_method('POST');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $body  = get_json_body();
         $errors = [];
 
@@ -185,26 +294,49 @@ switch ($action) {
             json_error($lenErr, 422);
         }
 
+        $initialStatus = ts_is_organizer_role_value($manager['roli'] ?? null) ? 'pending_review' : 'active';
+
         $stmt = $pdo->prepare(
-            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, kapaciteti, data, vendndodhja, latitude, longitude, banner)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO Eventi (id_perdoruesi, id_kategoria, titulli, pershkrimi, kapaciteti, data, vendndodhja, latitude, longitude, banner, statusi)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
-            $admin['id'], $id_kategoria, $titulli,
-            $pershkrimi, $kapaciteti, $data_eventi, $vendndodhja, $latitude, $longitude, $banner,
+            $manager['id'], $id_kategoria, $titulli,
+            $pershkrimi, $kapaciteti, $data_eventi, $vendndodhja, $latitude, $longitude, $banner, $initialStatus,
         ]);
 
         $newId = (int) $pdo->lastInsertId();
 
-        log_admin_action($admin['id'], 'create_event', 'event', $newId, ['titulli' => $titulli]);
+        log_admin_action($manager['id'], 'create_event', 'event', $newId, ['titulli' => $titulli, 'statusi' => $initialStatus]);
 
-        json_success(['id_eventi' => $newId, 'message' => 'Eventi u krijua me sukses.'], 201);
+        if ($initialStatus === 'pending_review') {
+            $reviewers = $pdo->query(
+                "SELECT id_perdoruesi, emri, email
+                 FROM Perdoruesi
+                 WHERE roli IN ('admin', 'super_admin') AND statusi_llogarise = 'active'"
+            )->fetchAll(PDO::FETCH_ASSOC);
+            $notifStmt = $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $message = ($manager['organization_name'] ?: $manager['emri']) . ' krijoi një event të ri në pritje të miratimit: "' . $titulli . '".';
+            foreach ($reviewers as $reviewer) {
+                $notifStmt->execute([$reviewer['id_perdoruesi'], $message, 'event_review', 'event', $newId, '/TiranaSolidare/views/dashboard.php']);
+            }
+        }
+
+        json_success([
+            'id_eventi' => $newId,
+            'statusi' => $initialStatus,
+            'message' => $initialStatus === 'pending_review'
+                ? 'Eventi u krijua dhe po pret miratimin e administratorit.'
+                : 'Eventi u krijua me sukses.',
+        ], 201);
         break;
 
     // ── UPDATE EVENT ───────────────────────────────
     case 'update':
         require_method('PUT');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $id   = (int) ($_GET['id'] ?? 0);
         $body = get_json_body();
 
@@ -212,13 +344,7 @@ switch ($action) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        // Check existence (exclude archived)
-        $check = $pdo->prepare('SELECT id_eventi, data, statusi, is_archived FROM Eventi WHERE id_eventi = ?');
-        $check->execute([$id]);
-        $event = $check->fetch();
-        if (!$event) {
-            json_error('Eventi nuk u gjet.', 404);
-        }
+        $event = ts_load_managed_event($pdo, $id, $manager);
 
         // Block editing archived events
         if (!empty($event['is_archived'])) {
@@ -329,7 +455,7 @@ switch ($action) {
             }
         }
 
-        log_admin_action($admin['id'], 'update_event', 'event', $id);
+        log_admin_action($manager['id'], 'update_event', 'event', $id);
 
         json_success(['message' => 'Eventi u përditësua me sukses.']);
         break;
@@ -337,12 +463,14 @@ switch ($action) {
     // ── DELETE / ARCHIVE EVENT ─────────────────────
     case 'delete':
         require_method('DELETE');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
+
+        $eventMeta = ts_load_managed_event($pdo, $id, $manager);
 
         // Check if event has applications
         $appCount = $pdo->prepare('SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ?');
@@ -387,7 +515,7 @@ switch ($action) {
                 }
             }
 
-            log_admin_action($admin['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
+            log_admin_action($manager['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
             json_success(['message' => 'Eventi u fshi me sukses.']);
         } else {
             // Hard-delete: no applications
@@ -398,7 +526,7 @@ switch ($action) {
                 json_error('Eventi nuk u gjet.', 404);
             }
 
-            log_admin_action($admin['id'], 'delete_event', 'event', $id);
+            log_admin_action($manager['id'], 'delete_event', 'event', $id, ['titulli' => $eventMeta['titulli'] ?? null]);
             json_success(['message' => 'Eventi u fshi me sukses.']);
         }
         break;
@@ -406,18 +534,15 @@ switch ($action) {
     // ── COMPLETE EVENT ─────────────────────────────
     case 'complete':
         require_method('PUT');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        $check = $pdo->prepare('SELECT id_eventi, titulli, data, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
-        $check->execute([$id]);
-        $event = $check->fetch();
-
-        if (!$event) {
+        $event = ts_load_managed_event($pdo, $id, $manager);
+        if (!empty($event['is_archived'])) {
             json_error('Eventi nuk u gjet.', 404);
         }
         if ($event['statusi'] !== 'active') {
@@ -454,25 +579,22 @@ switch ($action) {
             }
         }
 
-        log_admin_action($admin['id'], 'complete_event', 'event', $id, ['titulli' => $event['titulli']]);
+        log_admin_action($manager['id'], 'complete_event', 'event', $id, ['titulli' => $event['titulli']]);
         json_success(['message' => 'Eventi u shënua si i përfunduar.']);
         break;
 
     // ── CANCEL EVENT ──────────────────────────────
     case 'cancel':
         require_method('PUT');
-        $admin = require_admin();
+        $manager = require_event_manager();
         $id = (int) ($_GET['id'] ?? 0);
 
         if ($id <= 0) {
             json_error('ID-ja e eventit është e pavlefshme.', 400);
         }
 
-        $check = $pdo->prepare('SELECT id_eventi, titulli, statusi FROM Eventi WHERE id_eventi = ? AND is_archived = 0');
-        $check->execute([$id]);
-        $event = $check->fetch();
-
-        if (!$event) {
+        $event = ts_load_managed_event($pdo, $id, $manager);
+        if (!empty($event['is_archived'])) {
             json_error('Eventi nuk u gjet.', 404);
         }
         if (in_array($event['statusi'], ['cancelled', 'completed'], true)) {
@@ -506,10 +628,57 @@ switch ($action) {
             }
         }
 
-        log_admin_action($admin['id'], 'cancel_event', 'event', $id, ['titulli' => $event['titulli']]);
+        log_admin_action($manager['id'], 'cancel_event', 'event', $id, ['titulli' => $event['titulli']]);
         json_success(['message' => 'Eventi u anulua me sukses.']);
         break;
 
+    // ── APPROVE ORGANIZER EVENT ───────────────────
+    case 'approve':
+        require_method('PUT');
+        $admin = require_admin();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_error('ID-ja e eventit është e pavlefshme.', 400);
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT e.id_eventi, e.titulli, e.statusi, e.id_perdoruesi, p.emri, p.email, p.organization_name
+             FROM Eventi e
+             LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
+             WHERE e.id_eventi = ? AND e.is_archived = 0'
+        );
+        $stmt->execute([$id]);
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$event) {
+            json_error('Eventi nuk u gjet.', 404);
+        }
+        if (($event['statusi'] ?? '') !== 'pending_review') {
+            json_error('Vetëm eventet në pritje të miratimit mund të aktivizohen.', 422);
+        }
+
+        $pdo->prepare("UPDATE Eventi SET statusi = 'active' WHERE id_eventi = ?")->execute([$id]);
+
+        $message = 'Eventi juaj "' . ($event['titulli'] ?? '') . '" u miratua dhe tani është publik.';
+        $notifStmt = $pdo->prepare(
+            'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $notifStmt->execute([$event['id_perdoruesi'], $message, 'event_review', 'event', $id, '/TiranaSolidare/views/events.php?id=' . $id]);
+
+        if (filter_var($event['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $event['email'],
+                $event['organization_name'] ?: ($event['emri'] ?? 'Organizator'),
+                'Eventi u miratua — Tirana Solidare',
+                $message
+            );
+        }
+
+        log_admin_action($admin['id'], 'approve_event', 'event', $id, ['titulli' => $event['titulli']]);
+        json_success(['message' => 'Eventi u miratua me sukses.']);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: list, get, create, update, delete, complete, cancel.', 400);
+        json_error('Veprim i panjohur. Përdorni: list, manage_list, get, create, update, delete, complete, cancel, approve.', 400);
 }

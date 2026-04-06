@@ -1,20 +1,26 @@
 ﻿<?php
 // views/dashboard.php — Admin Panel (Admin only)
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/db.php';
 check_login();
 
-// Redirect volunteers to their own panel
-if (!in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true)) {
+// Redirect volunteers to their own panel.
+$currentRole = ts_normalize_value($_SESSION['roli'] ?? '');
+if (!ts_is_dashboard_role_value($currentRole)) {
     header("Location: /TiranaSolidare/views/volunteer_panel.php");
     exit();
 }
 
-$isSuperAdmin = ts_normalize_value($_SESSION['roli'] ?? '') === 'super_admin';
-
-$isAdmin = true;
+$isSuperAdmin = $currentRole === 'super_admin';
+$isAdmin = is_admin_role($currentRole);
+$isOrganizer = ts_is_organizer_role_value($currentRole);
+$siteSettings = ts_get_site_settings($pdo);
+$siteName = $siteSettings['organization_name'];
+$dashboardRoleLabel = $isSuperAdmin ? 'Super Admin' : ($isOrganizer ? 'Organizator' : 'Admin');
 $userEmri = htmlspecialchars($_SESSION['emri'] ?? 'Përdorues');
-$userRoli = htmlspecialchars($_SESSION['roli'] ?? 'volunteer');
+$userRoli = htmlspecialchars($currentRole ?: 'volunteer');
 $userEmail = htmlspecialchars($_SESSION['email'] ?? '');
+$userOrganizationName = htmlspecialchars($_SESSION['organization_name'] ?? '');
 $userInitial = mb_strtoupper(mb_substr($_SESSION['emri'] ?? 'P', 0, 1));
 $adminColorResolved = ts_resolve_profile_color($_SESSION['profile_color'] ?? 'emerald');
 $adminProfileTheme = $adminColorResolved['theme'];
@@ -26,11 +32,12 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?= csrf_meta() ?>
-  <title>Paneli — Tirana Solidare</title>
+  <title>Paneli — <?= e($siteName) ?></title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=<?= filemtime(__DIR__.'/../public/assets/styles/main.css') ?>">
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/dashboard.css?v=<?= filemtime(__DIR__.'/../public/assets/styles/dashboard.css') ?>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=<?= filemtime(__DIR__.'/../assets/css/map.css') ?>">
+  <?= ts_brand_theme_css() ?>
   <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/TiranaSolidare/sw.js');
@@ -50,8 +57,8 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
 <aside class="db-sidebar" id="db-sidebar">
   <div class="db-sidebar__header">
     <a href="/TiranaSolidare/public/" class="db-sidebar__logo">
-      <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="Tirana Solidare" style="width:32px;height:32px;object-fit:contain;">
-      <span>Tirana Solidare</span>
+      <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="<?= e($siteName) ?>" style="width:32px;height:32px;object-fit:contain;">
+      <span><?= e($siteName) ?></span>
     </a>
     <button class="db-sidebar__close" onclick="toggleSidebar()" aria-label="Close sidebar">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -64,11 +71,11 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <span>Përmbledhje</span>
     </button>
 
-    <?php if ($isAdmin): ?>
     <button class="db-nav-item" data-panel="events" onclick="switchPanel('events', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
       <span>Eventet</span>
     </button>
+    <?php if ($isAdmin): ?>
     <button class="db-nav-item" data-panel="users" onclick="switchPanel('users', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>Përdoruesit</span>
@@ -85,16 +92,24 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
       <span>Kategoritë</span>
     </button>
+    <?php endif; ?>
+    <?php if ($isSuperAdmin): ?>
+    <button class="db-nav-item" data-panel="organizations" onclick="switchPanel('organizations', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M9 12h.01"/><path d="M9 15h.01"/><path d="M15 9h.01"/><path d="M15 12h.01"/><path d="M15 15h.01"/></svg>
+      <span>Organizatat</span>
+    </button>
+    <?php endif; ?>
+    <?php if ($isAdmin): ?>
     <button class="db-nav-item" data-panel="settings" onclick="switchPanel('settings', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       <span>Cilësimet</span>
     </button>
+    <?php endif; ?>
     <?php if ($isSuperAdmin): ?>
     <button class="db-nav-item" data-panel="audit" onclick="switchPanel('audit', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
       <span>Auditimi</span>
     </button>
-    <?php endif; ?>
     <?php endif; ?>
 
 <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
@@ -141,7 +156,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     </button>
     <h1 class="db-topbar__title">Paneli</h1>
     <div class="db-topbar__right">
-      <span class="db-topbar__role db-topbar__role--<?= $isAdmin ? 'admin' : 'vol' ?>"><?= $isSuperAdmin ? 'Super Admin' : e($userRoli) ?></span>
+      <span class="db-topbar__role db-topbar__role--admin"><?= e($dashboardRoleLabel) ?></span>
     </div>
   </header>
 
@@ -151,7 +166,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <svg class="db-welcome__blob" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.06)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
       <div class="db-welcome__text">
         <h2>Mirësevini, <?= $userEmri ?>!</h2>
-        <p><?= $isAdmin ? 'Menaxhoni platformën nga paneli juaj admin.' : 'Shikoni eventet, aplikimet dhe kërkesat tuaja.' ?></p>
+        <p><?= $isOrganizer ? 'Menaxhoni eventet dhe aplikimet e organizatës suaj.' : 'Menaxhoni platformën nga paneli juaj.' ?></p>
       </div>
     </section>
     <div class="db-stats" id="dashboard-stats">
@@ -164,15 +179,18 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     <div class="db-overview-grid" id="dashboard-substats"></div>
   </div>
 
-  <?php if ($isAdmin): ?>
-  <!-- ═══════════════ PANEL: EVENTS (Admin) ═══════════════ -->
+  <?php if ($isAdmin || $isOrganizer): ?>
+  <!-- ═══════════════ PANEL: EVENTS (Dashboard) ═══════════════ -->
   <div class="db-panel" id="panel-events">
     <div class="db-panel__header">
-      <h3>Menaxho Eventet</h3>
+      <div>
+        <h3><?= $isOrganizer ? 'Eventet e organizatës' : 'Menaxho Eventet' ?></h3>
+        <p class="db-panel__subtitle"><?= $isOrganizer ? 'Eventet e reja publikohen pasi të miratohen nga administratori.' : 'Krijoni, përditësoni ose miratoni evente në platformë.' ?></p>
+      </div>
         <div style="display:flex; gap:10px;">
             <button class="db-btn db-btn--primary" onclick="toggleCreateEvent()">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Krijo Event
+              <?= $isOrganizer ? 'Dërgo Event' : 'Krijo Event' ?>
             </button>
         </div>
     </div>
@@ -254,6 +272,8 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <div id="event-applications"></div>
     </div>
   </div>
+
+  <?php if ($isAdmin): ?>
 
   <!-- ═══════════════ PANEL: USERS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-users">
@@ -418,23 +438,106 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     </div>
   </div>
 
+  <?php endif; ?>
+    <?php endif; ?>
+
+  <?php if ($isSuperAdmin): ?>
+  <!-- ═══════════════ PANEL: ORGANIZATIONS (Super Admin) ═══════════════ -->
+  <div class="db-panel" id="panel-organizations">
+    <div class="db-panel__header">
+      <div>
+        <h3>Aplikimet e Organizatave</h3>
+        <p class="db-panel__subtitle">Shqyrtoni OJF-të dhe grupet që kërkojnë akses si organizatorë.</p>
+      </div>
+    </div>
+    <div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+      <select id="org-app-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadOrganizationApplications(1)">
+        <option value="pending">Në pritje</option>
+        <option value="approved">Të miratuara</option>
+        <option value="rejected">Të refuzuara</option>
+      </select>
+      <input id="org-app-filter-search" type="text" placeholder="Kërko organizatë ose email…" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:220px;" onkeydown="if(event.key==='Enter')loadOrganizationApplications(1)">
+      <button class="db-btn db-btn--primary db-btn--sm" onclick="loadOrganizationApplications(1)">Filtro</button>
+    </div>
+    <div class="db-table-wrap" id="organization-application-list">
+      <div class="db-loading">Duke ngarkuar aplikimet…</div>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php if ($isAdmin): ?>
   <!-- ═══════════════ PANEL: SETTINGS (Admin) ═══════════════ -->
   <div class="db-panel" id="panel-settings">
     <div class="db-panel__header">
       <div>
         <h3>Cilësimet e Platformës</h3>
-        <p class="db-panel__subtitle">Menaxhoni platformën.</p>
+        <p class="db-panel__subtitle"><?= $isSuperAdmin ? 'Menaxhoni identitetin publik dhe kontaktet e platformës.' : 'Shikoni identitetin publik, kontaktet dhe logon aktuale të platformës.' ?></p>
       </div>
+    </div>
+    <div id="site-settings-permission-note" style="display:<?= $isSuperAdmin ? 'none' : 'block' ?>;margin-bottom:16px;padding:12px 14px;border-radius:12px;border:1px solid #dbe4f3;background:#f8fbff;color:#34507a;font-size:0.88rem;line-height:1.55;">
+      Po i shihni cilësimet në mënyrë leximi. Vetëm super administratori mund t'i ndryshojë.
     </div>
 
     <div class="ud-actions-grid">
+      <div class="ud-card">
+        <div class="ud-card__header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M9 12h.01"/><path d="M9 15h.01"/><path d="M15 9h.01"/><path d="M15 12h.01"/><path d="M15 15h.01"/></svg>
+          <h4>Identiteti i Platformës</h4>
+        </div>
+        <p class="ud-card__desc">Përditësoni emrin e organizatës, tekstet kryesore dhe kontaktet publike.</p>
+        <div class="ud-card__body">
+          <div class="db-form__group">
+            <label>Emri i organizatës</label>
+            <input type="text" id="site-organization-name" class="ud-input" maxlength="120">
+          </div>
+          <div class="db-form__group">
+            <label>Hero badge</label>
+            <input type="text" id="site-hero-badge" class="ud-input" maxlength="160">
+          </div>
+          <div class="db-form__group">
+            <label>Hero titulli</label>
+            <textarea id="site-hero-title" class="ud-input" rows="2" maxlength="160"></textarea>
+          </div>
+          <div class="db-form__group">
+            <label>Hero nën-titulli</label>
+            <textarea id="site-hero-subtitle" class="ud-input" rows="3" maxlength="320"></textarea>
+          </div>
+          <div class="db-form__group">
+            <label>Teksti i footer-it</label>
+            <textarea id="site-footer-blurb" class="ud-input" rows="4" maxlength="420"></textarea>
+          </div>
+          <div class="db-form__row">
+            <div class="db-form__group">
+              <label>Telefoni publik</label>
+              <input type="text" id="site-contact-phone" class="ud-input" maxlength="40">
+            </div>
+            <div class="db-form__group">
+              <label>Adresa publike</label>
+              <input type="text" id="site-contact-address" class="ud-input" maxlength="160">
+            </div>
+          </div>
+          <div class="db-form__row">
+            <div class="db-form__group">
+              <label>Ngjyra kryesore</label>
+              <input type="color" id="site-theme-primary" class="ud-input" style="padding:6px;height:46px;">
+            </div>
+            <div class="db-form__group">
+              <label>Ngjyra dytësore</label>
+              <input type="color" id="site-theme-accent" class="ud-input" style="padding:6px;height:46px;">
+            </div>
+          </div>
+          <button id="site-settings-save-btn" class="db-btn db-btn--primary" onclick="saveSiteSettings()">Ruaj cilësimet</button>
+          <div id="site-settings-status" style="font-size:13px;min-height:16px;margin-top:8px;"></div>
+        </div>
+      </div>
+
       <!-- Site Logo -->
       <div class="ud-card">
         <div class="ud-card__header">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="m3 14 4.5-4.5c.94-.94 2.48-.94 3.42 0l5.58 5.58c.94.94 2.48.94 3.42 0L21 10"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
           <h4>Logoja e Faqes</h4>
         </div>
-        <p class="ud-card__desc">Ndrysho logon e platformës. Do të shfaqet në krye të faqes publike dhe në panel.</p>
+        <p class="ud-card__desc"><?= $isSuperAdmin ? 'Ndrysho logon e platformës. Do të shfaqet në krye të faqes publike dhe në panel.' : 'Këtu shfaqet logoja aktuale e platformës. Vetëm super administratori mund ta ndryshojë.' ?></p>
         <div class="ud-card__body">
           <div style="margin-bottom:1rem;padding:1rem;background:#f8fafc;border-radius:8px;text-align:center;border:2px dashed #cbd5e1;">
             <img id="logo-preview" src="/TiranaSolidare/public/assets/images/logo.png" alt="Logoja e faqes" style="max-height:80px;max-width:100%;object-fit:contain;">
@@ -443,7 +546,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
             <button class="db-btn db-btn--primary" onclick="adminUploadLogo(document.getElementById('logo-input'))">Ruaj</button>
             <button class="db-btn db-btn--ghost" onclick="adminCancelLogo()">Anulo</button>
           </div>
-          <label class="db-btn db-btn--primary" style="cursor:pointer;display:inline-block;">
+          <label id="site-logo-upload-trigger" class="db-btn db-btn--primary" style="cursor:pointer;display:inline-block;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             Ngarko Logon e Re
             <input type="file" id="logo-input" accept="image/*" style="display:none;" onchange="adminPreviewLogo(this)">
@@ -457,6 +560,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       </div>
     </div>
   </div>
+  <?php endif; ?>
 
   <?php if ($isSuperAdmin): ?>
   <!-- ═══════════════ PANEL: AUDIT LOG (Super Admin) ═══════════════ -->
@@ -481,8 +585,6 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <div class="db-loading">Duke ngarkuar regjistrin…</div>
     </div>
   </div>
-  <?php endif; ?>
-
   <?php endif; ?>
 
   <!-- ═══════════════ PANEL: NOTIFICATIONS ═══════════════ -->
@@ -565,8 +667,8 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <h2 class="ud-header__name"><?= $userEmri ?></h2>
       <p class="ud-header__email"><?= $userEmail ?></p>
       <div class="ud-header__badges">
-        <span class="db-badge db-badge--admin"><?= $isSuperAdmin ? 'Super Admin' : e($userRoli) ?></span>
-        <span class="db-badge db-badge--vol" style="font-size:0.75rem;">Bashkia Tiranë</span>
+        <span class="db-badge db-badge--admin"><?= e($dashboardRoleLabel) ?></span>
+        <span class="db-badge db-badge--vol" style="font-size:0.75rem;"><?= e($isOrganizer && $userOrganizationName !== '' ? $userOrganizationName : $siteName) ?></span>
       </div>
       <div id="profile-avatar-status" style="font-size:12px;min-height:14px;margin-top:4px;color:var(--db-primary);"></div>
     </div>
@@ -654,12 +756,16 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
         <h4>Informacion për Organizatën</h4>
       </div>
       <p class="ud-card__desc" style="font-size:0.88rem;line-height:1.6;">
-        Eventet publikohen si iniciativë e <strong>Bashkisë Tiranë</strong>, organizatës që qëndron pas platformës Tirana Solidare.
+        <?php if ($isOrganizer): ?>
+        Eventet tuaja publikohen me emrin e organizatës <strong><?= e($userOrganizationName !== '' ? $userOrganizationName : $siteName) ?></strong> dhe jo me emrin tuaj personal.
+        <?php else: ?>
+        Eventet publikohen si iniciativë e <strong><?= e($siteName) ?></strong>, organizatës që qëndron pas platformës.
         Profili personal i administratorit nuk është i dukshëm për vullnetarët. Çdo event tregon vetëm emrin e organizatës dhe kategorinë.
+        <?php endif; ?>
       </p>
       <div style="margin-top:12px;padding:12px;background:rgba(0,113,93,0.06);border-radius:10px;font-size:0.82rem;color:#00715D;display:flex;gap:8px;align-items:flex-start;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-        <span>Vullnetarët e shohin platformën si "Tirana Solidare" dhe bashkinë si organizatorin e çdo eventi, jo emrin tuaj personal.</span>
+        <span><?= $isOrganizer ? 'Vullnetarët do të shohin emrin e organizatës suaj si organizuese të eventit.' : 'Vullnetarët e shohin platformën përmes identitetit publik të organizatës, jo emrin tuaj personal.' ?></span>
       </div>
     </div>
 
@@ -678,6 +784,10 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
 <script>
 const CURRENT_USER_ID = <?= (int) $_SESSION['user_id'] ?>;
 const IS_SUPER_ADMIN = <?= $isSuperAdmin ? 'true' : 'false' ?>;
+const CURRENT_USER_ROLE = <?= json_encode($currentRole) ?>;
+const CURRENT_ORGANIZATION_NAME = <?= json_encode($_SESSION['organization_name'] ?? '') ?>;
+const CAN_REVIEW_EVENTS = <?= $isAdmin ? 'true' : 'false' ?>;
+window.CAN_EDIT_SITE_SETTINGS = <?= $isSuperAdmin ? 'true' : 'false' ?>;
 </script>
 <script src="/TiranaSolidare/assets/js/dashboard-ui.js?v=<?= filemtime(__DIR__.'/../assets/js/dashboard-ui.js') ?>"></script>
 <script>

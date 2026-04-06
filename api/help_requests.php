@@ -65,17 +65,6 @@ function help_request_parse_matching_config(array $body, ?array $existing = null
     ];
 }
 
-function help_request_status_filter_values(string $status): array
-{
-    return match (ts_help_request_normalize_status($status)) {
-        'completed' => ['completed', 'closed'],
-        'open' => ['open'],
-        'filled' => ['filled'],
-        'cancelled' => ['cancelled'],
-        default => [ts_help_request_normalize_status($status)],
-    };
-}
-
 function help_request_insert_notification(PDO $pdo, int $userId, string $message, int $requestId, string $type = 'aplikim_kerkese'): void
 {
     $link = "/TiranaSolidare/views/help_requests.php?id={$requestId}";
@@ -280,6 +269,24 @@ switch ($action) {
                     ]
                 );
             }
+
+            $guardianMessage = ($applicationStatus === 'waitlisted'
+                ? "{$user['emri']} aplikoi për postimin \"{$request['titulli']}\" dhe u shtua në listën e pritjes."
+                : "{$user['emri']} aplikoi për postimin \"{$request['titulli']}\" dhe aplikimi është në pritje të shqyrtimit.")
+                . "\n\nDetaje:\n"
+                . 'Tipi: ' . ($request['tipi'] === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                . 'Vendndodhja: ' . (($request['vendndodhja'] ?? '') !== '' ? $request['vendndodhja'] : 'Do të shfaqet në platformë pasi të vazhdojë përputhja.');
+
+            ts_send_guardian_activity_email(
+                $pdo,
+                (int) $user['id'],
+                'Fëmija juaj aplikoi për një postim ndihme — Tirana Solidare',
+                $guardianMessage,
+                [
+                    'action_url' => "/views/help_requests.php?id={$requestId}",
+                    'action_label' => 'Shiko postimin',
+                ]
+            );
 
             json_success([
                 'id_aplikimi_kerkese' => $applicationId,
@@ -658,7 +665,7 @@ switch ($action) {
                 $params[] = $tipi;
             }
             if ($statusi) {
-                $statusValues = help_request_status_filter_values($statusi);
+                $statusValues = ts_help_request_status_filter_values($statusi);
                 $where[] = 'LOWER(kn.statusi) IN (' . implode(',', array_fill(0, count($statusValues), '?')) . ')';
                 foreach ($statusValues as $statusValue) {
                     $params[] = $statusValue;

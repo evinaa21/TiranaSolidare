@@ -31,14 +31,17 @@ try {
 
     if ($update->rowCount() === 0) {
         $check = $pdo->prepare(
-            'SELECT verified, guardian_consent_status, guardian_consent_token_expires
+            'SELECT verified, birthdate, guardian_consent_status, guardian_consent_token_expires
              FROM Perdoruesi WHERE email = ? AND guardian_email = ? LIMIT 1'
         );
         $check->execute([$email, $guardianEmail]);
         $row = $check->fetch(PDO::FETCH_ASSOC);
 
         if ($row && ($row['guardian_consent_status'] ?? '') === 'approved') {
-            header('Location: /TiranaSolidare/views/login.php?success=guardian_consent_already_verified');
+            $successKey = ts_user_activation_state($row) === 'email_pending'
+                ? 'guardian_consent_already_verified_email_pending'
+                : 'guardian_consent_already_verified';
+            header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
         } elseif ($row && !empty($row['guardian_consent_token_expires']) && strtotime($row['guardian_consent_token_expires']) < time()) {
             header('Location: /TiranaSolidare/views/login.php?error=guardian_consent_expired');
         } else {
@@ -47,15 +50,16 @@ try {
         exit();
     }
 
-    $userStmt = $pdo->prepare('SELECT emri, verified FROM Perdoruesi WHERE email = ? LIMIT 1');
+    $userStmt = $pdo->prepare('SELECT emri, verified, birthdate, guardian_consent_status FROM Perdoruesi WHERE email = ? LIMIT 1');
     $userStmt->execute([$email]);
     $user = $userStmt->fetch(PDO::FETCH_ASSOC) ?: ['emri' => 'Përdorues', 'verified' => 0];
+    $activationState = ts_user_activation_state($user);
 
     send_notification_email(
         $email,
         $user['emri'] ?? 'Përdorues',
         'Pëlqimi prindëror u konfirmua',
-        ((int) ($user['verified'] ?? 0) === 1)
+        ($activationState === 'ready')
             ? 'Pëlqimi i prindit ose kujdestarit u regjistrua me sukses. Tani mund të kyçeni në llogarinë tuaj.'
             : 'Pëlqimi i prindit ose kujdestarit u regjistrua me sukses. Hapi i fundit është të verifikoni edhe email-in tuaj.',
         [
@@ -65,7 +69,7 @@ try {
         ]
     );
 
-    header('Location: /TiranaSolidare/views/login.php?success=' . (((int) ($user['verified'] ?? 0) === 1) ? 'guardian_consent_verified' : 'guardian_consent_verified_email_pending'));
+    header('Location: /TiranaSolidare/views/login.php?success=' . (($activationState === 'ready') ? 'guardian_consent_verified' : 'guardian_consent_verified_email_pending'));
     exit();
 } catch (Throwable $e) {
     error_log('Guardian consent verification failed: ' . $e->getMessage());
