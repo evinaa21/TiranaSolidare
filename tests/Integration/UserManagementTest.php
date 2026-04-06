@@ -22,10 +22,10 @@ class UserManagementTest extends DatabaseTestCase
         $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
 
         $stmt = self::$pdo->prepare(
-            'INSERT INTO Perdoruesi (emri, mbiemri, email, fjalekalimi, roli, statusi_llogarise, verified)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified)
+             VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute(['Test', 'User', $email, $hash, 'volunteer', 'Aktiv', 0]);
+        $stmt->execute(['Test', $email, $hash, 'volunteer', 'Aktiv', 0]);
         $userId = (int) self::$pdo->lastInsertId();
 
         $this->assertGreaterThan(0, $userId);

@@ -145,4 +145,35 @@ class EmailQueueTest extends DatabaseTestCase
         $count = (int) self::$pdo->query("SELECT COUNT(*) FROM email_queue WHERE to_email = 'unknown@example.com'")->fetchColumn();
         $this->assertSame(1, $count);
     }
+
+    /** @test */
+    public function processing_is_valid_email_queue_status(): void
+    {
+        self::$pdo->exec(
+            "INSERT INTO email_queue (to_email, to_name, subject, body_html, status)
+             VALUES ('proc@example.com', 'Proc User', 'Test', '<p>Test</p>', 'processing')"
+        );
+
+        $row = self::$pdo->query("SELECT status FROM email_queue WHERE to_email = 'proc@example.com' ORDER BY id DESC LIMIT 1")->fetch();
+        $this->assertSame('processing', $row['status']);
+    }
+
+    /** @test */
+    public function email_queue_status_transitions_to_sent(): void
+    {
+        self::$pdo->exec(
+            "INSERT INTO email_queue (to_email, to_name, subject, body_html, status)
+             VALUES ('sent@example.com', 'Sent User', 'Test', '<p>Test</p>', 'pending')"
+        );
+        $id = (int) self::$pdo->lastInsertId();
+
+        self::$pdo->prepare("UPDATE email_queue SET status = 'processing' WHERE id = ?")->execute([$id]);
+        $stmt = self::$pdo->prepare("SELECT status FROM email_queue WHERE id = ?");
+        $stmt->execute([$id]);
+        $this->assertSame('processing', $stmt->fetchColumn());
+
+        self::$pdo->prepare("UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = ?")->execute([$id]);
+        $stmt->execute([$id]);
+        $this->assertSame('sent', $stmt->fetchColumn());
+    }
 }

@@ -1470,3 +1470,25 @@ function isUserBlocked(PDO $pdo, int $userId, int $otherUserId): bool
     $stmt->execute([$userId, $otherUserId, $otherUserId, $userId]);
     return (bool) $stmt->fetchColumn();
 }
+
+/**
+ * Return true if the given date-of-birth string represents a reasonable age
+ * (at least 1 year old and no more than 120 years old).
+ */
+function ts_birthdate_is_reasonable(?string $dob): bool
+{
+    if ($dob === null || $dob === '') {
+        return false;
+    }
+    $birth = DateTime::createFromFormat('Y-m-d', $dob);
+    if ($birth === false) {
+        return false;
+    }
+    $now = new DateTime();
+    $age = (int) $now->diff($birth)->y;
+    // diff gives the absolute difference; ensure birth is in the past
+    if ($birth > $now) {
+        return false;
+    }
+    return $age >= 1 && $age <= 120;
+}

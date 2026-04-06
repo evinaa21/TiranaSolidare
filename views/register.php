@@ -75,6 +75,14 @@ $successMessages = [
             <span><?= htmlspecialchars($successMessages[$successKey]) ?></span>
           </div>
         <?php endif; ?>
+        <div class="auth-sidecard">
+          <strong>Pse të regjistrohesh?</strong>
+          <ul>
+            <li>Publikoni ose aplikoni në nisma dhe evente komunitare.</li>
+            <li>Kontaktoni shpejt me njerëzit që kërkojnë ndihmë.</li>
+            <li>Ndërtimi i profilit ndihmon besueshmërinë në komunitet.</li>
+          </ul>
+        </div>
       </div>
 
       <form class="auth-form" action="/TiranaSolidare/src/actions/register_action.php" method="POST">
@@ -90,13 +98,57 @@ $successMessages = [
         </div>
         <div class="auth-field">
           <label for="password">Fjalëkalimi</label>
-          <input class="auth-input" type="password" id="password" name="password" placeholder="********" required>
-          <small class="auth-hint">Minimumi 8 karaktere me shkronjë të madhe, të vogël, numër dhe simbol.</small>
+          <input class="auth-input" type="password" id="password" name="password" placeholder="********" required autocomplete="new-password">
+          <ul class="pw-rules" id="pw-rules" aria-live="polite">
+            <li id="pw-len"  class="pw-rule">Të paktën 8 karaktere</li>
+            <li id="pw-up"   class="pw-rule">Të paktën 1 shkronjë e madhe (A–Z)</li>
+            <li id="pw-lo"   class="pw-rule">Të paktën 1 shkronjë e vogël (a–z)</li>
+            <li id="pw-num"  class="pw-rule">Të paktën 1 numër (0–9)</li>
+            <li id="pw-sym"  class="pw-rule">Të paktën 1 simbol (p.sh. !@#$%)</li>
+          </ul>
         </div>
         <div class="auth-field">
           <label for="confirm_password">Konfirmo fjalëkalimin</label>
-          <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required>
+          <input class="auth-input" type="password" id="confirm_password" name="confirm_password" placeholder="********" required autocomplete="new-password">
+          <small class="pw-match-hint" id="pw-match-hint"></small>
         </div>
+        <style>
+          .pw-rules { list-style: none; margin: 0.45rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+          .pw-rule  { font-size: 0.78rem; color: #aaa; transition: color .2s; padding-left: 1.1rem; position: relative; }
+          .pw-rule.ok { color: #16a34a; }
+          .pw-rule.ok::before { content: '\2713\00a0'; position: absolute; left: 0; }
+          .pw-match-hint { font-size: 0.78rem; margin-top: 0.3rem; display: block; min-height: 1rem; }
+        </style>
+        <script>
+          (function () {
+            var pw   = document.getElementById('password');
+            var cpw  = document.getElementById('confirm_password');
+            var hint = document.getElementById('pw-match-hint');
+            function check() {
+              var v = pw.value;
+              toggle('pw-len',  v.length >= 8);
+              toggle('pw-up',   /[A-Z]/.test(v));
+              toggle('pw-lo',   /[a-z]/.test(v));
+              toggle('pw-num',  /[0-9]/.test(v));
+              toggle('pw-sym',  /[^A-Za-z0-9]/.test(v));
+            }
+            function toggle(id, ok) {
+              document.getElementById(id).classList.toggle('ok', ok);
+            }
+            function matchCheck() {
+              if (!cpw.value) { hint.textContent = ''; hint.style.color = ''; return; }
+              if (pw.value === cpw.value) {
+                hint.textContent = '\u2713 Fjalëkalimet përputhen';
+                hint.style.color = '#16a34a';
+              } else {
+                hint.textContent = '\u2717 Fjalëkalimet nuk përputhen';
+                hint.style.color = '#dc2626';
+              }
+            }
+            pw.addEventListener('input', function() { check(); matchCheck(); });
+            cpw.addEventListener('input', matchCheck);
+          })();
+        </script>
         <div class="auth-field" style="margin-top:0.5rem">
           <label class="auth-checkbox-label">
             <input type="checkbox" name="privacy_consent" value="1" required>
@@ -107,14 +159,6 @@ $successMessages = [
         <p class="auth-meta">Keni llogari? <a href="/TiranaSolidare/views/login.php<?= $redirect ? '?redirect=' . urlencode($redirect) : '' ?>">Hyni këtu</a></p>
       </form>
 
-      <div class="auth-sidecard">
-        <strong>Pse të regjistrohesh?</strong>
-        <ul>
-          <li>Publikoni ose aplikoni në nisma dhe evente komunitare.</li>
-          <li>Kontaktoni shpejt me njerëzit që kërkojnë ndihmë.</li>
-          <li>Ndërtimi i profilit ndihmon besueshmërinë në komunitet.</li>
-        </ul>
-      </div>
     </div>
   </section>
 </main>

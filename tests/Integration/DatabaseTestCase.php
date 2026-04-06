@@ -70,10 +70,9 @@ abstract class DatabaseTestCase extends TestCase
             CREATE TABLE IF NOT EXISTS Perdoruesi (
                 id_perdoruesi INT AUTO_INCREMENT PRIMARY KEY,
                 emri VARCHAR(100) NOT NULL,
-                mbiemri VARCHAR(100) NOT NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 fjalekalimi VARCHAR(255) NOT NULL,
-                roli ENUM('admin','volunteer') DEFAULT 'volunteer',
+                roli ENUM('admin','volunteer','super_admin') DEFAULT 'volunteer',
                 statusi_llogarise VARCHAR(30) DEFAULT 'Aktiv',
                 verified TINYINT(1) DEFAULT 0,
                 verification_token VARCHAR(255) DEFAULT NULL,
@@ -107,7 +106,7 @@ abstract class DatabaseTestCase extends TestCase
                 subject VARCHAR(500) NOT NULL,
                 body_html LONGTEXT NOT NULL,
                 body_text TEXT DEFAULT '',
-                status ENUM('pending','sent','failed') DEFAULT 'pending',
+                status ENUM('pending','processing','sent','failed') DEFAULT 'pending',
                 attempts INT DEFAULT 0,
                 max_attempts INT DEFAULT 3,
                 last_error TEXT DEFAULT NULL,
@@ -135,7 +134,7 @@ abstract class DatabaseTestCase extends TestCase
                 id_perdoruesi INT NOT NULL,
                 mesazhi TEXT NOT NULL,
                 lloji VARCHAR(50) DEFAULT 'general',
-                lexuar TINYINT(1) DEFAULT 0,
+                is_read TINYINT(1) DEFAULT 0,
                 krijuar_me TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
@@ -148,7 +147,6 @@ abstract class DatabaseTestCase extends TestCase
     {
         $defaults = [
             'emri' => 'Test',
-            'mbiemri' => 'User',
             'email' => 'test' . uniqid() . '@example.com',
             'fjalekalimi' => password_hash('Str0ng!Pass', PASSWORD_DEFAULT),
             'roli' => 'volunteer',
@@ -159,11 +157,11 @@ abstract class DatabaseTestCase extends TestCase
         $data = array_merge($defaults, $overrides);
 
         $stmt = self::$pdo->prepare(
-            'INSERT INTO Perdoruesi (emri, mbiemri, email, fjalekalimi, roli, statusi_llogarise, verified, email_notifications)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, email_notifications)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
-            $data['emri'], $data['mbiemri'], $data['email'], $data['fjalekalimi'],
+            $data['emri'], $data['email'], $data['fjalekalimi'],
             $data['roli'], $data['statusi_llogarise'], $data['verified'], $data['email_notifications'],
         ]);
         return (int) self::$pdo->lastInsertId();

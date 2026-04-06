@@ -247,6 +247,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   display: grid;
   gap: 10px;
   color: #003229;
+  align-self: start;
 }
 .auth-sidecard ul {
   list-style: none;
@@ -268,6 +269,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   .auth-shell {
     padding-top: 120px;
   }
+
 }
 
 /* Profile page extensions */

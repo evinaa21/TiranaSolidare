@@ -52,7 +52,7 @@ $kategorite = $pdo->query(
   <title>Tirana Solidare</title>
   <link rel="stylesheet" href="assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="assets/styles/requests.css?v=202603213">
-  <link rel="stylesheet" href="assets/styles/index.css?v=20260401a">
+  <link rel="stylesheet" href="assets/styles/index.css?v=20260406h">
 </head>
 <body class="page-home">
 <?php include 'components/header.php' ?>
@@ -108,20 +108,50 @@ $kategorite = $pdo->query(
       <svg class="reg-blob reg-blob--1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(68, 139, 119, 0.07)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
       <svg class="reg-blob reg-blob--2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(0,113,93,0.05)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
 
+      <div id="regjistrohu-image" class="reveal reveal-left reveal-d1">
+        <div class="story-visual">
+          <div class="story-visual__frame">
+            <img src="assets/images/community-volunteers.png" alt="Vullnetarë që kujdesen për komunitetin" class="story-visual__img">
+          </div>
+        </div>
+      </div>
+
       <div id="regjistrohu-content">
         <span class="regjistrohu-label reveal reveal-up">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
           Bëhu pjesë e komunitetit
         </span>
-        <h2 class="reveal reveal-up reveal-d1">Çdo veprim i vogël krijon <br>ndryshim të <span class="regjistrohu-accent">madh!</span></h2>
-        <p class="reveal reveal-up reveal-d2">Regjistrohu në platformën tonë dhe fillo të ofrosh ndihmë për ata që kanë nevojë. Së bashku mund të bëjmë një ndryshim pozitiv në komunitetin tonë.</p>
-        <a href="/TiranaSolidare/views/register.php" class="btn_primary reveal reveal-up reveal-d3">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-      </div>
-      <div id="regjistrohu-image" class="reveal reveal-right reveal-d2">
-        <div class="regjistrohu-img-stack">
-          <img src="assets/images/community-volunteers.png" alt="Vullnetarë" class="regjistrohu-img-front">
-          <div class="regjistrohu-img-back"></div>
+        <h2 class="reveal reveal-up reveal-d1"><span class="story-title-line">Ndonjëherë mjafton një “jam këtu”</span><span class="story-title-line">për ta bërë ditën e dikujt më të lehtë.</span></h2>
+        <p class="reveal reveal-up reveal-d2">Tirana Solidare e kthen gatishmërinë tënde në veprim. Regjistrohesh, sheh një nevojë reale dhe bëhesh pjesë e një historie ku ndihma mbërrin më shpejt, më afër dhe me më shumë besim.</p>
+
+        <div class="storyline reveal reveal-up reveal-d3">
+          <article class="story-step">
+            <span class="story-step__index">01</span>
+            <div class="story-step__body">
+              <strong>Ti shfaqesh</strong>
+              <p>Krijon profilin dhe tregon kohën, aftësitë ose energjinë që mund të ndash me të tjerët.</p>
+            </div>
+          </article>
+
+          <article class="story-step">
+            <span class="story-step__index">02</span>
+            <div class="story-step__body">
+              <strong>Dikush ndan nevojën</strong>
+              <p>Eventet dhe kërkesat nuk janë thjesht postime. Pas tyre ka njerëz, familje dhe situata reale.</p>
+            </div>
+          </article>
+
+          <article class="story-step">
+            <span class="story-step__index">03</span>
+            <div class="story-step__body">
+              <strong>Ndihma bëhet lidhje</strong>
+              <p>Nga një mesazh ose aplikim nis një marrëdhënie më e afërt, më e besueshme dhe me ndikim real.</p>
+            </div>
+          </article>
         </div>
+
+        <a href="/TiranaSolidare/views/register.php" class="btn_primary reveal reveal-up reveal-d3">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+        <p class="regjistrohu-note reveal reveal-up reveal-d3">Një profil i plotë i jep më shumë besim çdo kontakti të ri në platformë.</p>
       </div>
   </section>
 
