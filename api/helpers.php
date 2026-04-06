@@ -194,7 +194,7 @@ function require_auth(): array
  */
 function is_admin_role(string $role): bool
 {
-    return in_array($role, ['admin', 'super_admin'], true);
+    return ts_is_admin_role_value($role);
 }
 
 /**

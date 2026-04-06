@@ -120,6 +120,34 @@ const TS_HELP_REQUEST_MATCHING_MODES = ['single', 'limited', 'open'];
 const TS_HELP_REQUEST_ACTIVE_STATUSES = ['open', 'filled'];
 const TS_HELP_REQUEST_TERMINAL_STATUSES = ['completed', 'cancelled'];
 
+function ts_help_request_application_unlocks_location(?string $status): bool
+{
+    return in_array(ts_normalize_value((string) $status), ['pending', 'approved', 'waitlisted', 'completed'], true);
+}
+
+function ts_can_view_help_request_location(array $request, ?int $viewerId = null, ?string $viewerRole = null, array $locationUnlockedRequestIds = []): bool
+{
+    if (ts_is_admin_role_value($viewerRole)) {
+        return true;
+    }
+
+    $requestOwnerId = (int) ($request['id_perdoruesi'] ?? 0);
+    if ($viewerId !== null && $viewerId > 0 && $requestOwnerId === $viewerId) {
+        return true;
+    }
+
+    $requestId = (int) ($request['id_kerkese_ndihme'] ?? 0);
+    return $requestId > 0 && in_array($requestId, $locationUnlockedRequestIds, true);
+}
+
+function ts_strip_help_request_location(array $request): array
+{
+    $request['vendndodhja'] = null;
+    $request['latitude'] = null;
+    $request['longitude'] = null;
+    return $request;
+}
+
 function ts_help_request_normalize_status(?string $status): string
 {
     $normalized = ts_normalize_value((string) $status);
@@ -555,11 +583,63 @@ function app_base_url(): string
     return $scheme . '://localhost/TiranaSolidare';
 }
 
+function ts_absolute_app_url(string $path = ''): string
+{
+    $path = trim($path);
+    if ($path === '') {
+        return app_base_url();
+    }
+    if (preg_match('~^https?://~i', $path)) {
+        return $path;
+    }
+
+    if (!str_starts_with($path, '/')) {
+        $path = '/' . $path;
+    }
+    if (str_starts_with($path, '/TiranaSolidare/')) {
+        $path = substr($path, strlen('/TiranaSolidare'));
+    }
+
+    return app_base_url() . $path;
+}
+
+function ts_contact_page_path(): string
+{
+    return '/TiranaSolidare/views/contact.php';
+}
+
+function ts_support_email(): string
+{
+    $email = trim((string) (getenv('CONTACT_EMAIL') ?: getenv('SUPPORT_EMAIL') ?: getenv('SMTP_FROM') ?: 'info@tiranasolidare.al'));
+    return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : 'info@tiranasolidare.al';
+}
+
+function ts_support_name(): string
+{
+    $name = trim((string) (getenv('CONTACT_NAME') ?: getenv('SUPPORT_NAME') ?: 'Ekipi Tirana Solidare'));
+    return $name !== '' ? $name : 'Ekipi Tirana Solidare';
+}
+
+function ts_is_admin_role_value(?string $role): bool
+{
+    return in_array(ts_normalize_value((string) $role), ['admin', 'super_admin'], true);
+}
+
+function ts_can_message_user_roles(?string $senderRole, ?string $receiverRole): bool
+{
+    return ts_is_admin_role_value($senderRole) || !ts_is_admin_role_value($receiverRole);
+}
+
+function ts_admin_contact_policy_message(): string
+{
+    return 'Administratorët nuk kontaktohen me mesazhe direkte. Përdorni faqen e kontaktit.';
+}
+
 /**
  * Send an email immediately via PHPMailer (synchronous).
  * Use for user-triggered flows (registration, password reset) where delivery must be instant.
  */
-function send_email_direct(string $toEmail, string $toName, string $subject, string $bodyHtml, string $bodyText = ''): bool
+function send_email_direct(string $toEmail, string $toName, string $subject, string $bodyHtml, string $bodyText = '', array $options = []): bool
 {
     $autoload = __DIR__ . '/../vendor/autoload.php';
     if (!file_exists($autoload)) {
@@ -596,6 +676,11 @@ function send_email_direct(string $toEmail, string $toName, string $subject, str
             (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
             (string) ($cfg['from_name']  ?? 'Tirana Solidare')
         );
+        $replyToEmail = $options['reply_to_email'] ?? null;
+        if (is_string($replyToEmail) && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+            $replyToName = trim((string) ($options['reply_to_name'] ?? $replyToEmail));
+            $mail->addReplyTo($replyToEmail, $replyToName !== '' ? $replyToName : $replyToEmail);
+        }
         $mail->addAddress($toEmail, $toName);
         $mail->isHTML(true);
         $mail->Subject = $subject;
@@ -857,25 +942,58 @@ function send_password_reset_email(string $toEmail, string $toName, string $rese
 /**
  * Send a generic user notification email (queued for background delivery).
  */
-function send_notification_email(string $toEmail, string $toName, string $subject, string $message): bool
+function send_notification_email(string $toEmail, string $toName, string $subject, string $message, array $options = []): bool
 {
-    // Check if user has opted out of email notifications
     global $pdo;
-    try {
-        $prefStmt = $pdo->prepare('SELECT email_notifications FROM Perdoruesi WHERE email = ? LIMIT 1');
-        $prefStmt->execute([$toEmail]);
-        $pref = $prefStmt->fetch(PDO::FETCH_ASSOC);
-        if ($pref && (int) $pref['email_notifications'] === 0) {
-            return true; // Silently skip — user opted out
+    $bypassPreferences = !empty($options['bypass_preferences']);
+
+    if (!$bypassPreferences) {
+        try {
+            $prefStmt = $pdo->prepare('SELECT email_notifications FROM Perdoruesi WHERE email = ? LIMIT 1');
+            $prefStmt->execute([$toEmail]);
+            $pref = $prefStmt->fetch(PDO::FETCH_ASSOC);
+            if ($pref && (int) $pref['email_notifications'] === 0) {
+                return true;
+            }
+        } catch (Throwable $e) {
+            // If preference check fails, proceed with sending.
         }
-    } catch (Throwable $e) {
-        // If preference check fails, proceed with sending
     }
 
     $safeName = htmlspecialchars($toName, ENT_QUOTES, 'UTF-8');
     $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
-    $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $safeMessage = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
     $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+    $actionUrl = trim((string) ($options['action_url'] ?? ''));
+    if ($actionUrl !== '') {
+        $actionUrl = ts_absolute_app_url($actionUrl);
+    }
+    $actionLabel = trim((string) ($options['action_label'] ?? ''));
+    if ($actionUrl !== '' && $actionLabel === '') {
+        $actionLabel = 'Shiko detajet';
+    }
+    $actionHtml = '';
+    $actionText = '';
+    if ($actionUrl !== '' && $actionLabel !== '') {
+        $safeActionUrl = htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8');
+        $safeActionLabel = htmlspecialchars($actionLabel, ENT_QUOTES, 'UTF-8');
+        $actionHtml = '
+                      <p style="margin:0 0 20px; text-align:center;">
+                        <a href="' . $safeActionUrl . '" style="display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;">' . $safeActionLabel . '</a>
+                      </p>';
+        $actionText = "\n\n{$actionLabel}: {$actionUrl}";
+    }
+    $preferencesHtml = '';
+    $preferencesText = '';
+    if (!$bypassPreferences) {
+        $preferencesHtml = '
+                  <tr>
+                    <td style="padding:12px 30px 16px; border-top:1px solid #e9f3ef;">
+                      <p style="margin:0; color:#999; font-size:11px; text-align:center; line-height:1.5;">Nuk dëshironi të merrni këto email? <a href="' . $safeSite . '/views/volunteer_panel.php?tab=settings" style="color:#00715D; text-decoration:underline;">Çaktivizoni njoftimet me email</a> në cilësimet e llogarisë suaj.</p>
+                    </td>
+                  </tr>';
+        $preferencesText = "\n\nPër të çaktivizuar njoftimet me email, vizitoni cilësimet e llogarisë.";
+    }
 
     $bodyHtml = "
         <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
@@ -893,14 +1011,11 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
                       <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeName},</p>
                       <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">{$safeSubject}</h2>
                       <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeMessage}</p>
+                                            {$actionHtml}
                       <p style=\"margin:0; color:#6b6b6b; font-size:12px;\">Ky mesazh është nga Tirana Solidare.</p>
                     </td>
                   </tr>
-                  <tr>
-                    <td style=\"padding:12px 30px 16px; border-top:1px solid #e9f3ef;\">
-                      <p style=\"margin:0; color:#999; font-size:11px; text-align:center; line-height:1.5;\">Nuk dëshironi të merrni këto email? <a href=\"{$safeSite}/views/volunteer_panel.php?tab=settings\" style=\"color:#00715D; text-decoration:underline;\">Çaktivizoni njoftimet me email</a> në cilësimet e llogarisë suaj.</p>
-                    </td>
-                  </tr>
+                                    {$preferencesHtml}
                   <tr>
                     <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
                       <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
@@ -911,9 +1026,92 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
             </tr>
           </table>
         </div>";
-    $bodyText = "Përshëndetje {$toName},\n\n{$message}\n\nPër të çaktivizuar njoftimet me email, vizitoni cilësimet e llogarisë.\n\nTirana Solidare";
+        $bodyText = "Përshëndetje {$toName},\n\n{$message}{$actionText}{$preferencesText}\n\nTirana Solidare";
 
     return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+}
+
+function send_contact_email(string $fromEmail, string $fromName, string $subject, string $message, ?int $fromUserId = null): bool
+{
+        if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                return false;
+        }
+
+        $fromName = trim($fromName) !== '' ? trim($fromName) : 'Vizitor';
+        $subject = trim($subject) !== '' ? trim($subject) : 'Mesazh nga faqja e kontaktit';
+        $message = trim($message);
+        if ($message === '') {
+                return false;
+        }
+
+        $toEmail = ts_support_email();
+        $toName = ts_support_name();
+        $finalSubject = '[Kontakt] ' . $subject;
+        $safeFromName = htmlspecialchars($fromName, ENT_QUOTES, 'UTF-8');
+        $safeFromEmail = htmlspecialchars($fromEmail, ENT_QUOTES, 'UTF-8');
+        $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
+        $safeMessage = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+        $safeSite = htmlspecialchars(app_base_url(), ENT_QUOTES, 'UTF-8');
+        $accountLine = $fromUserId !== null ? 'ID e llogarisë: ' . $fromUserId : 'Dërgues pa hyrje';
+        $safeAccountLine = htmlspecialchars($accountLine, ENT_QUOTES, 'UTF-8');
+
+        $bodyHtml = "
+                <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
+                    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
+                        <tr>
+                            <td align=\"center\" style=\"padding:24px 12px;\">
+                                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,0.08);\">
+                                    <tr>
+                                        <td style=\"background:linear-gradient(135deg, #00715D 0%, #005a48 100%); padding:20px 24px; text-align:center; color:#fff;\">
+                                            <div style=\"font-size:24px; font-weight:800; letter-spacing:0.2px;\">Tirana <strong>Solidare</strong></div>
+                                            <div style=\"font-size:14px; opacity:0.9; margin-top:2px;\">Mesazh i ri nga faqja e kontaktit</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style=\"padding:24px 30px 20px;\">
+                                            <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">{$safeSubject}</h2>
+                                            <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\"><strong>Dërguesi:</strong> {$safeFromName}</p>
+                                            <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\"><strong>Email-i:</strong> <a href=\"mailto:{$safeFromEmail}\" style=\"color:#00715D; text-decoration:none;\">{$safeFromEmail}</a></p>
+                                            <p style=\"margin:0 0 16px; color:#2b3a3a; font-size:14px;\">{$safeAccountLine}</p>
+                                            <div style=\"padding:16px 18px; background:#f4faf7; border:1px solid #dceee6; border-radius:10px; color:#374151; font-size:15px; line-height:1.65;\">{$safeMessage}</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style=\"padding:16px 30px 20px; background:#f1f8f4; color:#3c3c3c; font-size:12px; text-align:center;\">
+                                            <strong>Tirana Solidare</strong> • <a href=\"{$safeSite}\" style=\"color:#00715D; text-decoration:none;\">tiranasolidare.al</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>";
+        $bodyText = "Mesazh i ri nga faqja e kontaktit\n\nSubjekti: {$subject}\nDërguesi: {$fromName}\nEmail-i: {$fromEmail}\n{$accountLine}\n\n{$message}";
+
+        global $pdo;
+        $queueId = 0;
+        try {
+                if (queue_email($toEmail, $toName, $finalSubject, $bodyHtml, $bodyText) && $pdo) {
+                        $queueId = (int) $pdo->lastInsertId();
+                }
+        } catch (Throwable $e) {
+                // Non-critical fallback to direct send below.
+        }
+
+        $sent = send_email_direct($toEmail, $toName, $finalSubject, $bodyHtml, $bodyText, [
+                'reply_to_email' => $fromEmail,
+                'reply_to_name' => $fromName,
+        ]);
+
+        if ($sent && $queueId > 0) {
+                try {
+                        $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$queueId]);
+                } catch (Throwable $e) {
+                        // Non-critical.
+                }
+        }
+
+        return $sent;
 }
 
 /**

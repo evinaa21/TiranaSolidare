@@ -86,16 +86,36 @@ function help_request_insert_notification(PDO $pdo, int $userId, string $message
     $stmt->execute([$userId, $message, $type, 'help_request', $requestId, $link]);
 }
 
-function help_request_email_recipient(?string $email, ?string $name, string $subject, string $message): void
+function help_request_email_recipient(?string $email, ?string $name, string $subject, string $message, array $options = []): void
 {
     if (filter_var((string) $email, FILTER_VALIDATE_EMAIL)) {
         send_notification_email(
             (string) $email,
             $name !== null && $name !== '' ? $name : 'Përdorues',
             $subject,
-            $message
+            $message,
+            $options
         );
     }
+}
+
+function help_request_location_unlocked_ids(PDO $pdo, int $userId): array
+{
+    if ($userId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare('SELECT id_kerkese_ndihme, statusi FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?');
+    $stmt->execute([$userId]);
+
+    $ids = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (ts_help_request_application_unlocks_location($row['statusi'] ?? null)) {
+            $ids[] = (int) $row['id_kerkese_ndihme'];
+        }
+    }
+
+    return array_values(array_unique($ids));
 }
 
 function help_request_promote_waitlisted(PDO $pdo, int $requestId, int $limit = 1): array
@@ -155,8 +175,8 @@ switch ($action) {
             $pdo->beginTransaction();
 
             $check = $pdo->prepare(
-                "SELECT kn.id_kerkese_ndihme, kn.id_perdoruesi, kn.titulli, kn.statusi, kn.tipi,
-                        kn.matching_mode, kn.capacity_total,
+                "SELECT kn.id_kerkese_ndihme, kn.id_perdoruesi, kn.titulli, kn.statusi, kn.tipi, kn.vendndodhja,
+                    kn.moderation_status, kn.matching_mode, kn.capacity_total,
                         p.emri AS krijuesi_emri, p.email AS krijuesi_email
                  FROM Kerkesa_per_Ndihme kn
                  JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
@@ -236,6 +256,30 @@ switch ($action) {
                 $applicationStatus === 'waitlisted' ? 'Aplikant i ri në listë pritjeje' : 'Aplikim i ri për postimin tuaj',
                 $ownerMessage
             );
+
+            $applicantEmailStmt = $pdo->prepare('SELECT email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $applicantEmailStmt->execute([$user['id']]);
+            $applicantEmail = $applicantEmailStmt->fetchColumn();
+            if (filter_var($applicantEmail, FILTER_VALIDATE_EMAIL)) {
+                $applicantMessage = ($applicationStatus === 'waitlisted'
+                    ? "Aplikimi juaj për postimin \"{$request['titulli']}\" u regjistrua dhe jeni shtuar në listën e pritjes."
+                    : "Aplikimi juaj për postimin \"{$request['titulli']}\" u regjistrua me sukses dhe është në pritje të shqyrtimit.")
+                    . "\n\nDetaje:\n"
+                    . 'Tipi: ' . ($request['tipi'] === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                    . 'Vendndodhja: ' . (($request['vendndodhja'] ?? '') !== '' ? $request['vendndodhja'] : 'Do të shfaqet në platformë pasi të vazhdojë përputhja.');
+
+                send_notification_email(
+                    (string) $applicantEmail,
+                    $user['emri'] ?? 'Përdorues',
+                    'Konfirmim aplikimi për postim — Tirana Solidare',
+                    $applicantMessage,
+                    [
+                        'bypass_preferences' => true,
+                        'action_url' => "/views/help_requests.php?id={$requestId}",
+                        'action_label' => 'Shiko postimin',
+                    ]
+                );
+            }
 
             json_success([
                 'id_aplikimi_kerkese' => $applicationId,
@@ -576,6 +620,9 @@ switch ($action) {
         // Determine viewer context for moderation filtering
         $viewerIsAdmin = isset($_SESSION['user_id']) && is_admin_role($_SESSION['roli'] ?? '');
         $viewerId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+        $locationUnlockedRequestIds = $viewerIsAdmin || $viewerId <= 0
+            ? []
+            : help_request_location_unlocked_ids($pdo, $viewerId);
 
         try {
             // Optional filters
@@ -671,6 +718,12 @@ switch ($action) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $requests = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
+            $requests = array_map(static function (array $request) use ($viewerId, $viewerIsAdmin, $locationUnlockedRequestIds): array {
+                if (ts_can_view_help_request_location($request, $viewerId, $viewerIsAdmin ? 'admin' : 'volunteer', $locationUnlockedRequestIds)) {
+                    return $request;
+                }
+                return ts_strip_help_request_location($request);
+            }, $requests);
 
             json_success([
                 'requests'    => $requests,
@@ -725,7 +778,16 @@ switch ($action) {
                 }
             }
 
-            json_success(ts_normalize_row($request));
+            $locationUnlockedRequestIds = ($getViewerId > 0 && !$getViewerIsAdmin)
+                ? help_request_location_unlocked_ids($pdo, $getViewerId)
+                : [];
+
+            $request = ts_normalize_row($request);
+            if (!ts_can_view_help_request_location($request, $getViewerId, $getViewerIsAdmin ? 'admin' : 'volunteer', $locationUnlockedRequestIds)) {
+                $request = ts_strip_help_request_location($request);
+            }
+
+            json_success($request);
         } catch (\Exception $e) {
             error_log('help_requests get: ' . $e->getMessage());
             json_error('Gabim gjatë marrjes të kërkesës.', 500);
@@ -823,12 +885,62 @@ switch ($action) {
                 $matchingConfig['capacity_total'],
             ]);
 
+            $requestId = (int) $pdo->lastInsertId();
+
+            if ($moderationStatus === 'pending_review') {
+                $adminStmt = $pdo->query(
+                    "SELECT id_perdoruesi, emri, email
+                     FROM Perdoruesi
+                     WHERE roli IN ('admin','super_admin','Admin')
+                       AND statusi_llogarise IN ('active', 'Aktiv')"
+                );
+                $adminMessage = "{$user['emri']} dërgoi një postim të ri për shqyrtim: \"{$titulli}\".";
+                foreach ($adminStmt as $adminRow) {
+                    help_request_insert_notification($pdo, (int) $adminRow['id_perdoruesi'], $adminMessage, $requestId, 'moderation_help_request');
+                    help_request_email_recipient(
+                        $adminRow['email'] ?? null,
+                        $adminRow['emri'] ?? 'Administrator',
+                        'Postim i ri në shqyrtim — Tirana Solidare',
+                        $adminMessage,
+                        [
+                            'action_url' => "/views/help_requests.php?id={$requestId}",
+                            'action_label' => 'Shiko postimin',
+                        ]
+                    );
+                }
+            }
+
+            $creatorEmailStmt = $pdo->prepare('SELECT email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+            $creatorEmailStmt->execute([$user['id']]);
+            $creatorEmail = $creatorEmailStmt->fetchColumn();
+            if (filter_var($creatorEmail, FILTER_VALIDATE_EMAIL)) {
+                $creatorMessage = ($moderationStatus === 'approved'
+                    ? "Postimi juaj \"{$titulli}\" u publikua me sukses."
+                    : "Postimi juaj \"{$titulli}\" u regjistrua dhe po pret miratimin e administratorëve.")
+                    . "\n\nDetaje:\n"
+                    . 'Tipi: ' . ($tipi === 'offer' ? 'Dua të ndihmoj' : 'Kërkoj ndihmë') . "\n"
+                    . 'Vendndodhja: ' . (($vendndodhja ?? '') !== '' ? $vendndodhja : 'Nuk u specifikua') . "\n"
+                    . 'Statusi: ' . ($moderationStatus === 'approved' ? 'Publikuar' : 'Në shqyrtim');
+
+                send_notification_email(
+                    (string) $creatorEmail,
+                    $user['emri'] ?? 'Përdorues',
+                    'Konfirmim për postimin tuaj — Tirana Solidare',
+                    $creatorMessage,
+                    [
+                        'bypass_preferences' => true,
+                        'action_url' => "/views/help_requests.php?id={$requestId}",
+                        'action_label' => 'Shiko postimin',
+                    ]
+                );
+            }
+
             $createdMessage = $moderationStatus === 'approved'
                 ? 'Kërkesa u krijua me sukses.'
                 : 'Kërkesa u krijua dhe është në shqyrtim nga administratorët.';
 
             json_success([
-                'id_kerkese_ndihme' => (int) $pdo->lastInsertId(),
+                'id_kerkese_ndihme' => $requestId,
                 'moderation_status' => $moderationStatus,
                 'message'           => $createdMessage,
             ], 201);

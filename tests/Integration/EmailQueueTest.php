@@ -113,6 +113,28 @@ class EmailQueueTest extends DatabaseTestCase
     }
 
     /** @test */
+    public function send_notification_email_can_bypass_opt_out_for_critical_notices(): void
+    {
+        $this->createTestUser([
+            'email' => 'critical@example.com',
+            'email_notifications' => 0,
+        ]);
+
+        $result = send_notification_email(
+            'critical@example.com',
+            'Critical User',
+            'Security notice',
+            'Body',
+            ['bypass_preferences' => true]
+        );
+
+        $this->assertTrue($result);
+
+        $count = (int) self::$pdo->query("SELECT COUNT(*) FROM email_queue WHERE to_email = 'critical@example.com'")->fetchColumn();
+        $this->assertSame(1, $count);
+    }
+
+    /** @test */
     public function send_notification_email_escapes_subject_in_html(): void
     {
         $this->createTestUser(['email' => 'xss@example.com']);
@@ -133,6 +155,28 @@ class EmailQueueTest extends DatabaseTestCase
 
         $row = self::$pdo->query("SELECT body_html FROM email_queue ORDER BY id DESC LIMIT 1")->fetch();
         $this->assertStringContainsString('aktivizoni njoftimet', mb_strtolower($row['body_html']));
+    }
+
+    /** @test */
+    public function send_notification_email_includes_action_link_when_provided(): void
+    {
+        $this->createTestUser(['email' => 'action@example.com']);
+
+        send_notification_email(
+            'action@example.com',
+            'User',
+            'Test',
+            'Test message',
+            [
+                'action_url' => '/views/login.php',
+                'action_label' => 'Hap hyrjen',
+            ]
+        );
+
+        $row = self::$pdo->query("SELECT body_html, body_text FROM email_queue ORDER BY id DESC LIMIT 1")->fetch();
+        $this->assertStringContainsString('Hap hyrjen', $row['body_html']);
+        $this->assertStringContainsString('http://localhost/TiranaSolidare/views/login.php', $row['body_html']);
+        $this->assertStringContainsString('http://localhost/TiranaSolidare/views/login.php', $row['body_text']);
     }
 
     /** @test */

@@ -52,8 +52,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
     <ol>
       <li>
-        Dërgoni email në 
-        <a href="mailto:info@tiranasolidare.al">info@tiranasolidare.al</a>.
+        Hapni <a href="<?= htmlspecialchars(ts_contact_page_path()) ?>">faqen e kontaktit</a> dhe dërgoni kërkesën tuaj për rishikim.
       </li>
       <li>
         Shpjegoni shkurt pse mendoni se bllokimi është gabim ose si do të përmirësoni sjelljen.
@@ -73,7 +72,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
     <!-- Actions -->
     <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 20px;">
-      <a href="mailto:info@tiranasolidare.al" class="btn_secondary">
+      <a href="<?= htmlspecialchars(ts_contact_page_path()) ?>" class="btn_secondary">
         Kontakto ekipin
       </a>
     </div>

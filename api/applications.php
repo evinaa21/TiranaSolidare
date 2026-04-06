@@ -242,7 +242,12 @@ switch ($action) {
         }
 
         // Create notification for admins
-        $admins = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE roli IN ('admin','super_admin')");
+        $admins = $pdo->query(
+            "SELECT id_perdoruesi, emri, email
+             FROM Perdoruesi
+             WHERE roli IN ('admin','super_admin','Admin')
+               AND statusi_llogarise IN ('active', 'Aktiv')"
+        );
         $notifStmt = $pdo->prepare(
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
@@ -250,6 +255,42 @@ switch ($action) {
         $eventLink = "/TiranaSolidare/views/events.php?id={$eventId}";
         foreach ($admins as $admin) {
             $notifStmt->execute([$admin['id_perdoruesi'], $msg, 'aplikim_event', 'event', $eventId, $eventLink]);
+            if (filter_var($admin['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                send_notification_email(
+                    $admin['email'],
+                    $admin['emri'] ?? 'Administrator',
+                    'Aplikim i ri për event — Tirana Solidare',
+                    $msg,
+                    [
+                        'action_url' => "/views/events.php?id={$eventId}",
+                        'action_label' => 'Shiko eventin',
+                    ]
+                );
+            }
+        }
+
+        $userEmailStmt = $pdo->prepare('SELECT email FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+        $userEmailStmt->execute([$user['id']]);
+        $userEmail = $userEmailStmt->fetchColumn();
+        if (filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+            $applicantMessage = ($waitlisted
+                ? "Aplikimi juaj për eventin \"{$event['titulli']}\" u regjistrua dhe jeni shtuar në listën e pritjes."
+                : "Aplikimi juaj për eventin \"{$event['titulli']}\" u regjistrua me sukses dhe është në pritje të shqyrtimit.")
+                . "\n\nDetaje:\n"
+                . 'Data: ' . date('d/m/Y H:i', strtotime((string) $event['data'])) . "\n"
+                . 'Vendndodhja: ' . (($event['vendndodhja'] ?? '') !== '' ? $event['vendndodhja'] : 'Do të konfirmohet në faqen e eventit.');
+
+            send_notification_email(
+                (string) $userEmail,
+                $user['emri'] ?? 'Përdorues',
+                'Konfirmim aplikimi për event — Tirana Solidare',
+                $applicantMessage,
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => "/views/events.php?id={$eventId}",
+                    'action_label' => 'Shiko eventin',
+                ]
+            );
         }
 
         $successMsg = $waitlisted

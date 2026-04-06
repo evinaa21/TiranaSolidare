@@ -6,6 +6,8 @@ if (!function_exists('ts_get_site_logo_url')) {
 $logoUrl = ts_get_site_logo_url();
 $hasCustomLogo = ts_has_custom_logo();
 $dataAttr = $hasCustomLogo ? ' data-custom-logo="true"' : '';
+$contactPage = ts_contact_page_path();
+$supportEmail = ts_support_email();
 ?>
 
 <footer id="footer" class="footer"<?php echo $dataAttr; ?><?php echo $hasCustomLogo ? ' style="--logo-url: url(\'' . htmlspecialchars($logoUrl) . '\')"' : ''; ?>>
@@ -28,11 +30,12 @@ $dataAttr = $hasCustomLogo ? ' data-custom-logo="true"' : '';
         <li>Legal</li>
         <li><a href="/TiranaSolidare/views/privacy.php">Politika e Privatësisë</a></li>
         <li><a href="/TiranaSolidare/views/terms.php">Rregullat e Përdorimit</a></li>
-        <li><a href="mailto:info@tiranasolidare.al">Kontakto</a></li>
+        <li><a href="<?= htmlspecialchars($contactPage) ?>">Kontakto</a></li>
       </ul>
       <ul>
         <li>Kontakt</li>
-        <li><a href="mailto:info@tiranasolidare.al">info@tiranasolidare.al</a></li>
+        <li><a href="<?= htmlspecialchars($contactPage) ?>">Faqja e kontaktit</a></li>
+        <li><span><?= htmlspecialchars($supportEmail) ?></span></li>
         <li><a href="tel:+355691234567">+355 69 123 4567</a></li>
         <li><a href="#">Bashkia Tiranë, Tiranë</a></li>
       </ul>

@@ -346,11 +346,11 @@ $params[] = $user['id'];
         $target = $targetInfo->fetch();
 
         $blockedPageUrl = app_base_url() . '/views/blocked.php';
+        $contactPageUrl = ts_absolute_app_url(ts_contact_page_path());
         if ($blockReason !== '') {
             $blockMessage = "Llogaria juaj është bllokuar nga një administrator.\n\n"
                 . "Arsyeja e bllokimit: {$blockReason}\n\n"
-                . "Për të kërkuar zhbllokim, dërgoni email te team@tiranasolidare.al me emrin dhe adresën tuaj të llogarisë, "
-                . "si dhe një shpjegim të shkurtër.";
+                . "Për të kërkuar zhbllokim, përdorni faqen e kontaktit: {$contactPageUrl}";
         } else {
             $blockMessage = 'Llogaria juaj është bllokuar nga një administrator. '
                 . 'Për arsye dhe hapa për zhbllokim, ju lutem shihni: ' . $blockedPageUrl;
@@ -364,7 +364,12 @@ $params[] = $user['id'];
                 $target['email'],
                 $target['emri'] ?? 'Volunteer',
                 'Llogaria juaj është bllokuar',
-                $blockMessage
+                $blockMessage,
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => '/views/blocked.php',
+                    'action_label' => 'Shiko udhëzimet',
+                ]
             );
         }
 
@@ -416,7 +421,12 @@ $params[] = $user['id'];
                 $unblockTarget['email'],
                 $unblockTarget['emri'] ?? 'Volunteer',
                 'Llogaria juaj u zhbllokua — Tirana Solidare',
-                $unblockMsg
+                $unblockMsg,
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => '/views/volunteer_panel.php',
+                    'action_label' => 'Hap panelin',
+                ]
             );
         }
 
@@ -480,7 +490,12 @@ $params[] = $user['id'];
                 $roleEmailUser['email'],
                 $roleEmailUser['emri'] ?? 'Volunteer',
                 'Roli juaj u ndryshua — Tirana Solidare',
-                $roleMsg
+                $roleMsg,
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => $panelLink,
+                    'action_label' => 'Hap panelin',
+                ]
             );
         }
 

@@ -14,6 +14,25 @@ $requestCapacitySummary = '';
 $requestCapacityDetail = '';
 $requestQueueSummary = '';
 $listMatchingById = [];
+$requestLocationUnlockedIds = [];
+$canViewRequestLocation = false;
+
+if ($isLoggedIn && !$isAdmin) {
+  try {
+    $locationStmt = $pdo->prepare(
+      'SELECT id_kerkese_ndihme, statusi FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?'
+    );
+    $locationStmt->execute([(int) $currentUserId]);
+    foreach ($locationStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      if (ts_help_request_application_unlocks_location($row['statusi'] ?? null)) {
+        $requestLocationUnlockedIds[] = (int) $row['id_kerkese_ndihme'];
+      }
+    }
+    $requestLocationUnlockedIds = array_values(array_unique($requestLocationUnlockedIds));
+  } catch (Throwable $e) {
+    error_log('help_requests view location ids: ' . $e->getMessage());
+  }
+}
 
 // ── Single help request detail ──
 if (isset($_GET['id'])) {
@@ -100,6 +119,14 @@ if (isset($_GET['id'])) {
         $myApplyStmt->execute([(int) $request['id_kerkese_ndihme'], (int) $currentUserId]);
         $myRequestApplication = $myApplyStmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($myRequestApplication) $myRequestApplication = ts_normalize_row($myRequestApplication);
+      }
+
+      $canViewRequestLocation = $isOwner
+        || $isAdmin
+        || ($myRequestApplication && ts_help_request_application_unlocks_location($myRequestApplication['statusi'] ?? null));
+
+      if (!$canViewRequestLocation && !empty($request)) {
+        $request = ts_strip_help_request_location($request);
       }
 
       if ($isOwner || $isAdmin) {
@@ -286,13 +313,21 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
         <p><?= nl2br(htmlspecialchars($request['pershkrimi'] ?? 'Nuk ka përshkrim.')) ?></p>
       </div>
 
-      <?php if ($isLoggedIn && !empty($request['latitude']) && !empty($request['longitude'])): ?>
+      <?php if ($canViewRequestLocation && !empty($request['latitude']) && !empty($request['longitude'])): ?>
       <div class="map-detail-card">
         <div class="map-detail-card__header">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
           Vendndodhja në hartë
         </div>
         <div id="request-detail-map" class="ts-map-display"></div>
+      </div>
+      <?php elseif (!$canViewRequestLocation): ?>
+      <div class="map-detail-card" style="background:#f8fafc;border:1px solid #dbe7e2;">
+        <div class="map-detail-card__header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12 11 14 15 10"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+          Vendndodhja është e mbrojtur
+        </div>
+        <p style="margin:0;color:#506172;line-height:1.7;">Për siguri dhe privatësi, vendndodhja e saktë shfaqet vetëm për postuesin, administratorët ose pasi të keni aplikuar në këtë postim.</p>
       </div>
       <?php endif; ?>
     </div>
@@ -340,12 +375,19 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             </div>
             <div><span>Krijuar</span><strong><?= date('d/m/Y — H:i', strtotime($request['krijuar_me'])) ?></strong></div>
           </li>
-          <?php if ($isLoggedIn && !empty($request['vendndodhja'])): ?>
+          <?php if ($canViewRequestLocation && !empty($request['vendndodhja'])): ?>
           <li>
             <div class="rq-info-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
             </div>
             <div><span>Vendndodhja</span><strong><?= htmlspecialchars($request['vendndodhja']) ?></strong></div>
+          </li>
+          <?php elseif (!$canViewRequestLocation && ($canApplyToRequest || !$isOwner)): ?>
+          <li>
+            <div class="rq-info-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            </div>
+            <div><span>Vendndodhja</span><strong>Shfaqet pasi të aplikoni</strong></div>
           </li>
           <?php endif; ?>
         </ul>
@@ -402,7 +444,7 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
             <p class="rq-sidebar-hint">
               <?= ($requestMatching['resolved_status'] ?? 'open') === 'filled'
                 ? 'Kapaciteti aktiv është i mbushur, por mund të bashkoheni në listën e pritjes.'
-                : 'Postuesi do të njoftohet menjëherë dhe do të mund t\'ju kontaktojë me email.' ?>
+                : 'Postuesi do të njoftohet menjëherë dhe do të mund t\'ju kontaktojë me email. Vendndodhja do të hapet sapo aplikimi të regjistrohet.' ?>
             </p>
             <div class="rq-inline-status" id="rq-apply-status" style="display:none"></div>
           <?php elseif ($myRequestApplication): ?>
@@ -706,10 +748,16 @@ $statKerkesa      = (int) $pdo->query("SELECT COUNT(*) FROM Kerkesa_per_Ndihme W
           <div class="rq-card__content">
             <h3 class="rq-card__title"><?= htmlspecialchars($req['titulli']) ?></h3>
             <p class="rq-card__desc"><?= htmlspecialchars(mb_substr($req['pershkrimi'] ?? '', 0, $isFeatured ? 220 : 110)) ?><?= mb_strlen($req['pershkrimi'] ?? '') > ($isFeatured ? 220 : 110) ? '...' : '' ?></p>
-            <?php if ($isFeatured && !empty($req['vendndodhja'])): ?>
+            <?php $cardShowsLocation = ts_can_view_help_request_location($req, $currentUserId !== null ? (int) $currentUserId : null, $isAdmin ? 'admin' : 'volunteer', $requestLocationUnlockedIds); ?>
+            <?php if ($isFeatured && $cardShowsLocation && !empty($req['vendndodhja'])): ?>
             <div class="rq-card__location">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
               <?= htmlspecialchars($req['vendndodhja']) ?>
+            </div>
+            <?php elseif ($isFeatured): ?>
+            <div class="rq-card__location" style="color:#64748b;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+              Vendndodhja e saktë shfaqet pas aplikimit
             </div>
             <?php endif; ?>
             <div class="rq-card__matching-meta">
@@ -888,9 +936,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.querySelectorAll('.rq-contact-form').forEach((form) => {
     form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+        setInlineStatus(applyStatus, 'success', (json.data.message || 'Aplikimi u dërgua me sukses.') + ' Po hapim detajet e vendndodhjes...');
       const statusEl = form.querySelector('.rq-inline-status');
       const requestId = parseInt(form.dataset.requestId || '0', 10);
+        setTimeout(() => window.location.reload(), 900);
       const applicantId = parseInt(form.dataset.applicantId || '0', 10);
       const subjekti = (form.querySelector('input[name="subjekti"]')?.value || '').trim();
       const mesazhi = (form.querySelector('textarea[name="mesazhi"]')?.value || '').trim();
@@ -985,8 +1034,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const mapEl = document.getElementById('request-detail-map');
   if (mapEl) {
     TSMap.display('request-detail-map', {
-      lat: <?= json_encode($request['latitude'] ?? null) ?>,
-      lng: <?= json_encode($request['longitude'] ?? null) ?>,
+      lat: <?= json_encode($canViewRequestLocation ? ($request['latitude'] ?? null) : null) ?>,
+      lng: <?= json_encode($canViewRequestLocation ? ($request['longitude'] ?? null) : null) ?>,
       label: <?= json_encode($request['titulli'] ?? '') ?>,
       type: <?= json_encode(($request['tipi'] ?? '') === 'offer' ? 'offer' : 'request') ?>
     });

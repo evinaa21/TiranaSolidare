@@ -12,6 +12,13 @@
  */
 require_once __DIR__ . '/helpers.php';
 
+function messages_require_non_admin(array $user): void
+{
+    if (is_admin_role($user['roli'] ?? '')) {
+        json_error('Mesazhet direkte nuk janë aktive për administratorët.', 403);
+    }
+}
+
 $action = $_GET['action'] ?? 'conversations';
 
 switch ($action) {
@@ -20,6 +27,7 @@ switch ($action) {
 case 'conversations':
     require_method('GET');
     $user = require_auth();
+    messages_require_non_admin($user);
     release_session();
 
     $stmt = $pdo->prepare(
@@ -27,6 +35,7 @@ case 'conversations':
             c.other_id,
             p.emri AS other_emri,
             p.profile_color AS other_color,
+            p.roli AS other_roli,
             m_last.mesazhi AS last_message,
             c.last_time,
             c.unread_count
@@ -52,16 +61,19 @@ case 'conversations':
     $stmt->execute([$uid, $uid, $uid, $uid, $uid]);
     $conversations = ts_normalize_rows($stmt->fetchAll());
 
-    $unreadStmt = $pdo->prepare(
-        "SELECT COUNT(*) FROM Mesazhi 
-         WHERE marruesi_id = ? AND is_read = 0
-         AND NOT EXISTS (
-             SELECT 1 FROM user_blocks
-             WHERE blocker_id = derguesi_id AND blocked_id = ?
-         )"
+    $conversations = array_values(array_filter(
+        $conversations,
+        static fn (array $conversation): bool => ts_can_message_user_roles($user['roli'] ?? 'volunteer', $conversation['other_roli'] ?? null)
+    ));
+    $totalUnread = array_reduce(
+        $conversations,
+        static fn (int $carry, array $conversation): int => $carry + (int) ($conversation['unread_count'] ?? 0),
+        0
     );
-    $unreadStmt->execute([$uid, $uid]);
-    $totalUnread = (int) $unreadStmt->fetchColumn();
+    $conversations = array_map(static function (array $conversation): array {
+        unset($conversation['other_roli']);
+        return $conversation;
+    }, $conversations);
 
     json_success([
         'conversations' => $conversations,
@@ -73,6 +85,7 @@ case 'conversations':
     case 'thread':
         require_method('GET');
         $user = require_auth();
+        messages_require_non_admin($user);
         $withId = (int) ($_GET['with'] ?? 0);
 
         if ($withId <= 0) {
@@ -80,11 +93,14 @@ case 'conversations':
         }
 
         // Verify other user exists
-        $otherCheck = $pdo->prepare('SELECT id_perdoruesi, emri, profile_color FROM Perdoruesi WHERE id_perdoruesi = ?');
+        $otherCheck = $pdo->prepare('SELECT id_perdoruesi, emri, profile_color, roli FROM Perdoruesi WHERE id_perdoruesi = ?');
         $otherCheck->execute([$withId]);
         $other = $otherCheck->fetch();
         if (!$other) {
             json_error('Përdoruesi nuk u gjet.', 404);
+        }
+        if (!ts_can_message_user_roles($user['roli'] ?? 'volunteer', $other['roli'] ?? null)) {
+            json_error(ts_admin_contact_policy_message(), 403);
         }
 
         $pagination = get_pagination(50);
@@ -129,6 +145,7 @@ case 'conversations':
     case 'send':
         require_method('POST');
         $user = require_auth();
+        messages_require_non_admin($user);
         $body = get_json_body();
         $errors = [];
 
@@ -167,8 +184,11 @@ case 'conversations':
             json_error('Përdoruesi marrës nuk u gjet.', 404);
         }
 
-        if ($receiver['statusi_llogarise'] !== 'active') {
+        if (ts_normalize_value((string) ($receiver['statusi_llogarise'] ?? '')) !== 'active') {
             json_error('Nuk mund t\'i dërgoni mesazh këtij përdoruesi.', 403);
+        }
+        if (!ts_can_message_user_roles($user['roli'] ?? 'volunteer', $receiver['roli'] ?? null)) {
+            json_error(ts_admin_contact_policy_message(), 403);
         }
 
         // Kontrollo nëse marrësi ka bllokuar dërguesin
@@ -252,6 +272,7 @@ if ($blockCheck2->fetchColumn() > 0) {
     case 'mark_read':
         require_method('PUT');
         $user = require_auth();
+        messages_require_non_admin($user);
         $withId = (int) ($_GET['with'] ?? 0);
 
         if ($withId <= 0) {
@@ -270,6 +291,7 @@ if ($blockCheck2->fetchColumn() > 0) {
     case 'search_users':
         require_method('GET');
         $user = require_auth();
+        messages_require_non_admin($user);
         $query = trim($_GET['q'] ?? '');
 
         if (mb_strlen($query) < 2) {
@@ -277,16 +299,26 @@ if ($blockCheck2->fetchColumn() > 0) {
         }
 
         $stmt = $pdo->prepare(
-            "SELECT id_perdoruesi, emri, profile_color
+            "SELECT id_perdoruesi, emri, profile_color, roli
              FROM Perdoruesi
-             WHERE id_perdoruesi != ? AND statusi_llogarise = 'active' AND verified = 1
+             WHERE id_perdoruesi != ? AND statusi_llogarise IN ('active', 'Aktiv') AND verified = 1
                AND emri LIKE ?
              ORDER BY emri ASC
-             LIMIT 10"
+             LIMIT 25"
         );
         $stmt->execute([$user['id'], "%$query%"]);
 
-        json_success(['users' => $stmt->fetchAll()]);
+        $users = ts_normalize_rows($stmt->fetchAll());
+        $users = array_values(array_filter(
+            $users,
+            static fn (array $candidate): bool => ts_can_message_user_roles($user['roli'] ?? 'volunteer', $candidate['roli'] ?? null)
+        ));
+        $users = array_slice(array_map(static function (array $candidate): array {
+            unset($candidate['roli']);
+            return $candidate;
+        }, $users), 0, 10);
+
+        json_success(['users' => $users]);
         break;
 
         // ── BLOCK USER ─────────────────────────────────
@@ -411,6 +443,7 @@ case 'is_blocked':
 case 'delete_conversation':
     require_method('DELETE');
     $user = require_auth();
+    messages_require_non_admin($user);
     $withId = (int) ($_GET['with'] ?? 0);
 
     if (!$withId) {

@@ -1918,6 +1918,13 @@ if (avatarDeleteBtn) {
 
   let currentThread = null;
   let pollTimer = null;
+  const vpContactPage = '/TiranaSolidare/views/contact.php';
+
+  function vpMessagePolicyNotice(message) {
+    return '<div style="padding:12px 14px;border:1px solid #dbe7e2;border-radius:12px;background:#f5fbf8;color:#33534b;font-size:0.92rem;line-height:1.55;">'
+      + esc(message)
+      + ' <a href="' + vpContactPage + '" style="color:var(--db-primary,#00715D);font-weight:600;">Faqja e kontaktit</a>.</div>';
+  }
 
   window.vpLoadConversations = async function() {
     const container = document.getElementById('vp-msg-content');
@@ -1970,7 +1977,7 @@ if (actions) actions.style.display = 'none';
 
     try {
       const json = await vpApiCall('messages.php?action=thread&with=' + userId + '&limit=50');
-      if (!json.success) { container.innerHTML = '<div class="vp-loading">Gabim.</div>'; return; }
+      if (!json.success) { container.innerHTML = vpMessagePolicyNotice(json.message || 'Gabim.'); return; }
 
       const messages = json.data.messages;
       // Shto butonin vetëm nëse ka mesazhe
@@ -2012,7 +2019,13 @@ html += '</div>'
     input.focus();
     try {
       const json = await vpApiCall('messages.php?action=send', { method: 'POST', body: JSON.stringify({ marruesi_id: toUserId, mesazhi: text }) });
-      if (json.success) vpRefreshThread(toUserId);
+      if (!json.success) {
+        input.value = text;
+        const blockBar = document.getElementById('vp-msg-block-bar');
+        if (blockBar) blockBar.innerHTML = vpMessagePolicyNotice(json.message || 'Gabim gjatë dërgimit të mesazhit.');
+        return;
+      }
+      vpRefreshThread(toUserId);
     } catch (e) {}
   };
 
@@ -2043,7 +2056,7 @@ html += '</div>'
     const actions = document.getElementById('vp-msg-actions');
     if (title) title.innerHTML = '<a href="?tab=messages" style="margin-right:8px;color:inherit;">← </a> Mesazh i ri';
     if (actions) actions.style.display = 'none';
-    container.innerHTML = '<div style="padding:1rem;"><input type="text" id="vp-msg-search" class="vp-input" placeholder="Kërko përdorues sipas emrit…" oninput="vpSearchUsers(this.value)" style="margin-bottom:1rem;width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;"><div id="vp-msg-search-results"></div></div>';
+    container.innerHTML = '<div style="padding:1rem;"><p style="margin:0 0 12px;color:#5b6b79;font-size:0.92rem;line-height:1.55;">Administratorët nuk shfaqen në këtë kërkim. Për Bashkinë ose ekipin përdorni <a href="' + vpContactPage + '" style="color:var(--db-primary,#00715D);font-weight:600;">faqen e kontaktit</a>.</p><input type="text" id="vp-msg-search" class="vp-input" placeholder="Kërko përdorues sipas emrit…" oninput="vpSearchUsers(this.value)" style="margin-bottom:1rem;width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;"><div id="vp-msg-search-results"></div></div>';
   };
 
   let searchTimer = null;

@@ -5,6 +5,21 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/status_labels.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+$currentMapUserId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+$currentMapUserRole = $_SESSION['roli'] ?? 'volunteer';
+$mapViewerIsAdmin = $currentMapUserId > 0 && ts_is_admin_role_value((string) $currentMapUserRole);
+$requestLocationUnlockedIds = [];
+if ($currentMapUserId > 0 && !$mapViewerIsAdmin) {
+  $locationStmt = $pdo->prepare('SELECT id_kerkese_ndihme, statusi FROM Aplikimi_Kerkese WHERE id_perdoruesi = ?');
+  $locationStmt->execute([$currentMapUserId]);
+  foreach ($locationStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    if (ts_help_request_application_unlocks_location($row['statusi'] ?? null)) {
+      $requestLocationUnlockedIds[] = (int) $row['id_kerkese_ndihme'];
+    }
+  }
+  $requestLocationUnlockedIds = array_values(array_unique($requestLocationUnlockedIds));
+}
+
 // Fetch all events with coordinates
 $stmtEvents = $pdo->query(
     "SELECT e.id_eventi, e.titulli, e.vendndodhja, e.latitude, e.longitude, e.data,
@@ -16,17 +31,29 @@ $stmtEvents = $pdo->query(
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch all open help requests with coordinates
-$stmtRequests = $pdo->query(
-    "SELECT kn.id_kerkese_ndihme, kn.titulli, kn.vendndodhja, kn.latitude, kn.longitude,
-            kn.tipi, kn.statusi, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
+// Fetch help requests with coordinates, but only expose exact locations to owners,
+// admins, or users with an active application on that request.
+$requests = [];
+if ($currentMapUserId > 0) {
+  $stmtRequests = $pdo->query(
+    "SELECT kn.id_kerkese_ndihme, kn.id_perdoruesi, kn.titulli, kn.vendndodhja, kn.latitude, kn.longitude,
+        kn.tipi, kn.statusi, kn.moderation_status, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
      FROM Kerkesa_per_Ndihme kn
      JOIN Perdoruesi p ON p.id_perdoruesi = kn.id_perdoruesi
      LEFT JOIN Kategoria kat ON kat.id_kategoria = kn.id_kategoria
      WHERE kn.latitude IS NOT NULL AND kn.longitude IS NOT NULL AND kn.statusi = 'open'
      ORDER BY kn.krijuar_me DESC"
-);
-$requests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));
+  );
+  $visibleRequests = ts_normalize_rows($stmtRequests->fetchAll(PDO::FETCH_ASSOC));
+  foreach ($visibleRequests as $request) {
+    if (($request['moderation_status'] ?? 'approved') !== 'approved' && !$mapViewerIsAdmin && (int) ($request['id_perdoruesi'] ?? 0) !== $currentMapUserId) {
+      continue;
+    }
+    if (ts_can_view_help_request_location($request, $currentMapUserId, (string) $currentMapUserRole, $requestLocationUnlockedIds)) {
+      $requests[] = $request;
+    }
+  }
+}
 
 // Fetch categories for event filters
 $categories = $pdo->query("SELECT * FROM Kategoria ORDER BY emri")->fetchAll(PDO::FETCH_ASSOC);
@@ -94,6 +121,9 @@ foreach ($requests as $req) {
     </span>
     <h1>Harta e Komunitetit</h1>
     <p class="rq-hero__subtitle">Shiko të gjitha eventet dhe kërkesat për ndihmë në hartën e Tiranës.</p>
+    <p class="rq-hero__subtitle" style="max-width:760px;margin-top:10px;color:#476061;">
+      Për privatësi, vendndodhjet e sakta të kërkesave shfaqen vetëm për postuesin, administratorët ose pasi të keni aplikuar në atë postim. Eventet mbeten të dukshme normalisht në hartë.
+    </p>
 
     <!-- Trust stats -->
     <div class="rq-trust-bar">

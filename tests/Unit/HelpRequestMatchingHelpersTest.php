@@ -57,4 +57,39 @@ final class HelpRequestMatchingHelpersTest extends TestCase
         $this->assertSame('completed', ts_help_request_normalize_status('closed'));
         $this->assertSame('completed', ts_help_request_normalize_status('Mbyllur'));
     }
+
+    public function test_application_statuses_that_unlock_location_are_recognized(): void
+    {
+        $this->assertTrue(ts_help_request_application_unlocks_location('pending'));
+        $this->assertTrue(ts_help_request_application_unlocks_location('APPROVED'));
+        $this->assertTrue(ts_help_request_application_unlocks_location('completed'));
+        $this->assertFalse(ts_help_request_application_unlocks_location('rejected'));
+        $this->assertFalse(ts_help_request_application_unlocks_location('withdrawn'));
+    }
+
+    public function test_location_visibility_is_limited_to_owner_admin_or_active_applicant(): void
+    {
+        $request = [
+            'id_kerkese_ndihme' => 42,
+            'id_perdoruesi' => 7,
+        ];
+
+        $this->assertTrue(ts_can_view_help_request_location($request, 7, 'volunteer', []));
+        $this->assertTrue(ts_can_view_help_request_location($request, 15, 'admin', []));
+        $this->assertTrue(ts_can_view_help_request_location($request, 15, 'volunteer', [42]));
+        $this->assertFalse(ts_can_view_help_request_location($request, 15, 'volunteer', []));
+    }
+
+    public function test_location_fields_are_stripped_when_hidden(): void
+    {
+        $request = ts_strip_help_request_location([
+            'vendndodhja' => 'Tirane',
+            'latitude' => 41.3275,
+            'longitude' => 19.8187,
+        ]);
+
+        $this->assertNull($request['vendndodhja']);
+        $this->assertNull($request['latitude']);
+        $this->assertNull($request['longitude']);
+    }
 }

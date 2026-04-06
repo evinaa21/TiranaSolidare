@@ -97,14 +97,6 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     <?php endif; ?>
     <?php endif; ?>
 
-    <button class="db-nav-item" data-panel="messages" onclick="switchPanel('messages', this)">
-      <span class="db-nav-icon-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-        <span class="db-nav-badge" id="msg-badge" style="display:none"></span>
-      </span>
-      <span>Mesazhet</span>
-    </button>
-
 <button class="db-nav-item" data-panel="notifications" onclick="switchPanel('notifications', this)">
   <span class="db-nav-icon-wrap">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -492,22 +484,6 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
   <?php endif; ?>
 
   <?php endif; ?>
-
-  <!-- ═══════════════ PANEL: MESSAGES ═══════════════ -->
-  <div class="db-panel" id="panel-messages">
-    <div class="db-panel__header">
-      <h3 id="msg-panel-title">Mesazhet</h3>
-      <div id="msg-header-actions">
-        <button class="db-btn db-btn--primary" onclick="showNewConversation()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          Mesazh i ri
-        </button>
-      </div>
-    </div>
-    <div id="msg-content">
-      <div class="db-loading">Duke ngarkuar bisedat…</div>
-    </div>
-  </div>
 
   <!-- ═══════════════ PANEL: NOTIFICATIONS ═══════════════ -->
   <div class="db-panel" id="panel-notifications">

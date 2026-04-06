@@ -235,7 +235,12 @@ switch ($action) {
                 $userRecord['email'],
                 $userRecord['emri'],
                 'Fjalëkalimi juaj u ndryshua — Tirana Solidare',
-                'Fjalëkalimi i llogarisë suaj në Tirana Solidare u ndryshua me sukses. Nëse nuk e keni bërë ju,.kontaktoni menjëherë administratorin ose ndryshoni fjalëkalimin.'
+                'Fjalëkalimi i llogarisë suaj në Tirana Solidare u ndryshua me sukses. Nëse nuk e keni bërë ju, kontaktoni menjëherë ekipin tonë nga faqja e kontaktit.',
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => ts_contact_page_path(),
+                    'action_label' => 'Kontakto ekipin',
+                ]
             );
         }
 
@@ -293,6 +298,8 @@ switch ($action) {
             json_error('Ky email është i përdorur nga një llogari tjetër.', 409);
         }
 
+        $oldEmail = (string) ($currentUser['email'] ?? '');
+
         // Atomically update email + set verified=0 + store token, then send confirmation
         try {
             $pdo->beginTransaction();
@@ -317,6 +324,24 @@ switch ($action) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('change_email failed: ' . $e->getMessage());
             json_error('Gabim gjatë ndryshimit të email-it.', 500);
+        }
+
+        if (filter_var($oldEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                send_notification_email(
+                    $oldEmail,
+                    $_SESSION['emri'] ?? 'Përdorues',
+                    'Adresa e email-it u ndryshua — Tirana Solidare',
+                    "Adresa e email-it e llogarisë suaj u ndryshua në {$newEmail}. Nëse nuk e keni bërë ju, kontaktoni menjëherë ekipin tonë.",
+                    [
+                        'bypass_preferences' => true,
+                        'action_url' => ts_contact_page_path(),
+                        'action_label' => 'Kontakto ekipin',
+                    ]
+                );
+            } catch (Throwable $e) {
+                error_log('change_email old-address alert failed: ' . $e->getMessage());
+            }
         }
 
         // Destroy the current session — user must log in again after verifying the new address
