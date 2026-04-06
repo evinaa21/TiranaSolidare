@@ -4,8 +4,20 @@ require_once __DIR__ . '/../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 // Fetch top 20 volunteers by score
-$stmt = $pdo->query(
-    "SELECT
+$currentUserId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+
+$blockClause = '';
+$blockParams = [];
+if ($currentUserId > 0) {
+    $blockClause = "AND NOT EXISTS (
+        SELECT 1 FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_id = p.id_perdoruesi)
+           OR (blocker_id = p.id_perdoruesi AND blocked_id = ?)
+    )";
+    $blockParams = [$currentUserId, $currentUserId];
+}
+
+$sql = "SELECT
         p.id_perdoruesi,
         p.emri,
         p.profile_color,
@@ -32,9 +44,16 @@ $stmt = $pdo->query(
      WHERE p.roli = 'volunteer'
        AND p.statusi_llogarise = 'active'
        AND p.verified = 1
+       {$blockClause}
      ORDER BY score DESC, p.emri ASC
-     LIMIT 20"
-);
+     LIMIT 20";
+
+if ($currentUserId > 0) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($blockParams);
+} else {
+    $stmt = $pdo->query($sql);
+}
 $leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Pre-fetch badges for all leaderboard users

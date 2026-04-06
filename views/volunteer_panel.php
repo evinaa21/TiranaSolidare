@@ -739,13 +739,14 @@ $badgeIcons = [
               <div class="vp-request-card__header">
                 <div class="vp-request-card__badges">
                   <span class="vp-badge vp-badge--<?= $req['tipi'] === 'offer' ? 'offer' : 'request' ?>"><?= $req['tipi'] === 'request' ? 'Kërkoj ndihmë' : 'Dua të ndihmoj' ?></span>
-                  <span class="vp-badge vp-badge--<?= htmlspecialchars($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span>
                   <?php
                     $vpModStatus = $req['moderation_status'] ?? 'approved';
                     if ($vpModStatus === 'pending_review'): ?>
                     <span class="vp-badge" style="background:#fef3c7;color:#92400e;">&#9203; <?= status_label('pending_review') ?></span>
                   <?php elseif ($vpModStatus === 'rejected'): ?>
                     <span class="vp-badge" style="background:#fee2e2;color:#991b1b;">&#10007; <?= status_label('rejected') ?></span>
+                  <?php else: ?>
+                    <span class="vp-badge vp-badge--<?= htmlspecialchars($req['statusi']) ?>"><?= htmlspecialchars(status_label($req['statusi'])) ?></span>
                   <?php endif; ?>
                 </div>
               </div>
@@ -2200,3 +2201,5 @@ async function vpDeleteConversation(userId, userName) {
 <?php endif; ?>
 </body>
 </html>
+
+

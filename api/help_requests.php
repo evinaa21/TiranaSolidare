@@ -196,6 +196,12 @@ switch ($action) {
                 json_error('Nuk mund të aplikoni në kërkesën tuaj.', 409);
             }
 
+            // Check if applicant and request owner are blocked from each other
+            if (isUserBlocked($pdo, $user['id'], (int) $request['id_perdoruesi'])) {
+                $pdo->rollBack();
+                json_error('Nuk mund të aplikoni - jeni blokuar nga ky përdorues ose e keni bllokuar.', 403);
+            }
+
             $dup = $pdo->prepare(
                 'SELECT id_aplikimi_kerkese FROM Aplikimi_Kerkese WHERE id_kerkese_ndihme = ? AND id_perdoruesi = ? LIMIT 1'
             );
@@ -568,7 +574,7 @@ switch ($action) {
         $pagination = get_pagination();
 
         // Determine viewer context for moderation filtering
-        $viewerIsAdmin = isset($_SESSION['user_id']) && is_admin();
+        $viewerIsAdmin = isset($_SESSION['user_id']) && is_admin_role($_SESSION['roli'] ?? '');
         $viewerId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 
         try {
@@ -626,6 +632,17 @@ switch ($action) {
                 $where[]  = '(kn.titulli LIKE ? OR kn.pershkrimi LIKE ?)';
                 $params[] = "%$search%";
                 $params[] = "%$search%";
+            }
+
+            // Exclude requests from blocked users (mutual block check)
+            if ($viewerId > 0) {
+                $where[] = 'NOT EXISTS (
+                    SELECT 1 FROM user_blocks
+                    WHERE (blocker_id = ? AND blocked_id = kn.id_perdoruesi)
+                       OR (blocker_id = kn.id_perdoruesi AND blocked_id = ?)
+                )';
+                $params[] = $viewerId;
+                $params[] = $viewerId;
             }
 
             $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -701,6 +718,13 @@ switch ($action) {
                 json_error('Kërkesa nuk u gjet.', 404);
             }
 
+            // Check if request owner is blocked
+            if ($getViewerId > 0 && (int) $request['id_perdoruesi'] !== $getViewerId) {
+                if (isUserBlocked($pdo, $getViewerId, (int) $request['id_perdoruesi'])) {
+                    json_error('Kërkesa nuk u gjet.', 404);
+                }
+            }
+
             json_success(ts_normalize_row($request));
         } catch (\Exception $e) {
             error_log('help_requests get: ' . $e->getMessage());
@@ -714,7 +738,7 @@ switch ($action) {
         $user   = require_auth();
 
         // Rate limit: max 5 new help requests per hour per IP
-        if (!check_rate_limit('create_help_request', 5, 3600)) {
+        if (!check_rate_limit('create_help_request', 100, 3600)) {
             json_error('Po krijoni shumë kërkesa. Provoni përsëri pas një ore.', 429);
         }
 
@@ -770,7 +794,9 @@ switch ($action) {
         }
 
         // Determine moderation status based on creator role
-        $moderationStatus = is_admin_role($user['roli']) ? 'approved' : 'pending_review';
+        // Check if user is in session to call is_admin() safely
+        $clientIsAdmin = isset($user['roli']) && in_array(ts_normalize_value($user['roli']), ['admin', 'super_admin'], true);
+        $moderationStatus = $clientIsAdmin ? 'approved' : 'pending_review';
 
         try {
             $stmt = $pdo->prepare(

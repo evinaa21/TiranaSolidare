@@ -300,11 +300,50 @@ case 'block_user':
         json_error('ID e pavlefshme.', 400);
     }
 
-    $stmt = $pdo->prepare(
-        "INSERT IGNORE INTO user_blocks (blocker_id, blocked_id) VALUES (?, ?)"
-    );
-    $stmt->execute([$user['id'], $blocked_id]);
-    json_success(['message' => 'Përdoruesi u bllokua.']);
+    try {
+        $pdo->beginTransaction();
+
+        // Insert the block (one-directional)
+        $stmt = $pdo->prepare(
+            "INSERT IGNORE INTO user_blocks (blocker_id, blocked_id) VALUES (?, ?)"
+        );
+        $stmt->execute([$user['id'], $blocked_id]);
+
+        // Auto-withdraw active applications between the two users
+        // Case 1: User blocked an applicant who applied to their requests
+        $pdo->prepare(
+            "UPDATE Aplikimi_Kerkese
+             SET statusi = 'withdrawn'
+             WHERE id_perdoruesi = ? 
+               AND id_kerkese_ndihme IN (
+                   SELECT id_kerkese_ndihme FROM Kerkesa_per_Ndihme 
+                   WHERE id_perdoruesi = ?
+               )
+               AND statusi IN ('pending', 'approved', 'waitlisted')"
+        )->execute([$blocked_id, $user['id']]);
+
+        // Case 2: User's applications to the blocked user's requests
+        $pdo->prepare(
+            "UPDATE Aplikimi_Kerkese
+             SET statusi = 'withdrawn'
+             WHERE id_perdoruesi = ?
+               AND id_kerkese_ndihme IN (
+                   SELECT id_kerkese_ndihme FROM Kerkesa_per_Ndihme 
+                   WHERE id_perdoruesi = ?
+               )
+               AND statusi IN ('pending', 'approved', 'waitlisted')"
+        )->execute([$user['id'], $blocked_id]);
+
+        $pdo->commit();
+
+        json_success(['message' => 'Përdoruesi u bllokua.']);
+    } catch (\Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('messages block_user: ' . $e->getMessage());
+        json_error('Gabim gjatë bllokimit të përdoruesit.', 500);
+    }
     break;
 
 // ── UNBLOCK USER ───────────────────────────────

@@ -312,38 +312,58 @@ case 'monthly':
         require_method('GET');
         $limit = min(max((int) ($_GET['limit'] ?? 20), 1), 50);
 
-        $stmt = $pdo->query(
-            "SELECT
-                p.id_perdoruesi,
-                p.emri,
-                p.profile_color,
-                p.krijuar_me AS anetaresuar_me,
-                COALESCE(apps.total_apps, 0) AS total_apps,
-                COALESCE(apps.accepted_apps, 0) AS accepted_apps,
-                COALESCE(reqs.total_requests, 0) AS total_requests,
-                (COALESCE(apps.accepted_apps, 0) * 5
-                 + COALESCE(apps.total_apps, 0) * 1
-                 + COALESCE(reqs.total_requests, 0) * 2) AS score
-             FROM Perdoruesi p
-             LEFT JOIN (
-                SELECT id_perdoruesi,
-                       COUNT(*) AS total_apps,
-                       SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END) AS accepted_apps
-                FROM Aplikimi
-                GROUP BY id_perdoruesi
-             ) apps ON apps.id_perdoruesi = p.id_perdoruesi
-             LEFT JOIN (
-                SELECT id_perdoruesi, COUNT(*) AS total_requests
-                FROM Kerkesa_per_Ndihme
-                GROUP BY id_perdoruesi
-             ) reqs ON reqs.id_perdoruesi = p.id_perdoruesi
-             WHERE p.roli = 'volunteer'
-               AND p.statusi_llogarise = 'active'
-               AND p.verified = 1
-               AND p.profile_public = 1
-             ORDER BY score DESC, p.emri ASC
-             LIMIT {$limit}"
-        );
+        // Get current viewer ID (for block filtering)
+        $viewerId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+
+        // Build block exclusion clause if user is logged in
+        $blockExclusionClause = '';
+        if ($viewerId > 0) {
+            $blockExclusionClause = "AND NOT EXISTS (
+                SELECT 1 FROM user_blocks
+                WHERE (blocker_id = ? AND blocked_id = p.id_perdoruesi)
+                   OR (blocker_id = p.id_perdoruesi AND blocked_id = ?)
+            )";
+        }
+
+        $query = "SELECT
+                    p.id_perdoruesi,
+                    p.emri,
+                    p.profile_color,
+                    p.krijuar_me AS anetaresuar_me,
+                    COALESCE(apps.total_apps, 0) AS total_apps,
+                    COALESCE(apps.accepted_apps, 0) AS accepted_apps,
+                    COALESCE(reqs.total_requests, 0) AS total_requests,
+                    (COALESCE(apps.accepted_apps, 0) * 5
+                     + COALESCE(apps.total_apps, 0) * 1
+                     + COALESCE(reqs.total_requests, 0) * 2) AS score
+                 FROM Perdoruesi p
+                 LEFT JOIN (
+                    SELECT id_perdoruesi,
+                           COUNT(*) AS total_apps,
+                           SUM(CASE WHEN statusi = 'approved' THEN 1 ELSE 0 END) AS accepted_apps
+                    FROM Aplikimi
+                    GROUP BY id_perdoruesi
+                 ) apps ON apps.id_perdoruesi = p.id_perdoruesi
+                 LEFT JOIN (
+                    SELECT id_perdoruesi, COUNT(*) AS total_requests
+                    FROM Kerkesa_per_Ndihme
+                    GROUP BY id_perdoruesi
+                 ) reqs ON reqs.id_perdoruesi = p.id_perdoruesi
+                 WHERE p.roli = 'volunteer'
+                   AND p.statusi_llogarise = 'active'
+                   AND p.verified = 1
+                   AND p.profile_public = 1
+                   {$blockExclusionClause}
+                 ORDER BY score DESC, p.emri ASC
+                 LIMIT {$limit}";
+
+        if ($viewerId > 0) {
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$viewerId, $viewerId]);
+        } else {
+            $stmt = $pdo->query($query);
+        }
+
         $volunteers = ts_normalize_rows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         json_success(['leaderboard' => $volunteers]);

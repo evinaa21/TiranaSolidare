@@ -64,13 +64,25 @@ if (!(int) $profile['profile_public'] && !$isOwner && !$isAdmin) {
     $privateProfile = false;
 }
 
+$isBlocked = false;
+if ($isLoggedIn && !$isOwner && !$isAdmin) {
+    if (isUserBlocked($pdo, (int) $_SESSION['user_id'], $userId)) {
+        http_response_code(404);
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Profil i padisponueshëm</title><link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css"></head><body>';
+        include __DIR__ . '/../public/components/header.php';
+        echo '<main style="display:flex;align-items:center;justify-content:center;min-height:60vh;"><div style="text-align:center"><h2>Ky profil nuk është i disponueshëm.</h2><a href="/TiranaSolidare/public/" class="btn_primary" style="margin-top:16px;display:inline-block;">Kthehu në faqe kryesore</a></div></main>';
+        include __DIR__ . '/../public/components/footer.php';
+        echo '</body></html>';
+        exit();
+    }
+}
 
 $recentEvents = [];
 $recentRequests = [];
 $earnedBadges = [];
 $eventCount = $requestCount = $helpAppCount = 0;
 
-if (!$privateProfile) {
+if (!$privateProfile && !$isBlocked) {
     // Stats and earned badges
     $badgeInfo = ts_get_user_profile_badges($pdo, $userId);
     $eventCount = (int) ($badgeInfo['metrics']['accepted_events'] ?? 0);
@@ -95,7 +107,7 @@ if (!$privateProfile) {
     $reqStmt = $pdo->prepare(
         "SELECT id_kerkese_ndihme, titulli, tipi, statusi, krijuar_me
          FROM Kerkesa_per_Ndihme
-         WHERE id_perdoruesi = ?
+         WHERE id_perdoruesi = ? AND moderation_status = 'approved'
          ORDER BY krijuar_me DESC
          LIMIT 10"
     );
@@ -728,7 +740,7 @@ if (!$privateProfile) {
 
 <main class="pp-shell">
     <div class="pp-card" style="--pp-color-from: <?= htmlspecialchars($profileColorTheme['from']) ?>; --pp-color-mid: <?= htmlspecialchars($profileColorTheme['mid']) ?>; --pp-color-to: <?= htmlspecialchars($profileColorTheme['to']) ?>;">
-        <?php if ($privateProfile): ?>
+        <?php if ($privateProfile || $isBlocked): ?>
         <div class="pp-cover">
             <div class="pp-cover__pattern"></div>
             <div class="pp-cover__inner">
@@ -737,10 +749,18 @@ if (!$privateProfile) {
                         <span class="pp-cover__eyebrow">Profil privat</span>
                         <h2 class="pp-cover__title"><?= htmlspecialchars($heroTitle) ?></h2>
                         <p class="pp-cover__summary"><?= htmlspecialchars($heroSummary) ?></p>
-                        <div class="pp-cover__chips">
+                       <div class="pp-cover__chips">
                             <span class="pp-cover__chip"><?= htmlspecialchars($roleLabel) ?></span>
                             <span class="pp-cover__chip">Anëtar që nga <?= htmlspecialchars($memberSince) ?></span>
                         </div>
+                        <?php if ($isLoggedIn && !$isOwner): ?>
+                        <div class="pp-cover__actions">
+                            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=<?= (int) $profile['id_perdoruesi'] ?>" class="pp-cover__cta">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                Dërgo mesazh
+                            </a>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <aside class="pp-cover__spotlight">
@@ -767,7 +787,11 @@ if (!$privateProfile) {
         </div>
         <div class="pp-private-msg">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Ky profil është privat.
+            <?php if ($isBlocked): ?>
+                Ky profil nuk është i disponueshëm.
+            <?php else: ?>
+                Ky profil është privat.
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <div class="pp-cover">

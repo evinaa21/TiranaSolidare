@@ -1446,3 +1446,27 @@ function ts_has_custom_logo(): bool
     $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
     return !empty($files);
 }
+
+/**
+ * Check if two users have blocked each other (mutual block check).
+ * Returns true if blocker_id=A,blocked_id=B OR blocker_id=B,blocked_id=A
+ *
+ * @param PDO $pdo Database connection
+ * @param int $userId First user ID
+ * @param int $otherUserId Second user ID
+ * @return bool True if users are blocked from each other
+ */
+function isUserBlocked(PDO $pdo, int $userId, int $otherUserId): bool
+{
+    if ($userId <= 0 || $otherUserId <= 0 || $userId === $otherUserId) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM user_blocks
+         WHERE (blocker_id = ? AND blocked_id = ?)
+            OR (blocker_id = ? AND blocked_id = ?)'
+    );
+    $stmt->execute([$userId, $otherUserId, $otherUserId, $userId]);
+    return (bool) $stmt->fetchColumn();
+}

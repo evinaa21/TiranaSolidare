@@ -148,6 +148,17 @@ if (!$isAdmin) {
     $where[] = "k.moderation_status = 'approved'";
 }
 
+// Fshih kërkesat e përdoruesve të bllokuar
+if ($isLoggedIn && $currentUserId) {
+    $where[] = 'NOT EXISTS (
+        SELECT 1 FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_id = k.id_perdoruesi)
+           OR (blocker_id = k.id_perdoruesi AND blocked_id = ?)
+    )';
+    $params[] = (int) $currentUserId;
+    $params[] = (int) $currentUserId;
+}
+
 if ($search !== '') {
     $where[]  = '(k.titulli LIKE ? OR k.pershkrimi LIKE ?)';
     $params[] = "%$search%";
