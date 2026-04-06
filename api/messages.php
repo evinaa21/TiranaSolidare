@@ -331,6 +331,23 @@ case 'is_blocked':
     $user = require_auth();
     $other_id = (int) ($_GET['user_id'] ?? 0);
 
+        // Merr rolin e tjetrit
+    $roleStmt = $pdo->prepare('SELECT roli FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
+    $roleStmt->execute([$other_id]);
+    $other_role = $roleStmt->fetchColumn() ?: 'volunteer';
+
+    // Nëse tjetri është admin, nuk mund të bllokohet
+    if (is_admin_role($other_role)) {
+        json_success([
+            'i_blocked_them' => false,
+            'they_blocked_me' => false,
+            'is_blocked' => false,
+            'other_role' => $other_role,
+            'can_block' => false,
+        ]);
+        break;
+    }
+
     $stmt = $pdo->prepare(
         "SELECT COUNT(*) FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?"
     );

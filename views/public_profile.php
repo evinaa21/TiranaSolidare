@@ -49,6 +49,12 @@ if ($publicHandle === '' && isset($_GET['id'])) {
     exit();
 }
 
+// Require login to view any profile
+if (!$isLoggedIn) {
+    header("Location: /TiranaSolidare/views/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
+    exit();
+}
+
 // Privacy check: if profile is private and viewer is not the owner or the admin
 $isAdmin = $isLoggedIn && in_array(ts_normalize_value($_SESSION['roli'] ?? ''), ['admin', 'super_admin'], true);
 
@@ -57,6 +63,7 @@ if (!(int) $profile['profile_public'] && !$isOwner && !$isAdmin) {
 } else {
     $privateProfile = false;
 }
+
 
 $recentEvents = [];
 $recentRequests = [];

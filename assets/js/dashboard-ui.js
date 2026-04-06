@@ -1195,7 +1195,7 @@ window.loadHelpRequests = async function (page = 1) {
     requests.forEach(r => {
         const tipClass = r.tipi === 'request' ? 'request' : 'offer';
         const statClass = ['open', 'filled'].includes(r.statusi) ? 'open' : 'closed';
-        const modStatus = r.moderation_status || 'approved';
+        const modStatus = r.moderation_status || 'pending_review';
         const modBadgeStyle = modStatus === 'pending_review'
             ? 'background:#fef3c7;color:#92400e;'
             : modStatus === 'rejected'

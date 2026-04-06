@@ -424,7 +424,7 @@ $badgeIcons = [
                 </div>
               </div>
               <p class="vp-muted" style="margin:0;">Kur profili është privat, përmbajtja e aktivitetit shfaqet vetëm për ju.</p>
-              <button type="submit" class="btn_primary">Ruaj dukshmërinë</button>
+              <button type="submit" class="btn_primary">Ruaj</button>
             </form>
             <div id="vp-visibility-status" class="vp-status" style="display:none"></div>
           </div>
@@ -978,7 +978,10 @@ if (nameForm) {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
-      document.getElementById('vp-profile-emri').textContent = emri;
+      const emriEl = document.getElementById('vp-profile-emri');
+      if (emriEl) emriEl.textContent = emri;
+      const heroNameEl = document.querySelector('.vp-hero__name');
+      if (heroNameEl) heroNameEl.textContent = emri;
       const headerUser = document.querySelector('.header-user-name');
       if (headerUser) headerUser.textContent = emri;
       vpStatus('vp-name-status', 'success', 'Emri u përditësua me sukses.');
@@ -1337,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNotifBadge();
   setInterval(updateNotifBadge, 15000);
   initPushSubscription();
-  applyVolunteerProfileTheme(document.getElementById('vp-profile-color')?.value || 'emerald');
+  applyVolunteerProfileTheme('<?= htmlspecialchars($profileColorKey) ?>');
 });
 
 // ── Web Push Subscription ─────────────────────────────────────────────────────
@@ -2109,8 +2112,15 @@ async function vpCheckAndRenderBlockBtn(userId, userName) {
 
         const iBlockedThem  = json.data.i_blocked_them;
         const theyBlockedMe = json.data.they_blocked_me;
+        const canBlock = json.data.can_block !== false;
 
-        // Butoni blloko/zhblloko — shfaqet gjithmonë
+        // Nëse tjetri është admin, mos shfaq butonin dhe lejo compose
+        if (!canBlock) {
+            if (compose) compose.style.display = '';
+            blockBar.innerHTML = '';
+            return;
+        }
+
         blockBar.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:4px 0;">
                 <button onclick="${iBlockedThem ? `vpUnblockUser(${userId},'${userName.replace(/'/g,"\\'")}')` : `vpBlockUser(${userId},'${userName.replace(/'/g,"\\'")}')` }"
@@ -2129,7 +2139,6 @@ async function vpCheckAndRenderBlockBtn(userId, userName) {
                 ? '<p style="text-align:center;font-size:0.8rem;color:#94a3b8;margin:4px 0 8px;">Ke bllokuar këtë përdorues.</p>'
                 : ''}`;
 
-        // Fshih compose nëse ka bllok nga cilado anë
         if (compose) {
             compose.style.display = (iBlockedThem || theyBlockedMe) ? 'none' : '';
         }
