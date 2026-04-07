@@ -80,12 +80,7 @@ $userEmail = $_SESSION['email'] ?? '';
           <span>Organizatorët menaxhojnë vetëm eventet dhe aplikimet e veta, jo platformën e plotë.</span>
         </div>
       </div>
-      <?php if (!$isLoggedIn): ?>
-      <div class="org-cta">
-        <a class="btn_primary" href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/become_organizer.php') ?>">Kyçu për të aplikuar</a>
-        <a class="btn_secondary" href="/TiranaSolidare/views/register.php">Krijo llogari</a>
-      </div>
-      <?php endif; ?>
+
     </div>
 
     <aside class="org-panel">
@@ -112,10 +107,49 @@ $userEmail = $_SESSION['email'] ?? '';
     <p><?= $isOrganizer ? 'Llogaria juaj është tashmë organizator aktiv. Mund të vazhdoni drejtpërdrejt në panelin e eventeve.' : ($isAdmin ? 'Si administrator, keni akses të plotë në panelin e eventeve pa nevojë për aplikim si organizatë.' : 'Plotësoni të dhënat bazë të organizatës. Një super administrator do t\'i shqyrtojë dhe do t\'ju njoftojë për vendimin.') ?></p>
 
     <?php if (!$isLoggedIn): ?>
-      <div class="org-status org-status--pending" style="display:block;">
-        <strong>Duhet të jeni i kyçur.</strong>
-        Regjistrohuni ose kyçuni me llogarinë që do të lidhet me organizatën tuaj.
+      <div class="org-status org-status--approved" style="display:block;margin-bottom:18px;">
+        <strong>Nuk keni nevojë për llogari.</strong>
+        Plotësoni formularin dhe Super Administratori do të krijojë llogarinë tuaj si organizator pas miratimit.
       </div>
+      <form id="organization-application-form" class="org-form">
+        <div class="org-row">
+          <div class="org-field">
+            <label for="organization_name">Emri i organizatës</label>
+            <input id="organization_name" name="organization_name" type="text" maxlength="160" required>
+          </div>
+          <div class="org-field">
+            <label for="contact_name">Personi i kontaktit</label>
+            <input id="contact_name" name="contact_name" type="text" maxlength="120" required>
+          </div>
+        </div>
+
+        <div class="org-row">
+          <div class="org-field">
+            <label for="contact_email">Email i kontaktit</label>
+            <input id="contact_email" name="contact_email" type="email" maxlength="160" required>
+          </div>
+          <div class="org-field">
+            <label for="contact_phone">Telefon (opsional)</label>
+            <input id="contact_phone" name="contact_phone" type="text" maxlength="40">
+          </div>
+        </div>
+
+        <div class="org-field">
+          <label for="website">Website (opsional)</label>
+          <input id="website" name="website" type="url" maxlength="255" placeholder="https://organizata.al">
+        </div>
+
+        <div class="org-field">
+          <label for="description">Përshkrim i shkurtër</label>
+          <textarea id="description" name="description" maxlength="2000" placeholder="Përshkruani misionin, fushën e punës dhe llojin e eventeve që dëshironi të organizoni." required></textarea>
+        </div>
+
+        <div class="org-actions">
+          <button type="submit" class="btn_primary">Dërgo aplikimin</button>
+          <a href="/TiranaSolidare/views/events.php" class="btn_secondary">Kthehu te eventet</a>
+        </div>
+        <div id="organization-form-status" class="org-note"></div>
+      </form>
     <?php else: ?>
       <div id="org-status-card" class="org-status"></div>
       <?php if ($isAdmin): ?>
@@ -179,7 +213,6 @@ $userEmail = $_SESSION['email'] ?? '';
 
 <?php include __DIR__ . '/../public/components/footer.php'; ?>
 
-<?php if ($isLoggedIn): ?>
 <script src="/TiranaSolidare/assets/js/main.js?v=<?= filemtime(__DIR__.'/../assets/js/main.js') ?>"></script>
 <script>
 const ORG_FORM = document.getElementById('organization-application-form');
@@ -263,15 +296,20 @@ if (ORG_FORM) {
     }
     if (json.success) {
       ORG_FORM.reset();
+      <?php if ($isLoggedIn): ?>
       document.getElementById('contact_name').value = '<?= htmlspecialchars(addslashes($userName)) ?>';
       document.getElementById('contact_email').value = '<?= htmlspecialchars(addslashes($userEmail)) ?>';
       await loadOrganizationApplicationState();
+      <?php else: ?>
+      ORG_FORM.classList.add('org-hidden');
+      <?php endif; ?>
     }
   });
 }
 
+<?php if ($isLoggedIn): ?>
 loadOrganizationApplicationState();
-</script>
 <?php endif; ?>
+</script>
 </body>
 </html>

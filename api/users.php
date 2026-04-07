@@ -715,6 +715,71 @@ $where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
         json_success(['message' => 'Llogaria juaj u fshi me sukses. Të dhënat tuaja u anonimizuan.']);
         break;
 
+    // ── CREATE USER (Super Admin only) ────────────
+    case 'create':
+        require_method('POST');
+        $admin = require_super_admin();
+        $body = get_json_body();
+        $errors = [];
+
+        $name = required_field($body, 'emri', $errors);
+        $email = required_field($body, 'email', $errors);
+        $role = $body['roli'] ?? '';
+
+        if (!empty($errors)) {
+            json_error('Të dhëna të pavlefshme.', 422, $errors);
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_error('Email-i nuk është i vlefshëm.', 422);
+        }
+
+        if (!in_array($role, ['admin', 'volunteer', 'organizer'], true)) {
+            json_error("Roli duhet të jetë 'admin', 'organizer' ose 'volunteer'.", 422);
+        }
+
+        // Check email uniqueness
+        $emailCheck = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE email = ? LIMIT 1');
+        $emailCheck->execute([$email]);
+        if ($emailCheck->fetch()) {
+            json_error('Ky email është tashmë i regjistruar.', 409);
+        }
+
+        // Create the user with a random password
+        $tempPassword = bin2hex(random_bytes(16));
+        $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO Perdoruesi (emri, email, fjalekalimi, roli, statusi_llogarise, verified, profile_public, profile_color, kryuar_me)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+        );
+        $stmt->execute([$name, $email, $hashedPassword, $role, 'active', 1, 0, 'emerald']);
+        $newUserId = (int) $pdo->lastInsertId();
+
+        // Send password reset email so the user can set their password
+        try {
+            ts_send_new_account_password_reset($pdo, $newUserId, $email, $name);
+        } catch (Throwable $e) {
+            error_log('Failed to send password setup email for created user: ' . $e->getMessage());
+        }
+
+        $roleLabel = match ($role) {
+            'admin' => 'Administrator',
+            'organizer' => 'Organizator',
+            default => 'Vullnetar',
+        };
+
+        log_admin_action($admin['id'], 'create_user', 'user', $newUserId, [
+            'roli' => $role,
+            'email' => $email,
+        ]);
+
+        json_success([
+            'message' => "Llogaria u krijua me sukses si {$roleLabel}. Një email me linkun për vendosjen e fjalëkalimit u dërgua te {$email}.",
+            'user_id' => $newUserId,
+        ], 201);
+        break;
+
     default:
-        json_error('Veprim i panjohur. Përdorni: upload_profile_picture, update_profile, list, get, block, unblock, change_role, deactivate, reactivate, public_profile, delete_account.', 400);
+        json_error('Veprim i panjohur. Përdorni: upload_profile_picture, update_profile, list, get, block, unblock, change_role, create, deactivate, reactivate, public_profile, delete_account.', 400);
 }

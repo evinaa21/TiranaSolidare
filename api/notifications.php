@@ -146,7 +146,7 @@ switch ($action) {
         }
 
         // Only allow known role values to avoid injection
-        if (!in_array($roli, ['all', 'volunteer', 'admin', 'super_admin'], true)) {
+        if (!in_array($roli, ['all', 'volunteer', 'admin', 'super_admin', 'organizer'], true)) {
             $roli = 'all';
         }
 

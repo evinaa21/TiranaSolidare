@@ -476,7 +476,7 @@ function ts_organization_application_status(?string $status): string
         : 'pending';
 }
 
-function ts_submit_organization_application(PDO $pdo, int $userId, array $data): int
+function ts_submit_organization_application(PDO $pdo, ?int $userId, array $data): int
 {
     $stmt = $pdo->prepare(
         'INSERT INTO organization_applications (
@@ -513,10 +513,11 @@ function ts_review_organization_application(PDO $pdo, int $applicationId, int $r
         throw new InvalidArgumentException('Vendimi duhet të jetë approved ose rejected.');
     }
 
+    // Fetch application — LEFT JOIN because applicant_user_id may be NULL (public application)
     $stmt = $pdo->prepare(
         'SELECT oa.*, p.emri AS applicant_name, p.email AS applicant_email, p.statusi_llogarise
          FROM organization_applications oa
-         JOIN Perdoruesi p ON p.id_perdoruesi = oa.applicant_user_id
+         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = oa.applicant_user_id
          WHERE oa.id = ?
          LIMIT 1'
     );
@@ -531,7 +532,9 @@ function ts_review_organization_application(PDO $pdo, int $applicationId, int $r
         throw new RuntimeException('Ky aplikim është shqyrtuar tashmë.');
     }
 
-    if (ts_normalize_value($application['statusi_llogarise'] ?? '') !== 'active') {
+    $hasUser = !empty($application['applicant_user_id']);
+
+    if ($hasUser && ts_normalize_value($application['statusi_llogarise'] ?? '') !== 'active') {
         throw new RuntimeException('Vetëm llogaritë aktive mund të miratohen si organizatorë.');
     }
 
@@ -539,22 +542,62 @@ function ts_review_organization_application(PDO $pdo, int $applicationId, int $r
 
     try {
         if ($decision === 'approved') {
-            $pdo->prepare(
-                'UPDATE Perdoruesi
-                 SET roli = ?,
-                     organization_name = ?,
-                     organization_website = ?,
-                     organization_phone = ?,
-                     organization_description = ?
-                 WHERE id_perdoruesi = ?'
-            )->execute([
-                'organizer',
-                $application['organization_name'],
-                $application['website'] ?: null,
-                $application['contact_phone'] ?: null,
-                $application['description'] ?: null,
-                $application['applicant_user_id'],
-            ]);
+            if ($hasUser) {
+                // Existing user — just update their role
+                $pdo->prepare(
+                    'UPDATE Perdoruesi
+                     SET roli = ?,
+                         organization_name = ?,
+                         organization_website = ?,
+                         organization_phone = ?,
+                         organization_description = ?
+                     WHERE id_perdoruesi = ?'
+                )->execute([
+                    'organizer',
+                    $application['organization_name'],
+                    $application['website'] ?: null,
+                    $application['contact_phone'] ?: null,
+                    $application['description'] ?: null,
+                    $application['applicant_user_id'],
+                ]);
+            } else {
+                // Public application — check if email is already taken
+                $emailCheck = $pdo->prepare('SELECT id_perdoruesi FROM Perdoruesi WHERE email = ? LIMIT 1');
+                $emailCheck->execute([$application['contact_email']]);
+                $existingUser = $emailCheck->fetch(PDO::FETCH_ASSOC);
+
+                if ($existingUser) {
+                    // Link to existing user and promote to organizer
+                    $newUserId = (int) $existingUser['id_perdoruesi'];
+                    $pdo->prepare(
+                        'UPDATE Perdoruesi
+                         SET roli = ?,
+                             organization_name = ?,
+                             organization_website = ?,
+                             organization_phone = ?,
+                             organization_description = ?
+                         WHERE id_perdoruesi = ?'
+                    )->execute([
+                        'organizer',
+                        $application['organization_name'],
+                        $application['website'] ?: null,
+                        $application['contact_phone'] ?: null,
+                        $application['description'] ?: null,
+                        $newUserId,
+                    ]);
+                    // Link the application to the user
+                    $pdo->prepare('UPDATE organization_applications SET applicant_user_id = ? WHERE id = ?')
+                        ->execute([$newUserId, $applicationId]);
+                    $application['applicant_user_id'] = $newUserId;
+                } else {
+                    // Create a new organizer account
+                    $newUserId = ts_create_organizer_from_application($pdo, $application);
+                    $pdo->prepare('UPDATE organization_applications SET applicant_user_id = ? WHERE id = ?')
+                        ->execute([$newUserId, $applicationId]);
+                    $application['applicant_user_id'] = $newUserId;
+                    $application['_account_created'] = true;
+                }
+            }
         }
 
         $pdo->prepare(
@@ -576,9 +619,81 @@ function ts_review_organization_application(PDO $pdo, int $applicationId, int $r
         throw $e;
     }
 
+    // For newly created accounts, send a password reset email outside the transaction
+    if (!empty($application['_account_created']) && $application['applicant_user_id']) {
+        try {
+            ts_send_new_account_password_reset($pdo, (int) $application['applicant_user_id'], $application['contact_email'], $application['contact_name']);
+        } catch (Throwable $e) {
+            error_log('Failed to send password reset for new organizer account: ' . $e->getMessage());
+        }
+    }
+
     $application['status'] = $decision;
     $application['review_notes'] = trim($reviewNotes);
+    // Fill in applicant_name / applicant_email for notification purposes
+    if (empty($application['applicant_name'])) {
+        $application['applicant_name'] = $application['contact_name'];
+    }
+    if (empty($application['applicant_email'])) {
+        $application['applicant_email'] = $application['contact_email'];
+    }
     return $application;
+}
+
+function ts_create_organizer_from_application(PDO $pdo, array $application): int
+{
+    $tempPassword = bin2hex(random_bytes(16));
+    $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO Perdoruesi (
+            emri, email, fjalekalimi, roli, statusi_llogarise, verified,
+            profile_public, profile_color,
+            organization_name, organization_website, organization_phone, organization_description,
+            krijuar_me
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+    );
+    $stmt->execute([
+        $application['contact_name'],
+        $application['contact_email'],
+        $hashedPassword,
+        'organizer',
+        'active',
+        1,
+        0,
+        'emerald',
+        $application['organization_name'],
+        $application['website'] ?: null,
+        $application['contact_phone'] ?: null,
+        $application['description'] ?: null,
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+function ts_send_new_account_password_reset(PDO $pdo, int $userId, string $email, string $name): void
+{
+    $plainToken = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $plainToken);
+    $expiresAt = (new DateTimeImmutable('+72 hours'))->format('Y-m-d H:i:s');
+
+    $pdo->prepare('UPDATE Perdoruesi SET password_reset_token_hash = ?, password_reset_token_expires = ? WHERE id_perdoruesi = ?')
+        ->execute([$tokenHash, $expiresAt, $userId]);
+
+    $resetUrl = app_base_url() . '/views/reset_password.php?token=' . urlencode($plainToken) . '&email=' . urlencode($email);
+
+    send_notification_email(
+        $email,
+        $name,
+        'Llogaria juaj u krijua — Tirana Solidare',
+        'Aplikimi juaj si organizatë u miratua dhe llogaria juaj u krijua. Klikoni linkun më poshtë për të vendosur fjalëkalimin tuaj.',
+        [
+            'bypass_preferences' => true,
+            'send_now'           => true,
+            'action_url'         => $resetUrl,
+            'action_label'       => 'Vendos fjalëkalimin',
+        ]
+    );
 }
 
 function ts_can_manage_event(array $user, array $event): bool

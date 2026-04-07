@@ -39,13 +39,25 @@ switch ($action) {
 
     case 'submit':
         require_method('POST');
-        $user = require_auth();
 
-        if (in_array(ts_normalize_value($user['roli'] ?? ''), ['admin', 'super_admin'], true)) {
-            json_error('Administratorët nuk kanë nevojë të aplikojnë si organizatorë.', 409);
-        }
-        if (ts_is_organizer_role_value($user['roli'] ?? null)) {
-            json_error('Ju jeni tashmë organizator i miratuar.', 409);
+        // Allow submission from logged-in or anonymous users
+        $userId = null;
+        $user = null;
+        if (isset($_SESSION['user_id'])) {
+            $user = require_auth();
+            $userId = (int) $user['id'];
+
+            if (in_array(ts_normalize_value($user['roli'] ?? ''), ['admin', 'super_admin'], true)) {
+                json_error('Administratorët nuk kanë nevojë të aplikojnë si organizatorë.', 409);
+            }
+            if (ts_is_organizer_role_value($user['roli'] ?? null)) {
+                json_error('Ju jeni tashmë organizator i miratuar.', 409);
+            }
+        } else {
+            // Rate limit anonymous submissions by IP
+            if (!check_rate_limit('org_apply_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 3, 3600)) {
+                json_error('Keni dërguar shumë aplikime. Provoni përsëri më vonë.', 429);
+            }
         }
 
         $body = get_json_body();
@@ -80,20 +92,31 @@ switch ($action) {
             json_error($lenErr, 422);
         }
 
-        $pendingCheck = $pdo->prepare(
-            "SELECT id, status FROM organization_applications
-             WHERE applicant_user_id = ?
-             ORDER BY created_at DESC, id DESC
-             LIMIT 1"
-        );
-        $pendingCheck->execute([$user['id']]);
+        // Check for duplicate pending applications
+        if ($userId) {
+            $pendingCheck = $pdo->prepare(
+                "SELECT id, status FROM organization_applications
+                 WHERE applicant_user_id = ?
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT 1"
+            );
+            $pendingCheck->execute([$userId]);
+        } else {
+            $pendingCheck = $pdo->prepare(
+                "SELECT id, status FROM organization_applications
+                 WHERE contact_email = ? AND applicant_user_id IS NULL
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT 1"
+            );
+            $pendingCheck->execute([$contactEmail]);
+        }
         $latest = $pendingCheck->fetch(PDO::FETCH_ASSOC);
 
         if ($latest && ts_organization_application_status($latest['status'] ?? null) === 'pending') {
             json_error('Ju keni tashmë një aplikim në pritje.', 409);
         }
 
-        $applicationId = ts_submit_organization_application($pdo, (int) $user['id'], [
+        $applicationId = ts_submit_organization_application($pdo, $userId, [
             'organization_name' => $organizationName,
             'contact_name' => $contactName,
             'contact_email' => $contactEmail,
@@ -162,7 +185,8 @@ switch ($action) {
             $params[] = $status;
         }
         if ($search !== '') {
-            $where[] = '(oa.organization_name LIKE ? OR oa.contact_name LIKE ? OR applicant.email LIKE ?)';
+            $where[] = '(oa.organization_name LIKE ? OR oa.contact_name LIKE ? OR oa.contact_email LIKE ? OR applicant.email LIKE ?)';
+            $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
@@ -173,7 +197,7 @@ switch ($action) {
         $countStmt = $pdo->prepare(
             "SELECT COUNT(*)
              FROM organization_applications oa
-             JOIN Perdoruesi applicant ON applicant.id_perdoruesi = oa.applicant_user_id
+             LEFT JOIN Perdoruesi applicant ON applicant.id_perdoruesi = oa.applicant_user_id
              $whereSql"
         );
         $countStmt->execute($params);
@@ -183,7 +207,7 @@ switch ($action) {
             "SELECT oa.*, applicant.emri AS applicant_name, applicant.email AS applicant_email,
                     reviewer.emri AS reviewer_name
              FROM organization_applications oa
-             JOIN Perdoruesi applicant ON applicant.id_perdoruesi = oa.applicant_user_id
+             LEFT JOIN Perdoruesi applicant ON applicant.id_perdoruesi = oa.applicant_user_id
              LEFT JOIN Perdoruesi reviewer ON reviewer.id_perdoruesi = oa.reviewed_by_user_id
              $whereSql
              ORDER BY FIELD(oa.status, 'pending', 'approved', 'rejected'), oa.created_at DESC, oa.id DESC
@@ -232,23 +256,29 @@ switch ($action) {
             $message .= ' Shënim: ' . $notes;
         }
 
-        $notifStmt = $pdo->prepare(
-            'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku)
-             VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        $notifStmt->execute([
-            $application['applicant_user_id'],
-            $message,
-            'organization_application',
-            'organization_application',
-            $applicationId,
-            ts_app_path('views/become_organizer.php'),
-        ]);
+        // Send in-app notification only if we have a user ID
+        if (!empty($application['applicant_user_id'])) {
+            $notifStmt = $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $notifStmt->execute([
+                $application['applicant_user_id'],
+                $message,
+                'organization_application',
+                'organization_application',
+                $applicationId,
+                ts_app_path('views/become_organizer.php'),
+            ]);
+        }
 
-        if (filter_var($application['applicant_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+        // Send email notification using contact_email (works for both public and logged-in applications)
+        $applicantEmail = $application['applicant_email'] ?? $application['contact_email'] ?? '';
+        $applicantName = $application['applicant_name'] ?? $application['contact_name'] ?? 'Përdorues';
+        if (filter_var($applicantEmail, FILTER_VALIDATE_EMAIL)) {
             send_notification_email(
-                $application['applicant_email'],
-                $application['applicant_name'] ?? 'Përdorues',
+                $applicantEmail,
+                $applicantName,
                 'Përditësim për aplikimin e organizatës — Tirana Solidare',
                 $message
             );

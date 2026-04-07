@@ -334,6 +334,18 @@ $stmt = $pdo->prepare(
             $message = ($manager['organization_name'] ?: $manager['emri']) . ' krijoi një event të ri në pritje të miratimit: "' . $titulli . '".';
             foreach ($reviewers as $reviewer) {
                 $notifStmt->execute([$reviewer['id_perdoruesi'], $message, 'event_review', 'event', $newId, ts_app_path('views/dashboard.php')]);
+                if (filter_var($reviewer['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                    send_notification_email(
+                        $reviewer['email'],
+                        $reviewer['emri'] ?? 'Administrator',
+                        'Event i ri në pritje të miratimit — Tirana Solidare',
+                        $message,
+                        [
+                            'action_url' => '/views/dashboard.php',
+                            'action_label' => 'Shiko në panel',
+                        ]
+                    );
+                }
             }
         }
 

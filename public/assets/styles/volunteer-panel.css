@@ -1571,6 +1571,9 @@ select.vp-input {
 .vp-notif__icon--admin     { background: rgba(225,114,84,0.12);  color: #d84d27; }
 .vp-notif__icon--event     { background: rgba(0,113,93,0.10);    color: #00715D; }
 .vp-notif__icon--request   { background: rgba(245,158,11,0.12);  color: #d97706; }
+.vp-notif__icon--message   { background: rgba(139,92,246,0.12);  color: #7c3aed; }
+.vp-notif__icon--support   { background: rgba(236,72,153,0.12);  color: #db2777; }
+.vp-notif__icon--org       { background: rgba(20,184,166,0.12);  color: #0d9488; }
 .vp-notif__icon--default   { background: rgba(100,116,139,0.10); color: #64748b; }
 
 .vp-notif__body {

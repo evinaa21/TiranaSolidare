@@ -1437,10 +1437,16 @@ window.loadNotifications = async function () {
             return `<div class="db-notif__icon db-notif__icon--broadcast"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>`;
         } else if (t === 'admin_veprim' || t === 'admin') {
             return `<div class="db-notif__icon db-notif__icon--admin"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>`;
-        } else if (t === 'aplikim_event' || t === 'event') {
+        } else if (t === 'aplikim_event' || t === 'event' || t === 'event_review') {
             return `<div class="db-notif__icon db-notif__icon--event"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div>`;
-        } else if (t === 'aplikim_kerkese' || t === 'request' || t === 'help_request') {
+        } else if (t === 'aplikim_kerkese' || t === 'request' || t === 'help_request' || t === 'moderation_help_request') {
             return `<div class="db-notif__icon db-notif__icon--request"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></div>`;
+        } else if (t === 'mesazh') {
+            return `<div class="db-notif__icon db-notif__icon--message"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>`;
+        } else if (t === 'support_message') {
+            return `<div class="db-notif__icon db-notif__icon--support"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>`;
+        } else if (t === 'organization_application') {
+            return `<div class="db-notif__icon db-notif__icon--org"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>`;
         }
         return `<div class="db-notif__icon db-notif__icon--default"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>`;
     }
@@ -1449,8 +1455,16 @@ window.loadNotifications = async function () {
         const t = (tipi || '').toLowerCase();
         if (['broadcast', 'broadcast_sent', 'admin_veprim', 'admin'].includes(t)) {
             return `<span class="db-notif__source db-notif__source--admin">Admin</span>`;
-        } else if (['aplikim_event', 'event', 'aplikim_kerkese', 'request', 'help_request'].includes(t)) {
-            return `<span class="db-notif__source db-notif__source--vol">Vullnetar</span>`;
+        } else if (['aplikim_event', 'event', 'event_review'].includes(t)) {
+            return `<span class="db-notif__source db-notif__source--event">Event</span>`;
+        } else if (['aplikim_kerkese', 'request', 'help_request', 'moderation_help_request'].includes(t)) {
+            return `<span class="db-notif__source db-notif__source--vol">Kërkesë</span>`;
+        } else if (t === 'mesazh') {
+            return `<span class="db-notif__source db-notif__source--msg">Mesazh</span>`;
+        } else if (t === 'support_message') {
+            return `<span class="db-notif__source db-notif__source--support">Kontakt</span>`;
+        } else if (t === 'organization_application') {
+            return `<span class="db-notif__source db-notif__source--org">Organizatë</span>`;
         }
         return '';
     }
@@ -1459,18 +1473,19 @@ window.loadNotifications = async function () {
     notifs.forEach(n => {
         const unread = !n.is_read;
         const hasLink = n.linku && n.linku.trim() !== '';
-        const linkOpen = hasLink ? `<a href="${escapeHtml(n.linku)}" class="db-notif__link" style="text-decoration:none;color:inherit;">` : '';
-        const linkClose = hasLink ? '</a>' : '';
         const tipi = n.tipi || '';
+        const clickHandler = hasLink
+            ? ` onclick="notifClick(event, ${n.id_njoftimi}, '${escapeHtml(n.linku).replace(/'/g, "\\'")}')" style="cursor:pointer;"`
+            : '';
         html += `<div class="db-notif ${unread ? 'db-notif--unread' : 'db-notif--read'}">
             ${_notifTypeIcon(tipi)}
-            ${linkOpen}<div class="db-notif__body">
+            <div class="db-notif__body"${clickHandler}>
                 <p class="db-notif__msg">${escapeHtml(n.mesazhi)}</p>
                 <div class="db-notif__meta">
                     <span class="db-notif__time">${formatDate(n.krijuar_me)}</span>
                     ${_notifSourceBadge(tipi)}
                 </div>
-            </div>${linkClose}
+            </div>
             <div class="db-notif__actions">
                 ${unread ? `<button class="db-btn db-btn--success db-btn--icon-sq" onclick="markRead(${n.id_njoftimi})" title="Shëno si të lexuar" aria-label="Shëno si të lexuar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>` : ''}
                 <button class="db-btn db-btn--danger db-btn--icon-sq" onclick="deleteNotif(${n.id_njoftimi})" title="Fshi" aria-label="Fshi"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -1491,6 +1506,15 @@ window.loadNotifications = async function () {
             notifBadge.style.display  = 'none';
         }
     }
+};
+
+window.notifClick = async function(event, id, link) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+        await apiCall(`notifications.php?action=mark_read&id=${id}`, 'PUT');
+    } catch (e) { /* navigate anyway */ }
+    window.location.href = link;
 };
 
 window.markRead = async function(id) {
@@ -3049,7 +3073,7 @@ window.loadOrganizationApplications = async function(page = 1) {
                 <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.84rem;color:#64748b;">
                     <span><strong>Website:</strong> ${app.website ? escapeHtml(app.website) : '—'}</span>
                     <span><strong>Telefon:</strong> ${app.contact_phone ? escapeHtml(app.contact_phone) : '—'}</span>
-                    <span><strong>Kërkuesi:</strong> ${escapeHtml(app.applicant_name || '')}</span>
+                    <span><strong>Kërkuesi:</strong> ${app.applicant_name ? escapeHtml(app.applicant_name) : '<em style="color:#94a3b8;">Pa llogari — do të krijohet automatikisht</em>'}</span>
                 </div>
                 ${app.review_notes ? `<div style="padding:12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.84rem;color:#475569;"><strong>Shënimi:</strong> ${escapeHtml(app.review_notes)}</div>` : ''}
                 ${app.status === 'pending' ? `<div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -3073,6 +3097,78 @@ window.reviewOrganizationApplication = async function(id, decision) {
     const json = await apiCall(`organizations.php?action=review&id=${id}`, 'PUT', { decision, review_notes: reviewNotes });
     dbToast(json.message || json.data?.message || 'U krye.', json.success ? 'success' : 'danger');
     if (json.success) loadOrganizationApplications();
+};
+
+// ── CREATE USER MODAL (Super Admin) ──────────────────────
+window.openCreateUserModal = function() {
+    // Remove existing modal if any
+    const existing = document.getElementById('create-user-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'create-user-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:20px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+            <h3 style="margin:0 0 6px;color:#0f2d27;font-size:1.2rem;">Krijo përdorues të ri</h3>
+            <p style="margin:0 0 18px;color:#64748b;font-size:.88rem;line-height:1.5;">Përdoruesi do të marrë një email me linkun për të vendosur fjalëkalimin.</p>
+            <div style="display:grid;gap:12px;">
+                <div>
+                    <label style="display:block;font-size:.84rem;font-weight:700;color:#375049;margin-bottom:5px;">Emri i plotë</label>
+                    <input id="create-user-name" type="text" maxlength="100" required style="width:100%;border:1.5px solid #d9e5e1;border-radius:12px;padding:10px 12px;font-size:.92rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:.84rem;font-weight:700;color:#375049;margin-bottom:5px;">Email</label>
+                    <input id="create-user-email" type="email" maxlength="255" required style="width:100%;border:1.5px solid #d9e5e1;border-radius:12px;padding:10px 12px;font-size:.92rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:.84rem;font-weight:700;color:#375049;margin-bottom:5px;">Roli</label>
+                    <select id="create-user-role" style="width:100%;border:1.5px solid #d9e5e1;border-radius:12px;padding:10px 12px;font-size:.92rem;box-sizing:border-box;">
+                        <option value="admin">Administrator</option>
+                        <option value="organizer">Organizator</option>
+                        <option value="volunteer" selected>Vullnetar</option>
+                    </select>
+                </div>
+            </div>
+            <div id="create-user-status" style="margin-top:12px;font-size:.86rem;color:#64748b;"></div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+                <button class="db-btn db-btn--ghost" onclick="document.getElementById('create-user-modal').remove()">Anulo</button>
+                <button class="db-btn db-btn--primary" onclick="submitCreateUser()">Krijo</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.getElementById('create-user-name').focus();
+};
+
+window.submitCreateUser = async function() {
+    const name = document.getElementById('create-user-name')?.value.trim();
+    const email = document.getElementById('create-user-email')?.value.trim();
+    const role = document.getElementById('create-user-role')?.value;
+    const status = document.getElementById('create-user-status');
+
+    if (!name || !email) {
+        if (status) { status.style.color = '#b91c1c'; status.textContent = 'Plotësoni emrin dhe email-in.'; }
+        return;
+    }
+
+    if (status) { status.style.color = '#64748b'; status.textContent = 'Duke krijuar llogarinë…'; }
+
+    const json = await apiCall('users.php?action=create', 'POST', { emri: name, email, roli: role });
+    if (status) {
+        status.style.color = json.success ? '#15803d' : '#b91c1c';
+        status.textContent = json.message || json.data?.message || (json.success ? 'U krijua.' : 'Gabim.');
+    }
+    if (json.success) {
+        dbToast(json.data?.message || 'Përdoruesi u krijua me sukses.', 'success');
+        setTimeout(() => {
+            const modal = document.getElementById('create-user-modal');
+            if (modal) modal.remove();
+        }, 1500);
+        // Refresh user list if visible
+        if (typeof loadUsers === 'function') loadUsers(1);
+    }
 };
 
 window.adminCancelLogo = async function() {
