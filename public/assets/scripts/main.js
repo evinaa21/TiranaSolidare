@@ -1,3 +1,38 @@
+function tsDetectBasePath(scriptMatchers) {
+  const candidates = [document.currentScript?.src || ''];
+  document.querySelectorAll('script[src]').forEach((script) => candidates.push(script.src));
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const pathname = new URL(candidate, window.location.href).pathname;
+      for (const matcher of scriptMatchers) {
+        const index = pathname.indexOf(matcher);
+        if (index >= 0) {
+          return pathname.slice(0, index);
+        }
+      }
+    } catch (err) {
+      // Ignore malformed URLs.
+    }
+  }
+
+  return '';
+}
+
+function tsAppPath(path = '') {
+  const basePath = window.TS_BASE_PATH ?? '';
+  const trimmed = String(path || '').replace(/^\/+/, '');
+  if (!trimmed) {
+    return basePath || '/';
+  }
+  return `${basePath}/${trimmed}`.replace(/\/+/g, '/');
+}
+
+window.TS_BASE_PATH = window.TS_BASE_PATH ?? tsDetectBasePath(['/public/assets/scripts/main.js', '/assets/js/main.js']);
+window.tsAppPath = window.tsAppPath || tsAppPath;
+window.TS_API_BASE = window.TS_API_BASE ?? tsAppPath('api');
+
 function toggleMenu() {
   const headerNav = document.querySelector('.header-nav');
   headerNav.classList.toggle('active');

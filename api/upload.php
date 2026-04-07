@@ -25,7 +25,7 @@ if (!isset($_FILES['image'])) {
 $result = handle_image_upload(
     $_FILES['image'],
     __DIR__ . '/../public/assets/uploads',
-    '/TiranaSolidare/public/assets/uploads',
+    ts_app_path('public/assets/uploads'),
     5 * 1024 * 1024,
     700,
     80

@@ -51,7 +51,7 @@ $kategorite = $pdo->query(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="<?= htmlspecialchars($siteSettings['theme_primary']) ?>">
-  <link rel="manifest" href="/TiranaSolidare/public/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <title><?= htmlspecialchars($siteSettings['organization_name']) ?></title>
   <link rel="stylesheet" href="assets/styles/main.css?v=20260401a">
   <link rel="stylesheet" href="assets/styles/requests.css?v=202603213">

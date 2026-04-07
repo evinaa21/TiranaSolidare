@@ -8,6 +8,10 @@
  * ---------------------------------------------------
  */
 
+const TS_APP_PATH = window.tsAppPath || ((path = '') => `/${String(path || '').replace(/^\/+/, '')}`);
+const TS_DEFAULT_EVENT_BANNER = TS_APP_PATH('public/assets/images/default-event.svg');
+const TS_DEFAULT_LOGO = TS_APP_PATH('public/assets/images/logo.png');
+
 // ── English→Albanian label map (mirrors PHP status_labels.php) ──
 const STATUS_LABELS = {
     pending: 'Në pritje', approved: 'Pranuar', rejected: 'Refuzuar',
@@ -21,6 +25,26 @@ const STATUS_LABELS = {
     past: 'E kaluar'
 };
 function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
+
+const SUPPORT_STATUS_LABELS = {
+    new: 'I ri',
+    read: 'Lexuar',
+    replied: 'Përgjigjur',
+    resolved: 'Zgjidhur'
+};
+
+function supportStatusLabel(v) {
+    return SUPPORT_STATUS_LABELS[(v || '').toLowerCase()] || v || 'I ri';
+}
+
+function supportStatusBadgeClass(v) {
+    switch ((v || '').toLowerCase()) {
+        case 'resolved': return 'db-badge--success';
+        case 'replied': return 'db-badge--info';
+        case 'read': return 'db-badge--vol';
+        default: return 'db-badge--warn';
+    }
+}
 
 // ── Panel switching ─────────────────────────────────
 
@@ -44,6 +68,9 @@ function _loadPanelData(panelId) {
             break;
         case 'reports':
             loadReportsPanel();
+            break;
+        case 'support':
+            loadSupportMessages();
             break;
         case 'notifications':
             loadNotifications();
@@ -955,7 +982,7 @@ const [ufrom, uto] = colorMap[u.profile_color || 'emerald'] || colorMap.emerald;
                <span class="db-badge db-badge--${statusClass}">${statusLabel(u.statusi_llogarise)}</span>
             </div>
          <div style="margin-top:8px;">
-                 <a href="/TiranaSolidare/views/public_profile.php?id=${u.id_perdoruesi}" target="_blank" class="db-btn db-btn--info db-btn--sm">
+                 <a href="${TS_APP_PATH(`views/public_profile.php?id=${u.id_perdoruesi}`)}" target="_blank" class="db-btn db-btn--info db-btn--sm">
                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         Shiko Profilin Publik
                      </a>
@@ -1136,7 +1163,7 @@ window.loadUserRequests = async function(userId, userName) {
             const tipClass = r.tipi === 'request' ? 'request' : 'offer';
             const statClass = ['open', 'filled', 'Open', 'Filled'].includes(r.statusi) ? 'open' : 'closed';
             body += `<tr>
-                <td><a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
+                <td><a href="${TS_APP_PATH(`views/help_requests.php?id=${r.id_kerkese_ndihme}`)}" target="_blank" style="color:var(--db-primary);font-weight:600;">${escapeHtml(r.titulli)}</a></td>
                 <td><span class="db-badge db-badge--${tipClass}">${escapeHtml(statusLabel(r.tipi))}</span></td>
                 <td><span class="db-badge db-badge--${statClass}">${escapeHtml(statusLabel(r.statusi))}</span></td>
                 <td>${formatDate(r.krijuar_me)}</td>
@@ -1322,7 +1349,7 @@ window.loadHelpRequests = async function (page = 1) {
             <td>${formatDate(r.krijuar_me)}</td>
             <td>
                 <div class="db-table__actions">
-    <a href="/TiranaSolidare/views/help_requests.php?id=${r.id_kerkese_ndihme}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
+    <a href="${TS_APP_PATH(`views/help_requests.php?id=${r.id_kerkese_ndihme}`)}" class="db-btn db-btn--info db-btn--sm" target="_blank">Shiko</a>
 ${modStatus === 'pending_review' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button><button class="db-btn db-btn--danger db-btn--sm" onclick="rejectRequest(${r.id_kerkese_ndihme})">Refuzo</button>` : ''}
 ${modStatus === 'rejected' ? `<button class="db-btn db-btn--sm" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="approveRequest(${r.id_kerkese_ndihme})">Mirato</button>` : ''}
 ${r.flags > 0 ? `<button class="db-btn db-btn--sm" onclick="viewRequestFlags(${r.id_kerkese_ndihme})">Raportime</button>` : ''}
@@ -1430,6 +1457,156 @@ window.loadNotifications = async function () {
     }
 };
 
+window.markRead = async function(id) {
+    const json = await apiCall(`notifications.php?action=mark_read&id=${id}`, 'PUT');
+    dbToast(json.message || json.data?.message || 'Njoftimi u përditësua.', json.success ? 'success' : 'danger');
+    await loadNotifications();
+};
+
+window.markAllRead = async function() {
+    const json = await apiCall('notifications.php?action=mark_all_read', 'PUT');
+    dbToast(json.message || json.data?.message || 'Të gjitha njoftimet u shënuan si të lexuara.', json.success ? 'success' : 'danger');
+    await loadNotifications();
+};
+
+window.deleteNotif = async function(id) {
+    const json = await apiCall(`notifications.php?action=delete&id=${id}`, 'DELETE');
+    dbToast(json.message || json.data?.message || 'Njoftimi u fshi.', json.success ? 'success' : 'danger');
+    await loadNotifications();
+};
+
+window.loadSupportMessages = async function(page = 1) {
+    const container = document.getElementById('support-messages-container');
+    const summaryEl = document.getElementById('support-summary');
+    if (!container) return;
+
+    const status = document.getElementById('support-status-filter')?.value || 'all';
+    const search = (document.getElementById('support-search')?.value || '').trim();
+    const params = new URLSearchParams({ action: 'list', page: String(page), limit: '12', status });
+    if (search) params.set('search', search);
+
+    const json = await apiCall(`support_messages.php?${params}`);
+    if (!json.success) {
+        container.innerHTML = `<div class="db-loading" style="color:#dc3545;">${escapeHtml(json.message || 'Gabim gjatë ngarkimit të inbox-it.')}</div>`;
+        return;
+    }
+
+    const payload = json.data || {};
+    const messages = payload.messages || [];
+    const summary = payload.summary || {};
+    if (summaryEl) {
+        summaryEl.innerHTML = `
+            <span class="db-badge db-badge--vol">Gjithsej ${summary.all || 0}</span>
+            <span class="db-badge db-badge--warn">Të reja ${summary.new || 0}</span>
+            <span class="db-badge db-badge--vol">Lexuar ${summary.read || 0}</span>
+            <span class="db-badge db-badge--info">Përgjigjur ${summary.replied || 0}</span>
+            <span class="db-badge db-badge--success">Zgjidhur ${summary.resolved || 0}</span>`;
+    }
+
+    if (!messages.length) {
+        container.innerHTML = '<div class="db-loading">Nuk ka mesazhe në inbox për këtë filtër.</div>';
+        return;
+    }
+
+    let html = '<div class="db-table-responsive"><table class="db-table"><thead><tr><th>Dërguesi</th><th>Subjekti</th><th>Statusi</th><th>Data</th><th>Veprime</th></tr></thead><tbody>';
+    messages.forEach((msg) => {
+        const id = Number(msg.id_support_message);
+        const statusClass = supportStatusBadgeClass(msg.status);
+        const preview = escapeHtml((msg.message || '').slice(0, 110));
+        const messageHtml = escapeHtml(msg.message || '').replace(/\n/g, '<br>');
+        const replyHtml = escapeHtml(msg.last_reply_message || '').replace(/\n/g, '<br>');
+        html += `
+            <tr id="support-message-row-${id}">
+                <td>
+                    <strong>${escapeHtml(msg.from_name || 'Vizitor')}</strong>
+                    <div style="font-size:0.82rem;color:#64748b;">${escapeHtml(msg.from_email || '')}</div>
+                    ${msg.sender_user_name ? `<div style="font-size:0.78rem;color:#94a3b8;">Llogari: ${escapeHtml(msg.sender_user_name)}</div>` : ''}
+                </td>
+                <td>
+                    <div style="font-weight:700;color:#0f172a;">${escapeHtml(msg.subject || 'Pa subjekt')}</div>
+                    <div style="font-size:0.84rem;color:#64748b;">${preview}${(msg.message || '').length > 110 ? '…' : ''}</div>
+                </td>
+                <td><span class="db-badge ${statusClass}">${escapeHtml(supportStatusLabel(msg.status))}</span></td>
+                <td>${formatDate(msg.created_at)}</td>
+                <td>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        ${msg.status === 'new' ? `<button class="db-btn db-btn--ghost db-btn--sm" onclick="updateSupportMessageStatus(${id}, 'read')">Lexuar</button>` : ''}
+                        ${msg.status !== 'resolved' ? `<button class="db-btn db-btn--success db-btn--sm" onclick="updateSupportMessageStatus(${id}, 'resolved')">Zgjidh</button>` : `<button class="db-btn db-btn--ghost db-btn--sm" onclick="updateSupportMessageStatus(${id}, 'read')">Rihap</button>`}
+                        <button class="db-btn db-btn--primary db-btn--sm" onclick="toggleSupportReply(${id})">Përgjigju</button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background:#f8fafc;padding:16px 18px;border-left:3px solid rgba(0,113,93,0.16);">
+                    <div style="font-size:0.82rem;color:#64748b;font-weight:700;margin-bottom:6px;">Mesazhi</div>
+                    <div style="color:#334155;line-height:1.7;">${messageHtml}</div>
+                    ${msg.last_reply_message ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;"><div style="font-size:0.82rem;color:#64748b;font-weight:700;margin-bottom:6px;">Përgjigjja e fundit ${msg.replied_by_name ? `nga ${escapeHtml(msg.replied_by_name)}` : ''}</div><div style="color:#334155;line-height:1.7;">${replyHtml}</div></div>` : ''}
+                    <div id="support-reply-wrap-${id}" style="display:none;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                        <textarea id="support-reply-message-${id}" class="ud-input" rows="4" maxlength="4000" placeholder="Shkruani përgjigjen që do t’i dërgohet përdoruesit me email…"></textarea>
+                        <div class="db-toggle-row" style="justify-content:flex-start;gap:10px;margin-top:10px;">
+                            <span>Shënoje edhe si të zgjidhur</span>
+                            <label class="db-toggle">
+                                <input type="checkbox" id="support-reply-resolve-${id}">
+                                <span class="db-toggle__slider"></span>
+                            </label>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <button class="db-btn db-btn--primary db-btn--sm" onclick="sendSupportReply(${id})">Dërgo përgjigjen</button>
+                            <button class="db-btn db-btn--ghost db-btn--sm" onclick="toggleSupportReply(${id})">Mbyll</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+    });
+    html += '</tbody></table></div>';
+
+    if ((payload.total_pages || 1) > 1) {
+        html += dbPagination(payload.page, payload.total_pages, 'loadSupportMessages');
+    }
+
+    container.innerHTML = html;
+
+    const targetId = new URLSearchParams(window.location.search).get('support_message');
+    if (targetId) {
+        const row = document.getElementById(`support-message-row-${targetId}`);
+        if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.boxShadow = 'inset 0 0 0 2px rgba(0,113,93,0.35)';
+            window.setTimeout(() => { row.style.boxShadow = ''; }, 2400);
+        }
+    }
+};
+
+window.toggleSupportReply = function(id) {
+    const wrap = document.getElementById(`support-reply-wrap-${id}`);
+    if (!wrap) return;
+    wrap.style.display = wrap.style.display === 'none' || wrap.style.display === '' ? 'block' : 'none';
+    if (wrap.style.display === 'block') {
+        document.getElementById(`support-reply-message-${id}`)?.focus();
+    }
+};
+
+window.updateSupportMessageStatus = async function(id, status) {
+    const json = await apiCall(`support_messages.php?action=status&id=${id}`, 'PUT', { status });
+    dbToast(json.message || json.data?.message || 'Statusi u përditësua.', json.success ? 'success' : 'danger');
+    await loadSupportMessages();
+};
+
+window.sendSupportReply = async function(id) {
+    const message = (document.getElementById(`support-reply-message-${id}`)?.value || '').trim();
+    const markResolved = !!document.getElementById(`support-reply-resolve-${id}`)?.checked;
+    if (!message) {
+        dbToast('Shkruani një përgjigje përpara dërgimit.', 'danger');
+        return;
+    }
+
+    const json = await apiCall(`support_messages.php?action=reply&id=${id}`, 'POST', { message, mark_resolved: markResolved ? 1 : 0 });
+    dbToast(json.message || json.data?.message || 'Përgjigjja u dërgua.', json.success ? 'success' : 'danger');
+    if (json.success) {
+        await loadSupportMessages();
+    }
+};
+
 
 // ═══════════════════════════════════════════════════════
 //  OVERRIDE: Volunteer Event List
@@ -1447,7 +1624,7 @@ window.renderEventList = function (data) {
     let html = '<div class="db-event-grid">';
     data.events.forEach((ev, i) => {
         html += `<div class="db-event-card" style="animation-delay:${i * 0.04}s">
-            <img src="${ev.banner ? escapeHtml(ev.banner) : '/TiranaSolidare/public/assets/images/default-event.svg'}" class="db-event-card__img" alt="" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
+            <img src="${ev.banner ? escapeHtml(ev.banner) : TS_DEFAULT_EVENT_BANNER}" class="db-event-card__img" alt="" onerror="this.src='${TS_DEFAULT_EVENT_BANNER}'">
             <div class="db-event-card__body">
                 <h4 class="db-event-card__title">${escapeHtml(ev.titulli)}</h4>
                 <p class="db-event-card__desc">${escapeHtml((ev.pershkrimi || '').substring(0, 120))}...</p>
@@ -2416,7 +2593,7 @@ window.adminUploadPicture = async function(input) {
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     try {
-        const res = await fetch('/TiranaSolidare/api/users.php?action=upload_profile_picture', {
+        const res = await fetch(TS_APP_PATH('api/users.php?action=upload_profile_picture'), {
             method: 'POST',
             headers: { 'X-CSRF-Token': csrf },
             credentials: 'same-origin',
@@ -2424,7 +2601,7 @@ window.adminUploadPicture = async function(input) {
         });
         const json = await res.json();
         if (json.success) {
-            // API returns data.url — already a root-relative path starting with /TiranaSolidare/
+            // API returns a root-relative URL based on the active deployment path.
             const path = json.data?.url;
             if (path) setAdminProfileAvatar(path + '?t=' + Date.now());
             if (st) { st.style.color = '#16a34a'; st.textContent = 'Foto u ngarkua me sukses!'; }
@@ -2499,7 +2676,7 @@ window.adminUploadLogo = async function(input) {
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     try {
-        const res = await fetch('/TiranaSolidare/api/settings.php?action=upload_logo', {
+        const res = await fetch(TS_APP_PATH('api/settings.php?action=upload_logo'), {
             method: 'POST',
             headers: { 'X-CSRF-Token': csrf },
             credentials: 'same-origin',
@@ -2548,7 +2725,7 @@ window.adminDeleteLogo = async function() {
     try {
         const json = await apiCall('settings.php?action=delete_logo', 'DELETE');
         if (json.success) {
-            const defaultLogo = '/TiranaSolidare/public/assets/images/logo.png?t=' + Date.now();
+            const defaultLogo = TS_DEFAULT_LOGO + '?t=' + Date.now();
             if (preview) preview.src = defaultLogo;
             if (deleteBtn) deleteBtn.style.display = 'none';
             if (st) {
@@ -2813,7 +2990,7 @@ window.adminCancelLogo = async function() {
                 preview.src = json.data.url + '?t=' + Date.now();
             }
         } catch (e) {
-            preview.src = '/TiranaSolidare/public/assets/images/logo.png?t=' + Date.now();
+            preview.src = TS_DEFAULT_LOGO + '?t=' + Date.now();
         }
     }
 };
@@ -2838,6 +3015,7 @@ window.sendBroadcast = async function() {
     const mesazhi = (document.getElementById('broadcast-msg')?.value || '').trim();
     const roli = document.getElementById('broadcast-role')?.value || 'all';
     const linku = (document.getElementById('broadcast-link')?.value || '').trim() || null;
+    const send_email = document.getElementById('broadcast-send-email')?.checked ? 1 : 0;
     const st = document.getElementById('broadcast-status');
 
     if (!mesazhi) {
@@ -2847,11 +3025,12 @@ window.sendBroadcast = async function() {
     if (st) { st.textContent = 'Duke dërguar…'; st.style.color = ''; }
 
     try {
-        const json = await apiCall('notifications.php?action=broadcast', 'POST', { mesazhi, roli, linku });
+        const json = await apiCall('notifications.php?action=broadcast', 'POST', { mesazhi, roli, linku, send_email });
         if (json.success) {
             if (st) { st.style.color = '#16a34a'; st.textContent = json.data?.message || 'Njoftimi u dërgua.'; }
             document.getElementById('broadcast-msg').value = '';
             if (document.getElementById('broadcast-link')) document.getElementById('broadcast-link').value = '';
+            if (document.getElementById('broadcast-send-email')) document.getElementById('broadcast-send-email').checked = false;
             setTimeout(() => toggleBroadcastForm(), 2500);
         } else {
             if (st) { st.style.color = '#dc2626'; st.textContent = json.message || 'Gabim.'; }
@@ -2970,7 +3149,7 @@ window.createCategory = async function() {
             const csrfToken = typeof getAdminCSRF === 'function'
                 ? getAdminCSRF()
                 : (document.querySelector('meta[name="csrf-token"]')?.content || '');
-            const upRes = await fetch('/TiranaSolidare/api/upload.php', {
+            const upRes = await fetch(TS_APP_PATH('api/upload.php'), {
                 method: 'POST',
                 headers: { 'X-CSRF-Token': csrfToken },
                 credentials: 'same-origin',

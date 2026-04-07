@@ -54,7 +54,7 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $file = $_FILES['logo'];
     $upload_dir = __DIR__ . '/../public/assets/uploads';
-    $base_url = '/TiranaSolidare/public/assets/uploads';
+    $base_url = rtrim(ts_app_path('public/assets/uploads'), '/');
 
     // Validate upload
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -114,7 +114,7 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 else if ($action === 'get_logo') {
     require_method('GET');
     $upload_dir = __DIR__ . '/../public/assets/uploads';
-    $base_url = '/TiranaSolidare/public/assets/uploads';
+    $base_url = rtrim(ts_app_path('public/assets/uploads'), '/');
     
     // Get the latest logo
     $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
@@ -133,7 +133,7 @@ else if ($action === 'get_logo') {
     } else {
         json_success([
             'has_custom_logo' => false,
-            'url' => '/TiranaSolidare/public/assets/images/logo.png',
+            'url' => ts_get_site_logo_url(),
             'uploaded_at' => null,
         ]);
     }

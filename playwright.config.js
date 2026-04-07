@@ -2,6 +2,8 @@
 const { defineConfig, devices } = require('@playwright/test');
 const path = require('path');
 
+const baseURL = process.env.E2E_BASE_URL || 'http://localhost/TiranaSolidare';
+
 module.exports = defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
@@ -19,7 +21,7 @@ module.exports = defineConfig({
   ],
 
   use: {
-    baseURL: 'http://localhost/TiranaSolidare',
+    baseURL,
     screenshot: 'only-on-failure',
     video: 'off',
     trace: 'on-first-retry',

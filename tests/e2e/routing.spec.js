@@ -1,8 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const path = require('path');
-
-const BASE = 'http://localhost/TiranaSolidare';
+const { BASE } = require('./base-url');
 const VOLUNTEER = { email: 'e2e.volunteer@test.local', password: 'Test1234!' };
 const ADMIN     = { email: 'e2e.admin@test.local',     password: 'Test1234!' };
 
@@ -20,18 +19,27 @@ test.describe('Unauthenticated access guards', () => {
 
   test('events page is publicly accessible', async ({ page }) => {
     const response = await page.goto(`${BASE}/views/events.php`);
+    if (!response) {
+      throw new Error('Events page request did not return a response.');
+    }
     expect(response.status()).toBe(200);
     await expect(page).not.toHaveURL(/login\.php/);
   });
 
   test('map page is publicly accessible', async ({ page }) => {
     const response = await page.goto(`${BASE}/views/map.php`);
+    if (!response) {
+      throw new Error('Map page request did not return a response.');
+    }
     expect(response.status()).toBe(200);
     await expect(page).not.toHaveURL(/login\.php/);
   });
 
   test('help_requests page is publicly accessible', async ({ page }) => {
     const response = await page.goto(`${BASE}/views/help_requests.php`);
+    if (!response) {
+      throw new Error('Help requests page request did not return a response.');
+    }
     expect(response.status()).toBe(200);
     await expect(page).not.toHaveURL(/login\.php/);
   });

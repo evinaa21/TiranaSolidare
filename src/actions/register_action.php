@@ -10,19 +10,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // CSRF validation
     if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
-        header("Location: /TiranaSolidare/views/register.php?error=csrf_expired" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=csrf_expired' . $redirectParam));
         exit();
     }
 
     // Privacy consent check
     if (empty($_POST['privacy_consent'])) {
-        header("Location: /TiranaSolidare/views/register.php?error=no_consent" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=no_consent' . $redirectParam));
         exit();
     }
 
     // Rate limiting: max 3 registrations per 30 minutes
     if (!check_rate_limit('register', 3, 1800)) {
-        header("Location: /TiranaSolidare/views/register.php?error=rate_limited" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=rate_limited' . $redirectParam));
         exit();
     }
 
@@ -38,59 +38,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // 2. Validation
     if (empty($emri) || empty($email) || empty($password) || empty($confirm_password) || $birthdate === '') {
-        header("Location: /TiranaSolidare/views/register.php?error=empty_fields" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=empty_fields' . $redirectParam));
         exit();
     }
     
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        header("Location: /TiranaSolidare/views/register.php?error=invalid_email" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=invalid_email' . $redirectParam));
         exit();
     }
 
     if ($lenErr = validate_length($emri, 2, 100, 'emri')) {
-        header("Location: /TiranaSolidare/views/register.php?error=invalid_name" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=invalid_name' . $redirectParam));
         exit();
     }
 
     if ($password !== $confirm_password) {
-        header("Location: /TiranaSolidare/views/register.php?error=password_mismatch" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=password_mismatch' . $redirectParam));
         exit();
     }
 
     if ($passwordError = validate_password_strength($password)) {
-        header("Location: /TiranaSolidare/views/register.php?error=password_weak" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=password_weak' . $redirectParam));
         exit();
     }
 
     if (!ts_birthdate_is_reasonable($birthdate)) {
-        header("Location: /TiranaSolidare/views/register.php?error=invalid_birthdate" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=invalid_birthdate' . $redirectParam));
         exit();
     }
 
     $requiresGuardianConsent = ts_birthdate_requires_guardian_consent($birthdate);
     if ($requiresGuardianConsent) {
         if ($guardianName === '' || empty($guardianEmail) || $guardianRelation === '') {
-            header("Location: /TiranaSolidare/views/register.php?error=guardian_details_required" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=guardian_details_required' . $redirectParam));
             exit();
         }
 
         if (validate_length($guardianName, 2, 100, 'guardian_name')) {
-            header("Location: /TiranaSolidare/views/register.php?error=invalid_guardian_name" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=invalid_guardian_name' . $redirectParam));
             exit();
         }
 
         if (!filter_var($guardianEmail, FILTER_VALIDATE_EMAIL)) {
-            header("Location: /TiranaSolidare/views/register.php?error=invalid_guardian_email" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=invalid_guardian_email' . $redirectParam));
             exit();
         }
 
         if (strcasecmp($guardianEmail, $email) === 0) {
-            header("Location: /TiranaSolidare/views/register.php?error=guardian_email_same_as_user" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=guardian_email_same_as_user' . $redirectParam));
             exit();
         }
 
         if (validate_length($guardianRelation, 2, 60, 'guardian_relation')) {
-            header("Location: /TiranaSolidare/views/register.php?error=invalid_guardian_relation" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=invalid_guardian_relation' . $redirectParam));
             exit();
         }
     } else {
@@ -105,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute([$email]);
     
     if ($stmt->fetch()) {
-        header("Location: /TiranaSolidare/views/register.php?error=email_taken" . $redirectParam);
+        header('Location: ' . ts_app_path('views/register.php?error=email_taken' . $redirectParam));
         exit();
     } else {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -159,19 +159,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             $successKey = $requiresGuardianConsent ? 'verify_email_and_guardian_sent' : 'verify_email_sent';
-            header("Location: /TiranaSolidare/views/login.php?success=" . $successKey . $redirectParam);
+            header('Location: ' . ts_app_path('views/login.php?success=' . $successKey . $redirectParam));
             exit();
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             error_log('Registration failed: ' . $e->getMessage());
-            header("Location: /TiranaSolidare/views/register.php?error=sql_error" . $redirectParam);
+            header('Location: ' . ts_app_path('views/register.php?error=sql_error' . $redirectParam));
             exit();
         }
     }
 
 } else {
-    header("Location: /TiranaSolidare/views/register.php");
+    header('Location: ' . ts_app_path('views/register.php'));
     exit();
 }

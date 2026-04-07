@@ -221,8 +221,8 @@ if ($blockCheck2->fetchColumn() > 0) {
             $notifMsg = "{$user['emri']} ju dërgoi një mesazh.";
             // In-app link (absolute web path for <a href="..."> inside the app)
             $notifLink = (is_admin_role($receiver['roli']))
-                ? '/TiranaSolidare/views/dashboard.php?with=' . $user['id'] . '#messages'
-                : '/TiranaSolidare/views/volunteer_panel.php?tab=messages&with=' . $user['id'];
+                ? ts_app_path('views/dashboard.php?with=' . $user['id'] . '#messages')
+                : ts_app_path('views/volunteer_panel.php?tab=messages&with=' . $user['id']);
             // App-relative path for constructing full URLs (email / push)
             $emailPath = (is_admin_role($receiver['roli']))
                 ? '/views/dashboard.php?with=' . $user['id'] . '#messages'

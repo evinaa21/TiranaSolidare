@@ -1,7 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-
-const BASE = 'http://localhost/TiranaSolidare';
+const { BASE } = require('./base-url');
 
 test.describe('Public pages load correctly', () => {
 
@@ -35,6 +34,9 @@ test.describe('Public pages load correctly', () => {
 
   test('leaderboard page loads', async ({ page }) => {
     const response = await page.goto(`${BASE}/views/leaderboard.php`);
+    if (!response) {
+      throw new Error('Leaderboard request did not return a response.');
+    }
     expect(response.status()).toBe(200);
     await expect(page).not.toHaveURL(/login\.php/);
     await expect(page.locator('.lb-container')).toBeVisible();

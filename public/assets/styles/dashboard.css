@@ -839,6 +839,9 @@
 .db-badge--blocked { background: rgba(239,68,68,0.1); color: #dc2626; }
 .db-badge--deactivated { background: rgba(107,114,128,0.12); color: #6b7280; }
 .db-badge--pending { background: rgba(245,158,11,0.1); color: #d97706; }
+.db-badge--warn    { background: rgba(245,158,11,0.1); color: #d97706; }
+.db-badge--info    { background: rgba(59,130,246,0.12); color: #2563eb; }
+.db-badge--success { background: rgba(34,197,94,0.1); color: #16a34a; }
 .db-badge--open    { background: rgba(34,197,94,0.1); color: #16a34a; }
 .db-badge--closed  { background: rgba(107,114,128,0.1); color: #6b7280; }
 .db-badge--request { background: var(--db-accent-lt); color: var(--db-accent); }

@@ -67,7 +67,7 @@ function help_request_parse_matching_config(array $body, ?array $existing = null
 
 function help_request_insert_notification(PDO $pdo, int $userId, string $message, int $requestId, string $type = 'aplikim_kerkese'): void
 {
-    $link = "/TiranaSolidare/views/help_requests.php?id={$requestId}";
+    $link = ts_app_path('views/help_requests.php?id=' . $requestId);
     $stmt = $pdo->prepare(
         'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku)
          VALUES (?, ?, ?, ?, ?, ?)'
@@ -483,7 +483,7 @@ switch ($action) {
             }
 
             $notifMessage = "Postuesi i kërkesës \"{$request['titulli']}\" ju kontaktoi me email.";
-            $reqLink = "/TiranaSolidare/views/help_requests.php?id={$requestId}";
+            $reqLink = ts_app_path('views/help_requests.php?id=' . $requestId);
             $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
             $notifStmt->execute([$applicantId, $notifMessage, 'aplikim_kerkese', 'help_request', $requestId, $reqLink]);
 

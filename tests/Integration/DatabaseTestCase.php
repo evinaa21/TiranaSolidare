@@ -51,7 +51,7 @@ abstract class DatabaseTestCase extends TestCase
     protected function setUp(): void
     {
         self::$pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-        $tables = ['Perdoruesi', 'rate_limit_log', 'email_queue', 'admin_log', 'Njoftimi'];
+        $tables = ['Perdoruesi', 'rate_limit_log', 'email_queue', 'admin_log', 'Njoftimi', 'support_messages'];
         foreach ($tables as $table) {
             self::$pdo->exec("TRUNCATE TABLE {$table}");
         }
@@ -136,6 +136,24 @@ abstract class DatabaseTestCase extends TestCase
                 lloji VARCHAR(50) DEFAULT 'general',
                 is_read TINYINT(1) DEFAULT 0,
                 krijuar_me TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+
+        self::$pdo->exec(" 
+            CREATE TABLE IF NOT EXISTS support_messages (
+                id_support_message INT AUTO_INCREMENT PRIMARY KEY,
+                from_user_id INT DEFAULT NULL,
+                from_name VARCHAR(160) NOT NULL,
+                from_email VARCHAR(190) NOT NULL,
+                subject VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                status ENUM('new','read','replied','resolved') NOT NULL DEFAULT 'new',
+                last_reply_message TEXT DEFAULT NULL,
+                replied_by INT DEFAULT NULL,
+                replied_at DATETIME DEFAULT NULL,
+                resolved_by INT DEFAULT NULL,
+                resolved_at DATETIME DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
     }

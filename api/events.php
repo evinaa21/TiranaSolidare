@@ -330,7 +330,7 @@ $stmt = $pdo->prepare(
             );
             $message = ($manager['organization_name'] ?: $manager['emri']) . ' krijoi një event të ri në pritje të miratimit: "' . $titulli . '".';
             foreach ($reviewers as $reviewer) {
-                $notifStmt->execute([$reviewer['id_perdoruesi'], $message, 'event_review', 'event', $newId, '/TiranaSolidare/views/dashboard.php']);
+                $notifStmt->execute([$reviewer['id_perdoruesi'], $message, 'event_review', 'event', $newId, ts_app_path('views/dashboard.php')]);
             }
         }
 
@@ -448,7 +448,7 @@ $stmt = $pdo->prepare(
             }, $changedFields)));
 
             $updateNotifMsg  = "Detajet e eventit \"{$updData['titulli']}\" u ndryshuan ({$changeNames}). Kontrolloni informacionin e ri.";
-            $updateNotifLink = "/TiranaSolidare/views/events.php?id={$id}";
+            $updateNotifLink = ts_app_path('views/events.php?id=' . $id);
             $updNotifStmt = $pdo->prepare(
                 'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
             );
@@ -501,41 +501,41 @@ $stmt = $pdo->prepare(
             $eventStmt->execute([$id]);
             $eventTitle = $eventStmt->fetchColumn();
 
-           // Dërgo njoftim vetëm nëse eventi nuk ka kaluar ende
-if (strtotime($eventMeta['data']) > time()) {
-    $applicants = $pdo->prepare(
-        "SELECT DISTINCT a.id_perdoruesi, p.emri, p.email
-         FROM Aplikimi a
-         JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
-         WHERE a.id_eventi = ? AND a.statusi IN ('approved', 'pending')"
-    );
-    $applicants->execute([$id]);
-    $notifStmt = $pdo->prepare(
-        'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
-    );
-    $msg = "Eventi \"{$eventTitle}\" u anulua.";
-    $eventLink = "/TiranaSolidare/views/events.php";
-    foreach ($applicants as $app) {
-        $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $eventLink]);
-        if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
-            send_notification_email(
-                $app['email'],
-                $app['emri'],
-                'Eventi u anulua — Tirana Solidare',
-                $msg
-            );
-        }
-    }
-}
+            // Dërgo njoftim vetëm nëse eventi nuk ka kaluar ende.
+            if (strtotime($eventMeta['data']) > time()) {
+                $applicants = $pdo->prepare(
+                    "SELECT DISTINCT a.id_perdoruesi, p.emri, p.email
+                     FROM Aplikimi a
+                     JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+                     WHERE a.id_eventi = ? AND a.statusi IN ('approved', 'pending')"
+                );
+                $applicants->execute([$id]);
+                $notifStmt = $pdo->prepare(
+                    'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+                );
+                $msg = "Eventi \"{$eventTitle}\" u anulua.";
+                $eventLink = ts_app_path('views/events.php');
+                foreach ($applicants as $app) {
+                    $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $eventLink]);
+                    if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                        send_notification_email(
+                            $app['email'],
+                            $app['emri'],
+                            'Eventi u anulua — Tirana Solidare',
+                            $msg
+                        );
+                    }
+                }
+            }
 
-// Withdraw aplikimet pasi njoftimet u dërguan
-$pdo->prepare(
-    "UPDATE Aplikimi SET statusi = 'withdrawn'
-     WHERE id_eventi = ? AND statusi IN ('approved', 'pending')"
-)->execute([$id]);
+            // Withdraw aplikimet pasi njoftimet u dërguan.
+            $pdo->prepare(
+                "UPDATE Aplikimi SET statusi = 'withdrawn'
+                 WHERE id_eventi = ? AND statusi IN ('approved', 'pending')"
+            )->execute([$id]);
 
-log_admin_action($manager['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
-json_success(['message' => 'Eventi u fshi me sukses.']);
+            log_admin_action($manager['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
+            json_success(['message' => 'Eventi u fshi me sukses.']);
         } else {
             // Hard-delete: no applications
             $stmt = $pdo->prepare('DELETE FROM Eventi WHERE id_eventi = ?');
@@ -585,7 +585,7 @@ json_success(['message' => 'Eventi u fshi me sukses.']);
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
         $completeMsg  = "Faleminderit për pjesëmarrjen në eventin \"{$event['titulli']}\"! Kontributi juaj bëri ndryshimin.";
-        $completeLink = "/TiranaSolidare/views/events.php?id={$id}";
+        $completeLink = ts_app_path('views/events.php?id=' . $id);
         foreach ($volunteers as $vol) {
             $notifStmt->execute([$vol['id_perdoruesi'], $completeMsg, 'admin_veprim', 'event', $id, $completeLink]);
             if (filter_var($vol['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
@@ -634,7 +634,7 @@ json_success(['message' => 'Eventi u fshi me sukses.']);
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
         $msg  = "Eventi \"{$event['titulli']}\" u anulua.";
-        $link = "/TiranaSolidare/views/events.php?id={$id}";
+        $link = ts_app_path('views/events.php?id=' . $id);
         foreach ($applicants as $app) {
             $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $link]);
             if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
@@ -683,7 +683,7 @@ json_success(['message' => 'Eventi u fshi me sukses.']);
         $notifStmt = $pdo->prepare(
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $notifStmt->execute([$event['id_perdoruesi'], $message, 'event_review', 'event', $id, '/TiranaSolidare/views/events.php?id=' . $id]);
+        $notifStmt->execute([$event['id_perdoruesi'], $message, 'event_review', 'event', $id, ts_app_path('views/events.php?id=' . $id)]);
 
         if (filter_var($event['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
             send_notification_email(

@@ -505,6 +505,7 @@ body.page-showcase-events {
   line-height: 1.65;
   margin: 0 0 24px;
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -809,6 +810,7 @@ body.page-showcase-events {
   line-height: 1.35;
   margin: 0 0 10px;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -821,6 +823,7 @@ body.page-showcase-events {
   line-height: 1.55;
   margin: 0 0 16px;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

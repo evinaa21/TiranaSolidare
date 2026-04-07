@@ -9,11 +9,10 @@ require_once __DIR__ . '/../includes/functions.php';
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+    $isHttps = ts_is_https_request();
     session_set_cookie_params([
         'lifetime' => 0,
-        'path'     => '/TiranaSolidare/',
+        'path'     => ts_cookie_path(),
         'domain'   => '',
         'secure'   => $isHttps,
         'httponly'  => true,
@@ -44,21 +43,8 @@ require_once __DIR__ . '/../includes/functions.php';
 // ── CORS & Content-Type Headers ────────────────────
 header('Content-Type: application/json; charset=utf-8');
 
-// Restrict CORS to same-origin (localhost variants)
-$allowedOrigins = [
-    'http://localhost',
-    'http://localhost:80',
-    'http://localhost:3000',
-    'http://localhost:8080',
-    'http://127.0.0.1',
-    'http://127.0.0.1:80',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8080',
-    'https://localhost',
-    'https://localhost:443',
-    'https://127.0.0.1',
-    'https://127.0.0.1:443',
-];
+// Restrict CORS to the configured app origin plus local development variants.
+$allowedOrigins = ts_allowed_origins();
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins, true)) {
     header("Access-Control-Allow-Origin: $origin");

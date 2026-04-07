@@ -4,12 +4,12 @@ require_once __DIR__ . '/../../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /TiranaSolidare/views/login.php');
+    header('Location: ' . ts_app_path('views/login.php'));
     exit();
 }
 
 if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
-    header('Location: /TiranaSolidare/views/reset_password.php?error=csrf_expired');
+    header('Location: ' . ts_app_path('views/reset_password.php?error=csrf_expired'));
     exit();
 }
 
@@ -19,22 +19,22 @@ $password = $_POST['password'] ?? '';
 $confirmPassword = $_POST['confirm_password'] ?? '';
 
 if ($token === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /TiranaSolidare/views/reset_password.php?error=invalid_token&token=' . urlencode($token) . '&email=' . urlencode($email));
+    header('Location: ' . ts_app_path('views/reset_password.php?error=invalid_token&token=' . urlencode($token) . '&email=' . urlencode($email)));
     exit();
 }
 
 if (empty($password) || empty($confirmPassword)) {
-    header('Location: /TiranaSolidare/views/reset_password.php?error=empty_fields&token=' . urlencode($token) . '&email=' . urlencode($email));
+    header('Location: ' . ts_app_path('views/reset_password.php?error=empty_fields&token=' . urlencode($token) . '&email=' . urlencode($email)));
     exit();
 }
 
 if ($password !== $confirmPassword) {
-    header('Location: /TiranaSolidare/views/reset_password.php?error=password_mismatch&token=' . urlencode($token) . '&email=' . urlencode($email));
+    header('Location: ' . ts_app_path('views/reset_password.php?error=password_mismatch&token=' . urlencode($token) . '&email=' . urlencode($email)));
     exit();
 }
 
 if ($passwordError = validate_password_strength($password)) {
-    header('Location: /TiranaSolidare/views/reset_password.php?error=password_weak&token=' . urlencode($token) . '&email=' . urlencode($email));
+    header('Location: ' . ts_app_path('views/reset_password.php?error=password_weak&token=' . urlencode($token) . '&email=' . urlencode($email)));
     exit();
 }
 
@@ -56,7 +56,7 @@ try {
 
     if ($update->rowCount() === 0) {
         // Token was invalid, expired, or already consumed by a concurrent request
-        header('Location: /TiranaSolidare/views/reset_password.php?error=invalid_token');
+        header('Location: ' . ts_app_path('views/reset_password.php?error=invalid_token'));
         exit();
     }
 
@@ -74,10 +74,10 @@ try {
         session_start();
     }
 
-    header('Location: /TiranaSolidare/views/login.php?success=password_updated');
+    header('Location: ' . ts_app_path('views/login.php?success=password_updated'));
     exit();
 } catch (Throwable $e) {
     error_log('Reset password failed: ' . $e->getMessage());
-    header('Location: /TiranaSolidare/views/reset_password.php?error=sql_error&token=' . urlencode($token) . '&email=' . urlencode($email));
+    header('Location: ' . ts_app_path('views/reset_password.php?error=sql_error&token=' . urlencode($token) . '&email=' . urlencode($email)));
     exit();
 }

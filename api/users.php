@@ -21,6 +21,7 @@
 require_once __DIR__ . '/helpers.php';
 
 $action = $_GET['action'] ?? 'list';
+$profilePictureBaseUrl = rtrim(ts_app_path('uploads/images/profiles'), '/');
 
 switch ($action) {
 
@@ -36,7 +37,7 @@ switch ($action) {
         $result = handle_image_upload(
             $_FILES['image'],
             __DIR__ . '/../uploads/images/profiles',
-            '/TiranaSolidare/uploads/images/profiles',
+            $profilePictureBaseUrl,
             6 * 1024 * 1024,
             640,
             78
@@ -50,7 +51,7 @@ switch ($action) {
         $oldPicStmt = $pdo->prepare('SELECT profile_picture FROM Perdoruesi WHERE id_perdoruesi = ? LIMIT 1');
         $oldPicStmt->execute([$user['id']]);
         $oldPic = $oldPicStmt->fetchColumn();
-        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+        if ($oldPic && str_starts_with($oldPic, $profilePictureBaseUrl . '/')) {
             $oldFilename = basename($oldPic);
             // Validate filename to prevent path traversal
             if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
@@ -99,7 +100,7 @@ switch ($action) {
             json_error('URL e fotos nuk mund të kalojë 500 karaktere.', 422);
         }
         if ($profilePicture !== null && $profilePicture !== '') {
-            $isInternalPath = strpos($profilePicture, '/TiranaSolidare/uploads/images/profiles/') === 0;
+            $isInternalPath = strpos($profilePicture, $profilePictureBaseUrl . '/') === 0;
             if (!$isInternalPath && !validate_image_url($profilePicture)) {
                 json_error('Foto e profilit nuk është e vlefshme.', 422);
             }
@@ -246,7 +247,7 @@ $params[] = $user['id'];
         $stmt->execute([$user['id']]);
 
         // Remove the file from disk if it was an internal upload
-        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+        if ($oldPic && str_starts_with($oldPic, $profilePictureBaseUrl . '/')) {
             $oldFilename = basename($oldPic);
             if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
                 $oldPath = __DIR__ . '/../uploads/images/profiles/' . $oldFilename;
@@ -357,7 +358,7 @@ $params[] = $user['id'];
         }
 
         $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
-        $notifStmt->execute([$id, $blockMessage, 'admin_veprim', 'user', $id, '/TiranaSolidare/views/blocked.php']);
+        $notifStmt->execute([$id, $blockMessage, 'admin_veprim', 'user', $id, ts_app_path('views/blocked.php')]);
 
         if ($target && filter_var($target['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
             send_notification_email(
@@ -410,7 +411,7 @@ $params[] = $user['id'];
         $unblockTarget = $unblockInfo->fetch();
 
         // In-app notification
-        $panelUrl = '/TiranaSolidare/views/volunteer_panel.php';
+        $panelUrl = ts_app_path('views/volunteer_panel.php');
         $unblockMsg = 'Llogaria juaj është zhbllokuar. Mund të hyëni përsëri në platformë.';
         $notifInsert = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
         $notifInsert->execute([$id, $unblockMsg, 'admin_veprim', 'user', $id, $panelUrl]);
@@ -479,8 +480,8 @@ $params[] = $user['id'];
         };
         $roleMsg   = "Roli juaj në platformë u ndryshua në '{$roleLabel}' nga një Super Administrator.";
         $panelLink = in_array($newRole, ['admin', 'organizer'], true)
-            ? '/TiranaSolidare/views/dashboard.php'
-            : '/TiranaSolidare/views/volunteer_panel.php';
+            ? ts_app_path('views/dashboard.php')
+            : ts_app_path('views/volunteer_panel.php');
         $notifInsert = $pdo->prepare(
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
@@ -691,7 +692,7 @@ $params[] = $user['id'];
 
         // Delete profile picture file from disk
         $oldPic = $account['profile_picture'];
-        if ($oldPic && str_starts_with($oldPic, '/TiranaSolidare/uploads/images/profiles/')) {
+        if ($oldPic && str_starts_with($oldPic, $profilePictureBaseUrl . '/')) {
             $oldFilename = basename($oldPic);
             if (preg_match('/^[a-f0-9_]+\.webp$/i', $oldFilename)) {
                 $oldPath = __DIR__ . '/../uploads/images/profiles/' . $oldFilename;

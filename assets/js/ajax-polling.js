@@ -7,7 +7,10 @@
  * ---------------------------------------------------
  */
 
-const API_BASE = '/TiranaSolidare/api';
+const API_BASE = window.TS_API_BASE || (window.tsAppPath ? window.tsAppPath('api') : '/api');
+const DEFAULT_EVENT_BANNER = window.tsAppPath
+    ? window.tsAppPath('public/assets/images/default-event.svg')
+    : '/public/assets/images/default-event.svg';
 const POLL_INTERVAL = 15000; // 15 seconds
 
 // ── Notification Badge Polling ──────────────────────
@@ -181,7 +184,7 @@ function renderEventList(data) {
     data.events.forEach(ev => {
         html += `<div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">
-                <img src="${ev.banner ? escapeHtml(ev.banner) : '/TiranaSolidare/public/assets/images/default-event.svg'}" class="card-img-top" alt="Banner" onerror="this.src='/TiranaSolidare/public/assets/images/default-event.svg'">
+                <img src="${ev.banner ? escapeHtml(ev.banner) : DEFAULT_EVENT_BANNER}" class="card-img-top" alt="Banner" onerror="this.src='${DEFAULT_EVENT_BANNER}'">
                 <div class="card-body">
                     <h5 class="card-title">${escapeHtml(ev.titulli)}</h5>
                     <p class="card-text text-muted">${escapeHtml((ev.pershkrimi || '').substring(0, 120))}...</p>

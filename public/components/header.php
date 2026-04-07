@@ -19,22 +19,26 @@ $userInitial = function_exists('mb_strtoupper') ? mb_strtoupper($firstChar) : st
 $avatarSessionValue = $_SESSION['profile_picture'] ?? $_SESSION['avatar'] ?? $_SESSION['photo'] ?? $_SESSION['foto'] ?? $_SESSION['profile_image'] ?? '';
 $avatarUrl = '';
 if (is_string($avatarSessionValue) && $avatarSessionValue !== '') {
-  if (preg_match('/^https?:\/\//i', $avatarSessionValue) || strpos($avatarSessionValue, '/TiranaSolidare/') === 0 || strpos($avatarSessionValue, '/') === 0) {
+  if (preg_match('/^https?:\/\//i', $avatarSessionValue) || strpos($avatarSessionValue, '/') === 0) {
     $avatarUrl = $avatarSessionValue;
   } else {
-    $avatarUrl = '/TiranaSolidare/public/assets/uploads/' . ltrim($avatarSessionValue, '/');
+    $avatarUrl = ts_app_path('public/assets/uploads/' . ltrim($avatarSessionValue, '/'));
   }
 }
 
 $avatarHue = abs(crc32((string) $userName)) % 360;
 $headerColorResolved = ts_resolve_profile_color($_SESSION['profile_color'] ?? 'emerald');
 $headerColorTheme = $headerColorResolved['theme'];
+$appPath = static function (string $path = ''): string {
+  return htmlspecialchars(ts_app_path($path), ENT_QUOTES, 'UTF-8');
+};
+$appBasePath = ts_app_base_path();
 ?>
-<link rel="manifest" href="/TiranaSolidare/public/manifest.json">
+<link rel="manifest" href="<?= $appPath('public/manifest.json') ?>">
 <meta name="theme-color" content="<?= htmlspecialchars($themePrimary) ?>">
 <?= ts_brand_theme_css() ?>
 <header id="header" class="header">
-  <a href="/TiranaSolidare/public/" class="header-logo">
+  <a href="<?= $appPath('public/') ?>" class="header-logo">
     <img src="<?= htmlspecialchars(ts_get_site_logo_url()) ?>" alt="<?= htmlspecialchars($siteName) ?>">
     <span><?= htmlspecialchars($siteName) ?></span>
   </a>
@@ -42,13 +46,12 @@ $headerColorTheme = $headerColorResolved['theme'];
     <button onclick="toggleMenu()">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
-    <a href="/TiranaSolidare/public/" class="header-main-link">Kreu</a>
-    <a href="/TiranaSolidare/public/#regjistrohu" class="header-main-link">Misioni</a>
-    <a href="/TiranaSolidare/public/#si-funksionon" class="header-main-link">Si Funksionon</a>
-    <a href="/TiranaSolidare/views/events.php" class="header-main-link">Evente</a>
-    <a href="/TiranaSolidare/views/help_requests.php" class="header-main-link">Kërkesat</a>
-    <a href="/TiranaSolidare/views/map.php" class="header-main-link">Harta</a>
-    <a href="/TiranaSolidare/views/become_organizer.php" class="header-main-link">Për Organizata</a>
+    <a href="<?= $appPath('public/') ?>" class="header-main-link">Kreu</a>
+    <a href="<?= $appPath('public/#regjistrohu') ?>" class="header-main-link">Misioni</a>
+    <a href="<?= $appPath('public/#si-funksionon') ?>" class="header-main-link">Si Funksionon</a>
+    <a href="<?= $appPath('views/events.php') ?>" class="header-main-link">Evente</a>
+    <a href="<?= $appPath('views/help_requests.php') ?>" class="header-main-link">Kërkesat</a>
+    <a href="<?= $appPath('views/map.php') ?>" class="header-main-link">Harta</a>
     <span></span>
     <?php if ($isLoggedIn): ?>
       <?php if (!$isDashboardUser): ?>
@@ -67,7 +70,7 @@ $headerColorTheme = $headerColorResolved['theme'];
             <div id="header-notif-list">
               <div class="header-notif-empty">Duke ngarkuar…</div>
             </div>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications" class="header-notif-viewall">Shiko të gjitha &rarr;</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=notifications') ?>" class="header-notif-viewall">Shiko të gjitha &rarr;</a>
           </div>
         </div>
         <?php endif; ?>
@@ -90,31 +93,30 @@ $headerColorTheme = $headerColorResolved['theme'];
               <small><?= $isDashboardUser ? 'Paneli i menaxhimit' : 'Paneli i vullnetarit' ?></small>
             </div>
             <?php if ($isDashboardUser): ?>
-            <a href="/TiranaSolidare/views/dashboard.php" class="header-dropdown-admin-link">
+            <a href="<?= $appPath('views/dashboard.php') ?>" class="header-dropdown-admin-link">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
               Paneli
             </a>
             <?php else: ?>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=profile">Profili</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=applications">Aplikimet e mia</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=requests">Kërkesat e mia</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=score">Pikët e mia</a>
-            <a href="/TiranaSolidare/views/leaderboard.php">Renditja</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=notifications">Njoftimet</a>
-            <a href="/TiranaSolidare/views/volunteer_panel.php?tab=settings">Cilësimet</a>
-            <a href="/TiranaSolidare/views/become_organizer.php">Apliko si organizatë</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=profile') ?>">Profili</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=applications') ?>">Aplikimet e mia</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=requests') ?>">Kërkesat e mia</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=score') ?>">Pikët e mia</a>
+            <a href="<?= $appPath('views/leaderboard.php') ?>">Renditja</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=notifications') ?>">Njoftimet</a>
+            <a href="<?= $appPath('views/volunteer_panel.php?tab=settings') ?>">Cilësimet</a>
             <?php endif; ?>
-            <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
+            <form method="POST" action="<?= $appPath('src/actions/logout.php') ?>" style="display:inline;">
               <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
               <button type="submit" class="header-user-signout">Dil</button>
             </form>
           </div>
         </div>
     <?php else: ?>
-      <a href="/TiranaSolidare/views/register.php" class="btn_primary">
+      <a href="<?= $appPath('views/register.php') ?>" class="btn_primary">
         Bëhu Vullnetar 
       </a>
-      <a href="/TiranaSolidare/views/login.php" class="btn_secondary">
+      <a href="<?= $appPath('views/login.php') ?>" class="btn_secondary">
         Kyçu
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in-icon lucide-log-in"><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
       </a>
@@ -148,6 +150,15 @@ $headerColorTheme = $headerColorResolved['theme'];
 .header-notif-viewall:hover{background:#f0fdf9;}
 </style>
 <script>
+window.TS_BASE_PATH = window.TS_BASE_PATH ?? <?= json_encode($appBasePath, JSON_UNESCAPED_SLASHES) ?>;
+window.tsAppPath = window.tsAppPath || function(path) {
+  var basePath = window.TS_BASE_PATH || '';
+  var trimmed = String(path || '').replace(/^\/+/, '');
+  if (!trimmed) return basePath || '/';
+  return (basePath + '/' + trimmed).replace(/\/+/g, '/');
+};
+window.TS_API_BASE = window.TS_API_BASE || window.tsAppPath('api');
+
 function toggleNotifDropdown(e){
   e.stopPropagation();
   var d=document.getElementById('header-notif-dropdown');
@@ -165,7 +176,7 @@ async function headerLoadNotifications(){
   var list=document.getElementById('header-notif-list');if(!list)return;
   list.innerHTML='<div class="header-notif-empty">Duke ngarkuar\u2026</div>';
   try{
-    var res=await fetch('/TiranaSolidare/api/notifications.php?action=list&limit=6',{credentials:'same-origin'});
+    var res=await fetch(window.TS_API_BASE + '/notifications.php?action=list&limit=6',{credentials:'same-origin'});
     var json=await res.json();
     if(!json.success||(json.data.notifications||[]).length===0){list.innerHTML='<div class="header-notif-empty">Nuk ka njoftime.</div>';return;}
     list.innerHTML=json.data.notifications.map(function(n){
@@ -179,12 +190,12 @@ async function headerLoadNotifications(){
   }catch(e){list.innerHTML='<div class="header-notif-empty" style="color:#ef4444;">Gabim gjat\u00eb ngarkimit.</div>';}
 }
 async function headerMarkNotifRead(id){
-  try{var csrf=document.querySelector('meta[name="csrf-token"]');await fetch('/TiranaSolidare/api/notifications.php?action=mark_read&id='+id,{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});}catch(e){}
+  try{var csrf=document.querySelector('meta[name="csrf-token"]');await fetch(window.TS_API_BASE + '/notifications.php?action=mark_read&id='+id,{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});}catch(e){}
 }
 async function headerMarkAllRead(){
   try{
     var csrf=document.querySelector('meta[name="csrf-token"]');
-    await fetch('/TiranaSolidare/api/notifications.php?action=mark_all_read',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});
+    await fetch(window.TS_API_BASE + '/notifications.php?action=mark_all_read',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf?csrf.content:''}});
     headerLoadNotifications();
     var b=document.getElementById('notif-badge');if(b)b.style.display='none';
   }catch(e){}
@@ -193,7 +204,6 @@ async function headerMarkAllRead(){
 
 <script>
 if ('serviceWorker' in navigator) {
-  // Root-level sw.js has scope /TiranaSolidare/ so it covers both /public/ and /views/
-  navigator.serviceWorker.register('/TiranaSolidare/sw.js');
+  navigator.serviceWorker.register(window.tsAppPath('sw.js'));
 }
 </script>

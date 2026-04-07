@@ -4,24 +4,24 @@ require_once __DIR__ . '/../../config/db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /TiranaSolidare/views/resend_guardian_consent.php');
+    header('Location: ' . ts_app_path('views/resend_guardian_consent.php'));
     exit();
 }
 
 if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
-    header('Location: /TiranaSolidare/views/resend_guardian_consent.php?error=csrf_expired');
+    header('Location: ' . ts_app_path('views/resend_guardian_consent.php?error=csrf_expired'));
     exit();
 }
 
 $email = trim((string) ($_POST['email'] ?? ''));
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /TiranaSolidare/views/resend_guardian_consent.php?error=invalid_email');
+    header('Location: ' . ts_app_path('views/resend_guardian_consent.php?error=invalid_email'));
     exit();
 }
 
 if (!check_rate_limit('resend_guardian_consent', 3, 3600)) {
-    header('Location: /TiranaSolidare/views/resend_guardian_consent.php?error=rate_limited');
+    header('Location: ' . ts_app_path('views/resend_guardian_consent.php?error=rate_limited'));
     exit();
 }
 
@@ -71,5 +71,5 @@ if (
     );
 }
 
-header('Location: /TiranaSolidare/views/resend_guardian_consent.php?success=email_sent');
+header('Location: ' . ts_app_path('views/resend_guardian_consent.php?success=email_sent'));
 exit();

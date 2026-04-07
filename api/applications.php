@@ -268,7 +268,7 @@ switch ($action) {
             'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
         );
         $msg = "{$user['emri']} aplikoi për eventin \"{$event['titulli']}\".";
-        $eventLink = "/TiranaSolidare/views/events.php?id={$eventId}";
+        $eventLink = ts_app_path('views/events.php?id=' . $eventId);
         foreach ($admins as $admin) {
             $notifStmt->execute([$admin['id_perdoruesi'], $msg, 'aplikim_event', 'event', $eventId, $eventLink]);
             if (filter_var($admin['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
@@ -424,7 +424,7 @@ switch ($action) {
         // Notify the volunteer
         $statusLabel = $newStatus === 'approved' ? 'pranuar ✓' : ($newStatus === 'rejected' ? 'refuzuar ✗' : 'në pritje');
         $msg = "Aplikimi juaj për eventin \"{$app['eventi_titulli']}\" është {$statusLabel}.";
-        $eventLink = "/TiranaSolidare/views/events.php?id={$app['id_eventi']}";
+        $eventLink = ts_app_path('views/events.php?id=' . $app['id_eventi']);
         $notifStmt = $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)');
         $notifStmt->execute([$app['id_perdoruesi'], $msg, 'aplikim_event', 'event', $app['id_eventi'], $eventLink]);
 
@@ -484,7 +484,7 @@ switch ($action) {
 
             if ($nextApp) {
                 $promoteMsg  = "U promovuat nga lista e pritjes! Aplikimi juaj për eventin \"{$app['eventi_titulli']}\" u pranua.";
-                $promoteLink = "/TiranaSolidare/views/events.php?id={$app['id_eventi']}";
+                $promoteLink = ts_app_path('views/events.php?id=' . $app['id_eventi']);
                 $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)')
                     ->execute([$nextApp['id_perdoruesi'], $promoteMsg, 'aplikim_event', 'event', $app['id_eventi'], $promoteLink]);
 
@@ -584,7 +584,7 @@ json_success(['message' => "Statusi u përditësua në '$label'."]);
 
             if ($nextApp) {
                 $promoteMsg  = "U promovuat nga lista e pritjes! Aplikimi juaj për eventin \"{$withdrawn['eventi_titulli']}\" u pranua.";
-                $promoteLink = "/TiranaSolidare/views/events.php?id={$withdrawn['id_eventi']}";
+                $promoteLink = ts_app_path('views/events.php?id=' . $withdrawn['id_eventi']);
                 $pdo->prepare('INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)')
                     ->execute([$nextApp['id_perdoruesi'], $promoteMsg, 'aplikim_event', 'event', $withdrawn['id_eventi'], $promoteLink]);
                 if (filter_var($nextApp['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
@@ -751,7 +751,7 @@ break;
             $notifStmt  = $pdo->prepare(
                 'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
             );
-            $eventLink = "/TiranaSolidare/views/events.php?id={$eventId}";
+            $eventLink = ts_app_path('views/events.php?id=' . $eventId);
 
             foreach ($pending as $app) {
                 if ($approved >= $slots) {
@@ -842,7 +842,7 @@ break;
             $notifStmt  = $pdo->prepare(
                 'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
             );
-            $eventLink  = "/TiranaSolidare/views/events.php?id={$eventId}";
+            $eventLink  = ts_app_path('views/events.php?id=' . $eventId);
             $rejected   = 0;
 
             foreach ($pending as $app) {

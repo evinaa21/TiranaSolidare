@@ -4,23 +4,23 @@ require_once __DIR__ . '/../../includes/functions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /TiranaSolidare/views/login.php');
+    header('Location: ' . ts_app_path('views/login.php'));
     exit();
 }
 
 if (!validate_csrf_token($_POST['_csrf_token'] ?? '')) {
-    header('Location: /TiranaSolidare/views/forgot_password.php?error=csrf_expired');
+    header('Location: ' . ts_app_path('views/forgot_password.php?error=csrf_expired'));
     exit();
 }
 
 if (!check_rate_limit('forgot_password', 5, 900)) {
-    header('Location: /TiranaSolidare/views/forgot_password.php?error=rate_limited');
+    header('Location: ' . ts_app_path('views/forgot_password.php?error=rate_limited'));
     exit();
 }
 
 $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /TiranaSolidare/views/forgot_password.php?error=invalid_email');
+    header('Location: ' . ts_app_path('views/forgot_password.php?error=invalid_email'));
     exit();
 }
 
@@ -44,10 +44,10 @@ try {
         send_password_reset_email($email, $user['emri'] ?? 'Volunteer', $resetUrl);
     }
 
-    header('Location: /TiranaSolidare/views/forgot_password.php?success=email_sent');
+    header('Location: ' . ts_app_path('views/forgot_password.php?success=email_sent'));
     exit();
 } catch (Throwable $e) {
     error_log('Forgot password flow failed: ' . $e->getMessage());
-    header('Location: /TiranaSolidare/views/forgot_password.php?error=sql_error');
+    header('Location: ' . ts_app_path('views/forgot_password.php?error=sql_error'));
     exit();
 }

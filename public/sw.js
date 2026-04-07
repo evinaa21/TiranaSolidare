@@ -1,9 +1,20 @@
-const CACHE_NAME = 'tirana-solidare-v3';
+const CACHE_NAME = 'tirana-solidare-v4';
+const SW_BASE_PATH = (() => {
+  const pathname = new URL(self.location.href).pathname;
+  return pathname.endsWith('/sw.js') ? pathname.slice(0, -('/sw.js'.length)) : '';
+})();
+const swPath = (path = '') => {
+  const trimmed = String(path || '').replace(/^\/+/, '');
+  if (!trimmed) {
+    return SW_BASE_PATH || '/';
+  }
+  return `${SW_BASE_PATH}/${trimmed}`.replace(/\/+/g, '/');
+};
 const ASSETS = [
-  '/TiranaSolidare/public/',
-  '/TiranaSolidare/public/assets/styles/main.css',
-  '/TiranaSolidare/public/assets/styles/index.css',
-  '/TiranaSolidare/public/assets/scripts/main.js'
+  swPath('public/'),
+  swPath('public/assets/styles/main.css'),
+  swPath('public/assets/styles/index.css'),
+  swPath('public/assets/scripts/main.js')
 ];
 
 self.addEventListener('install', event => {
@@ -62,9 +73,9 @@ self.addEventListener('push', event => {
   const title   = payload.title || 'Tirana Solidare';
   const options = {
     body: payload.body || '',
-    icon: '/TiranaSolidare/public/assets/images/icon-192.png',
-    badge: '/TiranaSolidare/public/assets/images/icon-192.png',
-    data: { url: payload.url || '/TiranaSolidare/public/' },
+    icon: swPath('public/assets/images/icon-192.png'),
+    badge: swPath('public/assets/images/icon-192.png'),
+    data: { url: payload.url || swPath('public/') },
     requireInteraction: false,
   };
 
@@ -73,11 +84,13 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = event.notification.data?.url || '/TiranaSolidare/public/';
+  const target = event.notification.data?.url || swPath('public/');
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {
-        if (client.url.includes('/TiranaSolidare/') && 'focus' in client) {
+        const clientPath = new URL(client.url).pathname;
+        const scopePrefix = SW_BASE_PATH === '' ? '/' : (SW_BASE_PATH + '/');
+        if (clientPath.startsWith(scopePrefix) && 'focus' in client) {
           client.navigate(target);
           return client.focus();
         }

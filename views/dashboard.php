@@ -7,7 +7,7 @@ check_login();
 // Redirect volunteers to their own panel.
 $currentRole = ts_normalize_value($_SESSION['roli'] ?? '');
 if (!ts_is_dashboard_role_value($currentRole)) {
-    header("Location: /TiranaSolidare/views/volunteer_panel.php");
+  header('Location: ' . ts_app_path('views/volunteer_panel.php'));
     exit();
 }
 
@@ -40,7 +40,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
   <?= ts_brand_theme_css() ?>
   <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/TiranaSolidare/sw.js');
+    navigator.serviceWorker.register('<?= htmlspecialchars(ts_app_path('sw.js'), ENT_QUOTES, 'UTF-8') ?>');
   }
   </script>
   <!-- Emergency panel visibility override – cannot be cached -->
@@ -109,6 +109,13 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     <button class="db-nav-item" data-panel="audit" onclick="switchPanel('audit', this)">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
       <span>Auditimi</span>
+    </button>
+    <?php endif; ?>
+
+    <?php if ($isAdmin): ?>
+    <button class="db-nav-item" data-panel="support" onclick="switchPanel('support', this)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>
+      <span>Inbox</span>
     </button>
     <?php endif; ?>
 
@@ -587,6 +594,35 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
   </div>
   <?php endif; ?>
 
+  <?php if ($isAdmin): ?>
+  <div class="db-panel" id="panel-support">
+    <div class="db-panel__header">
+      <div>
+        <h3>Inbox i Kontaktit</h3>
+        <p class="db-panel__subtitle">Mesazhet nga faqja e kontaktit ruhen këtu, njoftojnë administratorët dhe mund të marrin përgjigje me email.</p>
+      </div>
+    </div>
+
+    <div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+      <select id="support-status-filter" class="ud-input" style="max-width:180px;padding:8px 12px;" onchange="loadSupportMessages(1)">
+        <option value="all">Të gjitha</option>
+        <option value="new">Të reja</option>
+        <option value="read">Lexuar</option>
+        <option value="replied">Përgjigjur</option>
+        <option value="resolved">Zgjidhur</option>
+      </select>
+      <input type="text" id="support-search" class="ud-input" placeholder="Kërko sipas emrit, email-it ose subjektit…" style="min-width:240px;" onkeydown="if(event.key==='Enter') loadSupportMessages(1)">
+      <button class="db-btn db-btn--primary" onclick="loadSupportMessages(1)">Filtro</button>
+      <button class="db-btn db-btn--ghost" onclick="document.getElementById('support-status-filter').value='all';document.getElementById('support-search').value='';loadSupportMessages(1)">Pastro</button>
+    </div>
+
+    <div id="support-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+    <div id="support-messages-container">
+      <div class="db-loading">Duke ngarkuar inbox-in…</div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- ═══════════════ PANEL: NOTIFICATIONS ═══════════════ -->
   <div class="db-panel" id="panel-notifications">
     <div class="db-panel__header">
@@ -626,6 +662,13 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
       <div class="db-form__group" style="margin-top:10px;">
         <label>Link (opsional)</label>
         <input type="text" id="broadcast-link" class="ud-input" placeholder="https://… ose /TiranaSolidare/…">
+      </div>
+      <div class="db-toggle-row" style="margin-top:12px;justify-content:flex-start;gap:10px;">
+        <span>Dërgo edhe email për këtë njoftim</span>
+        <label class="db-toggle">
+          <input type="checkbox" id="broadcast-send-email">
+          <span class="db-toggle__slider"></span>
+        </label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="db-btn db-btn--primary" onclick="sendBroadcast()">Dërgo Njoftimin</button>

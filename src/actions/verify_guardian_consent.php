@@ -8,7 +8,7 @@ $email = trim($_GET['email'] ?? '');
 $guardianEmail = trim($_GET['guardian'] ?? '');
 
 if ($token === '' || $email === '' || $guardianEmail === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !filter_var($guardianEmail, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /TiranaSolidare/views/login.php?error=invalid_guardian_consent_link');
+    header('Location: ' . ts_app_path('views/login.php?error=invalid_guardian_consent_link'));
     exit();
 }
 
@@ -41,11 +41,11 @@ try {
             $successKey = ts_user_activation_state($row) === 'email_pending'
                 ? 'guardian_consent_already_verified_email_pending'
                 : 'guardian_consent_already_verified';
-            header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
+            header('Location: ' . ts_app_path('views/login.php?success=' . $successKey));
         } elseif ($row && !empty($row['guardian_consent_token_expires']) && strtotime($row['guardian_consent_token_expires']) < time()) {
-            header('Location: /TiranaSolidare/views/login.php?error=guardian_consent_expired');
+            header('Location: ' . ts_app_path('views/login.php?error=guardian_consent_expired'));
         } else {
-            header('Location: /TiranaSolidare/views/login.php?error=invalid_guardian_consent_link');
+            header('Location: ' . ts_app_path('views/login.php?error=invalid_guardian_consent_link'));
         }
         exit();
     }
@@ -69,10 +69,10 @@ try {
         ]
     );
 
-    header('Location: /TiranaSolidare/views/login.php?success=' . (($activationState === 'ready') ? 'guardian_consent_verified' : 'guardian_consent_verified_email_pending'));
+    header('Location: ' . ts_app_path('views/login.php?success=' . (($activationState === 'ready') ? 'guardian_consent_verified' : 'guardian_consent_verified_email_pending')));
     exit();
 } catch (Throwable $e) {
     error_log('Guardian consent verification failed: ' . $e->getMessage());
-    header('Location: /TiranaSolidare/views/login.php?error=sql_error');
+    header('Location: ' . ts_app_path('views/login.php?error=sql_error'));
     exit();
 }

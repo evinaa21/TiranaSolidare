@@ -15,5 +15,5 @@ $keys = vapid_generate_keys();
 echo "Add these lines to your .env file:\n\n";
 echo "VAPID_PUBLIC_KEY={$keys['public']}\n";
 echo "VAPID_PRIVATE_KEY={$keys['private']}\n\n";
-echo "Public key for JavaScript (copy into config/push.php):\n";
+echo "Public key for the browser subscription flow:\n";
 echo $keys['public'] . "\n";

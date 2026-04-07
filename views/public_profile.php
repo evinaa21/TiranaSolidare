@@ -12,7 +12,7 @@ if ($userId <= 0) {
 }
 
 if ($userId <= 0) {
-    header('Location: /TiranaSolidare/views/404.php');
+    header('Location: ' . ts_app_path('views/404.php'));
     exit();
 }
 
@@ -29,16 +29,16 @@ $stmt->execute([$userId]);
 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$profile) {
-    header('Location: /TiranaSolidare/views/404.php');
+    header('Location: ' . ts_app_path('views/404.php'));
     exit();
 }
 
 // Admins don't have public profiles
 if (in_array(ts_normalize_value($profile['roli'] ?? ''), ['admin', 'super_admin'], true)) {
     if ($isOwner) {
-        header('Location: /TiranaSolidare/views/dashboard.php');
+        header('Location: ' . ts_app_path('views/dashboard.php'));
     } else {
-        header('Location: /TiranaSolidare/views/404.php');
+        header('Location: ' . ts_app_path('views/404.php'));
     }
     exit();
 }
@@ -51,7 +51,7 @@ if ($publicHandle === '' && isset($_GET['id'])) {
 
 // Require login to view any profile
 if (!$isLoggedIn) {
-    header("Location: /TiranaSolidare/views/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
+    header('Location: ' . ts_app_path('views/login.php?redirect=' . urlencode((string) $_SERVER['REQUEST_URI'])));
     exit();
 }
 
@@ -68,9 +68,9 @@ $isBlocked = false;
 if ($isLoggedIn && !$isOwner && !$isAdmin) {
     if (isUserBlocked($pdo, (int) $_SESSION['user_id'], $userId)) {
         http_response_code(404);
-        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Profil i padisponueshëm</title><link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css"></head><body>';
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Profil i padisponueshëm</title><link rel="stylesheet" href="' . htmlspecialchars(ts_app_path('public/assets/styles/main.css'), ENT_QUOTES, 'UTF-8') . '"></head><body>';
         include __DIR__ . '/../public/components/header.php';
-        echo '<main style="display:flex;align-items:center;justify-content:center;min-height:60vh;"><div style="text-align:center"><h2>Ky profil nuk është i disponueshëm.</h2><a href="/TiranaSolidare/public/" class="btn_primary" style="margin-top:16px;display:inline-block;">Kthehu në faqe kryesore</a></div></main>';
+        echo '<main style="display:flex;align-items:center;justify-content:center;min-height:60vh;"><div style="text-align:center"><h2>Ky profil nuk është i disponueshëm.</h2><a href="' . htmlspecialchars(ts_app_path('public/'), ENT_QUOTES, 'UTF-8') . '" class="btn_primary" style="margin-top:16px;display:inline-block;">Kthehu në faqe kryesore</a></div></main>';
         include __DIR__ . '/../public/components/footer.php';
         echo '</body></html>';
         exit();

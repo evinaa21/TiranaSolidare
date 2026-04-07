@@ -137,10 +137,12 @@ switch ($action) {
 
         $roli  = trim($body['roli'] ?? 'all');    // 'all' | 'volunteer' | 'admin'
         $linku = !empty($body['linku']) ? trim($body['linku']) : null;
+        $sendEmail = !empty($body['send_email']);
+        $requiredPrefix = ts_app_base_path() === '' ? '/' : rtrim(ts_app_base_path(), '/') . '/';
 
         // Validate link to prevent stored XSS via javascript:/data: URIs and path traversal
-        if ($linku !== null && (!str_starts_with($linku, '/TiranaSolidare/') || str_contains($linku, '..'))) {
-            json_error('Linku duhet të jetë relativ dhe të fillojë me /TiranaSolidare/.', 422);
+        if ($linku !== null && (!str_starts_with($linku, $requiredPrefix) || str_contains($linku, '..'))) {
+            json_error('Linku duhet të jetë relativ dhe të fillojë me ' . $requiredPrefix, 422);
         }
 
         // Only allow known role values to avoid injection
@@ -149,12 +151,13 @@ switch ($action) {
         }
 
         if ($roli === 'all') {
-            $uStmt = $pdo->query("SELECT id_perdoruesi FROM Perdoruesi WHERE statusi_llogarise = 'active'");
+            $uStmt = $pdo->query("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE statusi_llogarise = 'active'");
         } else {
-            $uStmt = $pdo->prepare("SELECT id_perdoruesi FROM Perdoruesi WHERE roli = ? AND statusi_llogarise = 'active'");
+            $uStmt = $pdo->prepare("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE roli = ? AND statusi_llogarise = 'active'");
             $uStmt->execute([$roli]);
         }
-        $userIds = $uStmt->fetchAll(PDO::FETCH_COLUMN);
+        $recipients = $uStmt->fetchAll(PDO::FETCH_ASSOC);
+        $userIds = array_map(static fn (array $row): int => (int) ($row['id_perdoruesi'] ?? 0), $recipients);
 
         if (empty($userIds)) {
             json_error('Asnjë përdorues aktiv u gjet për rolin zgjedhur.', 404);
@@ -187,7 +190,34 @@ switch ($action) {
             json_error('Gabim gjatë dërgimit të njoftimit.', 500);
         }
 
-        json_success(['sent' => $count, 'message' => "Njoftimi u dërgua te $count përdorues."]);
+        $emailed = 0;
+        if ($sendEmail) {
+            foreach ($recipients as $recipient) {
+                $email = trim((string) ($recipient['email'] ?? ''));
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    continue;
+                }
+
+                if (send_notification_email(
+                    $email,
+                    (string) ($recipient['emri'] ?? 'Përdorues'),
+                    'Njoftim i rëndësishëm — Tirana Solidare',
+                    $mesazhi,
+                    [
+                        'action_url' => $linku,
+                        'action_label' => $linku ? 'Hap njoftimin' : '',
+                    ]
+                )) {
+                    $emailed++;
+                }
+            }
+        }
+
+        $message = "Njoftimi u dërgua te $count përdorues.";
+        if ($sendEmail) {
+            $message .= " Email u futën në radhë për $emailed përdorues.";
+        }
+        json_success(['sent' => $count, 'emailed' => $emailed, 'message' => $message]);
         break;
 
     default:

@@ -7,7 +7,7 @@ check_login();
 
 // Dashboard roles should use the shared dashboard instead of the volunteer panel.
 if (ts_is_dashboard_role_value($_SESSION['roli'] ?? '')) {
-    header("Location: /TiranaSolidare/views/dashboard.php");
+  header('Location: ' . ts_app_path('views/dashboard.php'));
     exit();
 }
 

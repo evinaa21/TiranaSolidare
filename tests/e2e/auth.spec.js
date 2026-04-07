@@ -1,7 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-
-const BASE = 'http://localhost/TiranaSolidare';
+const { BASE } = require('./base-url');
 const VOLUNTEER = { email: 'e2e.volunteer@test.local', password: 'Test1234!' };
 const ADMIN     = { email: 'e2e.admin@test.local',     password: 'Test1234!' };
 
@@ -34,7 +33,10 @@ test.describe('Authentication flows', () => {
     await page.fill('#email', VOLUNTEER.email);
     // Remove required so browser allows submission
     await page.evaluate(() => {
-      document.querySelector('input#password').removeAttribute('required');
+      const passwordInput = document.querySelector('input#password');
+      if (passwordInput instanceof HTMLInputElement) {
+        passwordInput.removeAttribute('required');
+      }
     });
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/error=empty_fields/);
@@ -68,7 +70,9 @@ test.describe('Authentication flows', () => {
     await Promise.all([
       page.waitForNavigation({ timeout: 15_000 }),
       page.locator('#header-user-menu form[action*="logout.php"]').evaluate((form) => {
-        form.submit();
+        if (form instanceof HTMLFormElement) {
+          form.submit();
+        }
       }),
     ]);
     await expect(page).toHaveURL(/login\.php/);

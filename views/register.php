@@ -6,9 +6,9 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 if (isset($_SESSION['user_id'])) {
     $roli = $_SESSION['roli'] ?? '';
     if (in_array($roli, ['admin', 'super_admin'])) {
-        header('Location: /TiranaSolidare/views/dashboard.php');
+    header('Location: ' . ts_app_path('views/dashboard.php'));
     } else {
-        header('Location: /TiranaSolidare/views/volunteer_panel.php');
+    header('Location: ' . ts_app_path('views/volunteer_panel.php'));
     }
     exit();
 }

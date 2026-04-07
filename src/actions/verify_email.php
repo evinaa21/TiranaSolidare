@@ -7,7 +7,7 @@ $token = trim($_GET['token'] ?? '');
 $email = trim($_GET['email'] ?? '');
 
 if ($token === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /TiranaSolidare/views/login.php?error=invalid_verification_link');
+    header('Location: ' . ts_app_path('views/login.php?error=invalid_verification_link'));
     exit();
 }
 
@@ -38,11 +38,11 @@ try {
             $successKey = ts_user_activation_state($row) === 'guardian_pending'
                 ? 'email_already_verified_guardian_pending'
                 : 'email_already_verified';
-            header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
+            header('Location: ' . ts_app_path('views/login.php?success=' . $successKey));
         } elseif ($row && !empty($row['verification_token_expires']) && strtotime($row['verification_token_expires']) < time()) {
-            header('Location: /TiranaSolidare/views/login.php?error=verification_expired');
+            header('Location: ' . ts_app_path('views/login.php?error=verification_expired'));
         } else {
-            header('Location: /TiranaSolidare/views/login.php?error=invalid_verification_link');
+            header('Location: ' . ts_app_path('views/login.php?error=invalid_verification_link'));
         }
         exit();
     }
@@ -54,10 +54,10 @@ try {
         ? 'email_verified_guardian_pending'
         : 'email_verified';
 
-    header('Location: /TiranaSolidare/views/login.php?success=' . $successKey);
+    header('Location: ' . ts_app_path('views/login.php?success=' . $successKey));
     exit();
 } catch (Throwable $e) {
     error_log('Email verification failed: ' . $e->getMessage());
-    header('Location: /TiranaSolidare/views/login.php?error=sql_error');
+    header('Location: ' . ts_app_path('views/login.php?error=sql_error'));
     exit();
 }

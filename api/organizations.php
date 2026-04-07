@@ -128,7 +128,7 @@ switch ($action) {
                 'organization_application',
                 'organization_application',
                 $applicationId,
-                '/TiranaSolidare/views/dashboard.php#panel-organizations',
+                ts_app_path('views/dashboard.php#panel-organizations'),
             ]);
 
             if (filter_var($reviewer['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
@@ -242,7 +242,7 @@ switch ($action) {
             'organization_application',
             'organization_application',
             $applicationId,
-            '/TiranaSolidare/views/become_organizer.php',
+            ts_app_path('views/become_organizer.php'),
         ]);
 
         if (filter_var($application['applicant_email'] ?? '', FILTER_VALIDATE_EMAIL)) {

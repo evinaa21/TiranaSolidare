@@ -10,6 +10,45 @@
  * ---------------------------------------------------
  */
 
+function tsMapDetectBasePath() {
+  if (typeof window !== 'undefined' && typeof window.TS_BASE_PATH === 'string') {
+    return window.TS_BASE_PATH;
+  }
+
+  const candidates = [document.currentScript?.src || ''];
+  document.querySelectorAll('script[src]').forEach((script) => candidates.push(script.src));
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const pathname = new URL(candidate, window.location.href).pathname;
+      const marker = '/assets/js/map-component.js';
+      const index = pathname.indexOf(marker);
+      if (index >= 0) {
+        return pathname.slice(0, index);
+      }
+    } catch (err) {
+      // Ignore malformed URLs.
+    }
+  }
+
+  return '';
+}
+
+const TS_MAP_BASE_PATH = tsMapDetectBasePath();
+const tsMapPath = (typeof window !== 'undefined' && typeof window.tsAppPath === 'function')
+  ? window.tsAppPath
+  : ((path = '') => {
+      const trimmed = String(path || '').replace(/^\/+/, '');
+      if (!trimmed) {
+        return TS_MAP_BASE_PATH || '/';
+      }
+      return `${TS_MAP_BASE_PATH}/${trimmed}`.replace(/\/+/g, '/');
+    });
+const TS_MAP_API_BASE = (typeof window !== 'undefined' && typeof window.TS_API_BASE === 'string')
+  ? window.TS_API_BASE
+  : tsMapPath('api');
+
 const TSMap = (() => {
   // Default center: Tirana, Albania
   const TIRANA = [41.3275, 19.8187];
@@ -198,7 +237,7 @@ const TSMap = (() => {
     if (!addressInput) return;
 
     try {
-      const res = await fetch(`/TiranaSolidare/api/geocode.php?action=reverse&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`);
+      const res = await fetch(`${TS_MAP_API_BASE}/geocode.php?action=reverse&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`);
       const json = await res.json();
       const data = json.success ? (json.data.result || null) : null;
       if (data && (data.short_name || data.display_name)) {
@@ -212,7 +251,7 @@ const TSMap = (() => {
   // Forward geocode search
   async function geocodeSearch(query, resultsDiv, map, marker, options, setMarker, onResultSelect) {
     try {
-      const res = await fetch(`/TiranaSolidare/api/geocode.php?action=search&q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${TS_MAP_API_BASE}/geocode.php?action=search&q=${encodeURIComponent(query)}`);
       const json = await res.json();
       const results = json.success ? (json.data.results || []) : [];
 

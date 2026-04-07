@@ -139,7 +139,7 @@ body.page-requests {
 .rq-hero.rq-hero--events {
   background-image: 
     linear-gradient(135deg, rgba(0,35,28,0.82) 0%, rgba(0,60,48,0.72) 50%, rgba(0,25,18,0.85) 100%),
-    url('/TiranaSolidare/public/assets/images/events-bg.png');
+    url('../images/events-bg.png');
   background-size: cover, cover;
   background-position: center, center 60%;
   background-repeat: no-repeat, no-repeat;
@@ -159,7 +159,7 @@ body.page-requests {
 .rq-hero.rq-hero--requests {
   background-image:
     linear-gradient(135deg, rgba(13,31,26,0.82) 0%, rgba(20,43,36,0.72) 50%, rgba(15,28,23,0.85) 100%),
-    url('/TiranaSolidare/public/assets/images/requests-bg.png');
+    url('../images/requests-bg.png');
   background-size: cover, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;

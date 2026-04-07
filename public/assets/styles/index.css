@@ -2723,7 +2723,7 @@
     overflow: hidden;
     background:
       linear-gradient(168deg, rgba(0,21,16,0.88) 0%, rgba(0,42,34,0.82) 30%, rgba(0,61,51,0.75) 55%, rgba(0,43,34,0.82) 80%, rgba(0,17,13,0.9) 100%),
-      url('/TiranaSolidare/public/assets/images/events-bg.png');
+      url('../images/events-bg.png');
     background-size: cover, cover;
     background-position: center, center 40%;
     background-repeat: no-repeat, no-repeat;

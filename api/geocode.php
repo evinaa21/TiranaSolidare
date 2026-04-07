@@ -19,10 +19,11 @@ $action = $_GET['action'] ?? 'search';
 
 function ts_geocode_http_json(string $url): array
 {
+    $siteUrl = app_base_url();
     $headers = [
         'Accept: application/json',
         'Accept-Language: sq,en',
-        'User-Agent: TiranaSolidare/1.0 (+http://localhost/TiranaSolidare)',
+        'User-Agent: TiranaSolidare/1.0 (+' . $siteUrl . ')',
     ];
 
     if (function_exists('curl_init')) {

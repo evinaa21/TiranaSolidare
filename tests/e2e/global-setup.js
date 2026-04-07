@@ -2,8 +2,7 @@
 const { chromium } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
-
-const BASE = 'http://localhost/TiranaSolidare';
+const { BASE } = require('./base-url');
 
 module.exports = async function globalSetup() {
   // Ensure auth directory exists

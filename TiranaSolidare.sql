@@ -602,6 +602,31 @@ CREATE TABLE IF NOT EXISTS `email_queue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- Migration: Support inbox for admin contact messages
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `support_messages` (
+  `id_support_message` INT NOT NULL AUTO_INCREMENT,
+  `from_user_id` INT NULL,
+  `from_name` VARCHAR(160) NOT NULL,
+  `from_email` VARCHAR(190) NOT NULL,
+  `subject` VARCHAR(200) NOT NULL,
+  `message` TEXT NOT NULL,
+  `status` ENUM('new','read','replied','resolved') NOT NULL DEFAULT 'new',
+  `last_reply_message` TEXT NULL,
+  `replied_by` INT NULL,
+  `replied_at` DATETIME NULL,
+  `resolved_by` INT NULL,
+  `resolved_at` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_support_message`),
+  INDEX `idx_support_status` (`status`, `created_at`),
+  INDEX `idx_support_user` (`from_user_id`),
+  INDEX `idx_support_reply` (`replied_by`),
+  INDEX `idx_support_resolve` (`resolved_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 -- Migration: Standardize kerkesa_per_ndihme.statusi to lowercase English
 -- (missed in original FIX 1 migration)
 -- --------------------------------------------------------

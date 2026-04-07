@@ -1,7 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-
-const BASE = 'http://localhost/TiranaSolidare';
+const { BASE } = require('./base-url');
 
 // All tests in this file run with the pre-authenticated admin session
 // (storageState: 'tests/e2e/.auth/admin.json', set in playwright.config.js)

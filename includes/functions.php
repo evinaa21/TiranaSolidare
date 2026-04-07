@@ -6,10 +6,147 @@
  * ---------------------------------------------------
  */
 
+require_once __DIR__ . '/../config/env.php';
+
+function ts_is_https_request(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+}
+
+function ts_app_base_path(): string
+{
+    static $basePath = null;
+    if ($basePath !== null) {
+        return $basePath;
+    }
+
+    $configured = getenv('APP_URL');
+    if (is_string($configured) && trim($configured) !== '') {
+        $parsedPath = parse_url(trim($configured), PHP_URL_PATH);
+        if (is_string($parsedPath)) {
+            $normalized = '/' . trim($parsedPath, '/');
+            $basePath = $normalized === '/' ? '' : rtrim($normalized, '/');
+            return $basePath;
+        }
+    }
+
+    $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? ''));
+    foreach (['/api/', '/views/', '/src/', '/public/', '/tests/'] as $marker) {
+        $position = strpos($scriptPath, $marker);
+        if ($position !== false) {
+            $prefix = rtrim(substr($scriptPath, 0, $position), '/');
+            $basePath = $prefix;
+            return $basePath;
+        }
+    }
+
+    $directory = str_replace('\\', '/', dirname($scriptPath));
+    $basePath = ($directory === '/' || $directory === '.') ? '' : rtrim($directory, '/');
+    return $basePath;
+}
+
+function ts_cookie_path(): string
+{
+    $basePath = ts_app_base_path();
+    return $basePath === '' ? '/' : ($basePath . '/');
+}
+
+function ts_app_path(string $path = ''): string
+{
+    $basePath = ts_app_base_path();
+    $trimmedPath = trim($path);
+
+    if ($trimmedPath === '') {
+        return $basePath === '' ? '/' : $basePath;
+    }
+    if (preg_match('~^https?://~i', $trimmedPath)) {
+        return $trimmedPath;
+    }
+
+    $trimmedPath = ltrim($trimmedPath, '/');
+    return ($basePath === '' ? '' : $basePath) . '/' . $trimmedPath;
+}
+
+function ts_app_origin(): ?string
+{
+    $configured = getenv('APP_URL');
+    if (!is_string($configured) || trim($configured) === '') {
+        return null;
+    }
+
+    $parts = parse_url(trim($configured));
+    if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+        return null;
+    }
+
+    $origin = $parts['scheme'] . '://' . $parts['host'];
+    if (!empty($parts['port'])) {
+        $origin .= ':' . $parts['port'];
+    }
+
+    return $origin;
+}
+
+function ts_allowed_origins(): array
+{
+    $origins = [
+        'http://localhost',
+        'http://localhost:80',
+        'http://localhost:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1',
+        'http://127.0.0.1:80',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:8080',
+        'https://localhost',
+        'https://localhost:443',
+        'https://127.0.0.1',
+        'https://127.0.0.1:443',
+    ];
+
+    $appOrigin = ts_app_origin();
+    if ($appOrigin !== null && $appOrigin !== '') {
+        $origins[] = $appOrigin;
+    }
+
+    return array_values(array_unique($origins));
+}
+
+function ts_rewrite_legacy_app_paths(string $buffer): string
+{
+    $basePath = ts_app_base_path();
+    if ($basePath === '/TiranaSolidare') {
+        return $buffer;
+    }
+
+    $replacementPath = $basePath === '' ? '/' : ($basePath . '/');
+    $encodedReplacementPath = rawurlencode($replacementPath);
+    $encodedReplacementBase = rawurlencode($basePath === '' ? '/' : $basePath);
+
+    return str_replace(
+        [
+            '/TiranaSolidare/',
+            '%2FTiranaSolidare%2F',
+            '%2FTiranaSolidare',
+        ],
+        [
+            $replacementPath,
+            $encodedReplacementPath,
+            $encodedReplacementBase,
+        ],
+        $buffer
+    );
+}
+
+if (!defined('TS_OUTPUT_PATH_REWRITER_STARTED') && PHP_SAPI !== 'cli') {
+    define('TS_OUTPUT_PATH_REWRITER_STARTED', true);
+    ob_start('ts_rewrite_legacy_app_paths');
+}
+
 // ── Secure session cookie settings (applied globally) ──
 if (session_status() === PHP_SESSION_NONE) {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+    $isHttps = ts_is_https_request();
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.use_strict_mode', '1');
@@ -19,7 +156,7 @@ if (session_status() === PHP_SESSION_NONE) {
     // Ensure all sessions use the same cookie path to prevent stale cookie conflicts
     session_set_cookie_params([
         'lifetime' => 0,
-        'path'     => '/TiranaSolidare/',
+        'path'     => ts_cookie_path(),
         'domain'   => '',
         'secure'   => $isHttps,
         'httponly'  => true,
@@ -41,7 +178,7 @@ function enforce_session_timeout(int $maxIdleSeconds = 3600): void
             session_start();
         }
         $_SESSION['flash']['error'] = 'Sesioni juaj ka skaduar nga mosaktiviteti. Ju lutem kyçuni përsëri.';
-        header('Location: /TiranaSolidare/views/login.php?error=session_expired');
+        header('Location: ' . ts_app_path('views/login.php?error=session_expired'));
         exit();
     }
     $_SESSION['last_activity'] = time();
@@ -53,11 +190,10 @@ function enforce_session_timeout(int $maxIdleSeconds = 3600): void
 function check_login(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
-        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+        $isHttps = ts_is_https_request();
         session_set_cookie_params([
             'lifetime' => 0,
-            'path'     => '/TiranaSolidare/',
+            'path'     => ts_cookie_path(),
             'domain'   => '',
             'secure'   => $isHttps,
             'httponly'  => true,
@@ -67,7 +203,7 @@ function check_login(): void
     }
     enforce_session_timeout();
     if (!isset($_SESSION['user_id'])) {
-        header('Location: /TiranaSolidare/views/login.php');
+        header('Location: ' . ts_app_path('views/login.php'));
         exit();
     }
 }
@@ -465,8 +601,9 @@ function ts_birthdate_age(?string $dob): ?int
         return null;
     }
 
-    $birth = DateTime::createFromFormat('Y-m-d', $dob);
-    $errors = DateTime::getLastErrors();
+    $timezone = new DateTimeZone('UTC');
+    $birth = DateTimeImmutable::createFromFormat('!Y-m-d', $dob, $timezone);
+    $errors = DateTimeImmutable::getLastErrors();
     if (
         $birth === false
         || ($errors !== false && (($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0))
@@ -475,12 +612,12 @@ function ts_birthdate_age(?string $dob): ?int
         return null;
     }
 
-    $now = new DateTime();
-    if ($birth > $now) {
+    $today = new DateTimeImmutable('today', $timezone);
+    if ($birth > $today) {
         return null;
     }
 
-    $age = (int) $now->diff($birth)->y;
+    $age = (int) $birth->diff($today)->y;
     return ($age >= 1 && $age <= 120) ? $age : null;
 }
 
@@ -1198,10 +1335,13 @@ function app_base_url(): string
         return rtrim($configured, '/');
     }
     // Fallback for local development only
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+    $https = ts_is_https_request();
     $scheme = $https ? 'https' : 'http';
-    return $scheme . '://localhost/TiranaSolidare';
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    if ($host === '') {
+        $host = 'localhost';
+    }
+    return $scheme . '://' . $host . (ts_app_base_path() ?: '');
 }
 
 function ts_absolute_app_url(string $path = ''): string
@@ -1217,7 +1357,8 @@ function ts_absolute_app_url(string $path = ''): string
     if (!str_starts_with($path, '/')) {
         $path = '/' . $path;
     }
-    if (str_starts_with($path, '/TiranaSolidare/')) {
+    $legacyPrefix = '/TiranaSolidare/';
+    if (str_starts_with($path, $legacyPrefix)) {
         $path = substr($path, strlen('/TiranaSolidare'));
     }
 
@@ -1226,7 +1367,7 @@ function ts_absolute_app_url(string $path = ''): string
 
 function ts_contact_page_path(): string
 {
-    return '/TiranaSolidare/views/contact.php';
+    return ts_app_path('views/contact.php');
 }
 
 function ts_support_email(): string
@@ -1261,6 +1402,178 @@ function ts_can_message_user_roles(?string $senderRole, ?string $receiverRole): 
 function ts_admin_contact_policy_message(): string
 {
     return 'Administratorët nuk kontaktohen me mesazhe direkte. Përdorni faqen e kontaktit.';
+}
+
+function ts_db_table_columns(PDO $pdo, string $table): array
+{
+    static $cache = [];
+
+    $cacheKey = spl_object_id($pdo) . ':' . strtolower($table);
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    try {
+        $stmt = $pdo->query('SHOW COLUMNS FROM `' . str_replace('`', '``', $table) . '`');
+        $columns = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $field = (string) ($row['Field'] ?? '');
+            if ($field !== '') {
+                $columns[] = $field;
+            }
+        }
+        $cache[$cacheKey] = $columns;
+    } catch (Throwable $e) {
+        $cache[$cacheKey] = [];
+    }
+
+    return $cache[$cacheKey];
+}
+
+function ts_db_has_column(PDO $pdo, string $table, string $column): bool
+{
+    return in_array($column, ts_db_table_columns($pdo, $table), true);
+}
+
+function ts_insert_notification(
+    PDO $pdo,
+    int $userId,
+    string $message,
+    string $type = 'general',
+    ?string $targetType = null,
+    ?int $targetId = null,
+    ?string $link = null
+): bool {
+    if ($userId <= 0 || trim($message) === '') {
+        return false;
+    }
+
+    $columns = ts_db_table_columns($pdo, 'Njoftimi');
+    if ($columns === []) {
+        return false;
+    }
+
+    $payload = [
+        'id_perdoruesi' => $userId,
+        'mesazhi' => $message,
+        'is_read' => 0,
+    ];
+
+    if (in_array('tipi', $columns, true)) {
+        $payload['tipi'] = $type;
+    } elseif (in_array('lloji', $columns, true)) {
+        $payload['lloji'] = $type;
+    }
+
+    if ($targetType !== null && in_array('target_type', $columns, true)) {
+        $payload['target_type'] = $targetType;
+    }
+    if ($targetId !== null && in_array('target_id', $columns, true)) {
+        $payload['target_id'] = $targetId;
+    }
+    if ($link !== null && in_array('linku', $columns, true)) {
+        $payload['linku'] = $link;
+    }
+
+    $columnList = array_keys($payload);
+    $placeholders = implode(', ', array_fill(0, count($columnList), '?'));
+    $sql = 'INSERT INTO Njoftimi (' . implode(', ', $columnList) . ') VALUES (' . $placeholders . ')';
+
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute(array_values($payload));
+}
+
+function ts_support_dashboard_path(?int $messageId = null): string
+{
+    $query = $messageId !== null && $messageId > 0 ? ('?support_message=' . $messageId) : '';
+    return ts_app_path('views/dashboard.php' . $query . '#support');
+}
+
+function ts_get_active_admin_recipients(PDO $pdo): array
+{
+    $stmt = $pdo->query(
+        "SELECT id_perdoruesi, emri, email, roli, statusi_llogarise
+         FROM Perdoruesi
+         WHERE roli IN ('admin', 'super_admin', 'Admin')"
+    );
+
+    $recipients = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (!ts_is_admin_role_value((string) ($row['roli'] ?? ''))) {
+            continue;
+        }
+        if (ts_normalize_value((string) ($row['statusi_llogarise'] ?? '')) !== 'active') {
+            continue;
+        }
+        $recipients[] = [
+            'id_perdoruesi' => (int) ($row['id_perdoruesi'] ?? 0),
+            'emri' => (string) ($row['emri'] ?? 'Administrator'),
+            'email' => (string) ($row['email'] ?? ''),
+        ];
+    }
+
+    return $recipients;
+}
+
+function ts_store_support_message(PDO $pdo, string $fromName, string $fromEmail, string $subject, string $message, ?int $fromUserId = null): int
+{
+    if (ts_db_table_columns($pdo, 'support_messages') === []) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO support_messages (from_user_id, from_name, from_email, subject, message, status)
+         VALUES (?, ?, ?, ?, ?, ?)' 
+    );
+    $stmt->execute([
+        $fromUserId,
+        $fromName,
+        $fromEmail,
+        $subject,
+        $message,
+        'new',
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+function ts_notify_admins_about_support_message(PDO $pdo, int $messageId, string $subject, string $fromName, bool $sendEmail = true): int
+{
+    $recipients = ts_get_active_admin_recipients($pdo);
+    $notificationText = 'Mesazh i ri nga formulari i kontaktit: "' . $subject . '" nga ' . $fromName . '.';
+    $dashboardPath = ts_support_dashboard_path($messageId > 0 ? $messageId : null);
+    $notified = 0;
+
+    foreach ($recipients as $recipient) {
+        if (ts_insert_notification(
+            $pdo,
+            (int) $recipient['id_perdoruesi'],
+            $notificationText,
+            'support_message',
+            'support_message',
+            $messageId > 0 ? $messageId : null,
+            $dashboardPath
+        )) {
+            $notified++;
+        }
+
+        if ($sendEmail && filter_var($recipient['email'], FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                (string) $recipient['email'],
+                (string) $recipient['emri'],
+                'Mesazh i ri për administratorët — Tirana Solidare',
+                $notificationText,
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => $dashboardPath,
+                    'action_label' => 'Hap inbox-in',
+                    'send_now' => true,
+                ]
+            );
+        }
+    }
+
+    return $notified;
 }
 
 /**
@@ -1694,6 +2007,8 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
 {
     global $pdo;
     $bypassPreferences = !empty($options['bypass_preferences']);
+    $sendNow = !empty($options['send_now']);
+    $requireSendNowSuccess = !empty($options['require_send_now_success']);
 
     if (!$bypassPreferences) {
         try {
@@ -1776,7 +2091,27 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
         </div>";
         $bodyText = "Përshëndetje {$toName},\n\n{$message}{$actionText}{$preferencesText}\n\nTirana Solidare";
 
-    return queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    $queued = queue_email($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    $queueId = ($queued && $pdo) ? (int) $pdo->lastInsertId() : 0;
+
+    if ($sendNow) {
+        $sent = send_email_direct($toEmail, $toName, $subject, $bodyHtml, $bodyText, [
+            'reply_to_email' => $options['reply_to_email'] ?? null,
+            'reply_to_name' => $options['reply_to_name'] ?? null,
+        ]);
+
+        if ($sent && $queueId > 0) {
+            try {
+                $pdo->prepare("UPDATE email_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$queueId]);
+            } catch (Throwable $e) {
+                // Non-critical.
+            }
+        }
+
+        return $requireSendNowSuccess ? $sent : ($queued || $sent);
+    }
+
+    return $queued;
 }
 
 function send_contact_email(string $fromEmail, string $fromName, string $subject, string $message, ?int $fromUserId = null): bool
@@ -1837,6 +2172,16 @@ function send_contact_email(string $fromEmail, string $fromName, string $subject
         $bodyText = "Mesazh i ri nga faqja e kontaktit\n\nSubjekti: {$subject}\nDërguesi: {$fromName}\nEmail-i: {$fromEmail}\n{$accountLine}\n\n{$message}";
 
         global $pdo;
+        $messageId = 0;
+        try {
+            if ($pdo instanceof PDO) {
+                $messageId = ts_store_support_message($pdo, $fromName, $fromEmail, $subject, $message, $fromUserId);
+                ts_notify_admins_about_support_message($pdo, $messageId, $subject, $fromName);
+            }
+        } catch (Throwable $e) {
+            error_log('support message storage failed: ' . $e->getMessage());
+        }
+
         $queueId = 0;
         try {
                 if (queue_email($toEmail, $toName, $finalSubject, $bodyHtml, $bodyText) && $pdo) {
@@ -1859,7 +2204,22 @@ function send_contact_email(string $fromEmail, string $fromName, string $subject
                 }
         }
 
-        return $sent;
+            send_notification_email(
+                $fromEmail,
+                $fromName,
+                'Morëm mesazhin tuaj — Tirana Solidare',
+                'Mesazhi juaj u regjistrua me sukses. Ekipi ynë do t’ju përgjigjet sa më shpejt në këtë adresë email-i.',
+                [
+                    'bypass_preferences' => true,
+                    'action_url' => ts_contact_page_path(),
+                    'action_label' => 'Hap faqen e kontaktit',
+                    'send_now' => true,
+                    'reply_to_email' => $toEmail,
+                    'reply_to_name' => $toName,
+                ]
+            );
+
+            return $queueId > 0 || $sent || $messageId > 0;
 }
 
 /**
@@ -1904,7 +2264,8 @@ function validate_image_url(?string $url): bool
 {
     if (empty($url)) return true; // Optional field
     // Allow internal upload paths (relative paths starting with our app prefix)
-    if (strncmp($url, '/TiranaSolidare/', 16) === 0) {
+    $basePath = ts_app_base_path();
+    if (str_starts_with($url, $basePath === '' ? '/' : ($basePath . '/'))) {
         return true;
     }
     if (!preg_match('#^https://#i', $url)) {
@@ -1921,7 +2282,9 @@ function validate_image_url(?string $url): bool
  */
 function is_safe_redirect(string $url): bool
 {
-    if (strpos($url, '/TiranaSolidare/') !== 0) {
+    $basePath = ts_app_base_path();
+    $requiredPrefix = $basePath === '' ? '/' : ($basePath . '/');
+    if (strpos($url, $requiredPrefix) !== 0) {
         return false;
     }
     if (strpos($url, '//') !== false) {
@@ -2344,11 +2707,11 @@ function ts_public_profile_url(int $userId, ?string $displayName = null): string
 {
     $id = max(0, $userId);
     if ($id <= 0) {
-        return '/TiranaSolidare/views/public_profile.php';
+        return ts_app_path('views/public_profile.php');
     }
 
     $slug = ts_slugify((string) ($displayName ?? 'user'));
-    return '/TiranaSolidare/views/public_profile.php?u=' . rawurlencode($slug . '-' . $id);
+    return ts_app_path('views/public_profile.php?u=' . rawurlencode($slug . '-' . $id));
 }
 
 /**
@@ -2358,15 +2721,15 @@ function ts_public_profile_url(int $userId, ?string $displayName = null): string
 function ts_get_site_logo_url(): string
 {
     $upload_dir = __DIR__ . '/../public/assets/uploads';
-    $base_url = '/TiranaSolidare/public/assets/uploads';
+    $base_url = ts_app_path('public/assets/uploads');
     
     if (!is_dir($upload_dir)) {
-        return '/TiranaSolidare/public/assets/images/logo.png';
+        return ts_app_path('public/assets/images/logo.png');
     }
     
     $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
     if (empty($files)) {
-        return '/TiranaSolidare/public/assets/images/logo.png';
+        return ts_app_path('public/assets/images/logo.png');
     }
     
     usort($files, function ($a, $b) {
