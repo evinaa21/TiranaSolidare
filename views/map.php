@@ -6,6 +6,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 // Events are fully public — no session or privacy checks needed
 
+$mapEventFilterSql = "e.is_archived = 0 AND LOWER(e.statusi) = 'active' AND e.data >= NOW()";
+
 // Fetch all public events that have coordinates
 $stmtEvents = $pdo->query(
     "SELECT e.id_eventi, e.titulli, e.vendndodhja, e.latitude, e.longitude, e.data,
@@ -13,7 +15,7 @@ $stmtEvents = $pdo->query(
      FROM Eventi e
      LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
      WHERE e.latitude IS NOT NULL AND e.longitude IS NOT NULL
-       AND " . ts_public_event_filter_sql('e') . "
+  AND " . $mapEventFilterSql . "
      ORDER BY e.data ASC"
 );
 $events = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);

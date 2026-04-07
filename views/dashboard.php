@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // views/dashboard.php — Admin Panel (Admin only)
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/db.php';

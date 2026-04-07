@@ -576,6 +576,20 @@ $categories = [
 
 $events = [
     [
+        'key' => 'web-challenge',
+        'owner_key' => 'admin',
+        'category_key' => 'edukimi',
+        'titulli' => 'Përgatitja e skenës për konkursin Web Challenge',
+        'pershkrimi' => 'Kërkojmë 12 vullnetarë për montimin e skenës, sistemimin e sallës, vendosjen e materialeve vizuale dhe orientimin e ekipeve pjesëmarrëse për konkursin Web Challenge në Tiranë. Aktiviteti zhvillohet në bashkëpunim me ekipin organizator dhe koordinatorët e bashkisë.',
+        'data' => format_datetime($now->modify('+1 day')->setTime(9, 0)),
+        'vendndodhja' => 'Piramida e Tiranës, Tiranë',
+        'latitude' => 41.3270,
+        'longitude' => 19.8213,
+        'kapaciteti' => 12,
+        'statusi' => 'active',
+        'banner_sources' => ['https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80'],
+    ],
+    [
         'key' => 'lake-cleanup',
         'owner_key' => 'admin',
         'category_key' => 'mjedis',
@@ -673,20 +687,6 @@ $events = [
         'statusi' => 'active',
         'banner_sources' => ['https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1200'],
     ],
-    [
-        'key' => 'tree-planting',
-        'owner_key' => 'admin',
-        'category_key' => 'mjedis',
-        'titulli' => 'Mbjellja e Pemëve në Parkun e Ri',
-        'pershkrimi' => 'Një aksion i përfunduar me fokus te mbjellja e fidanëve, ujitja fillestare dhe shpërndarja e roleve të terrenit. Aktiviteti përfshiu bashkëpunim me banorët e zonës.',
-        'data' => format_datetime($now->modify('-12 days')->setTime(8, 30)),
-        'vendndodhja' => 'Parku i Ri, Tiranë',
-        'latitude' => 41.3190,
-        'longitude' => 19.8230,
-        'kapaciteti' => 4,
-        'statusi' => 'completed',
-        'banner_sources' => ['https://images.unsplash.com/photo-1542601906990-b4d3fb773b09?q=80&w=1200'],
-    ],
 ];
 
 $eventApplications = [
@@ -709,10 +709,6 @@ $eventApplications = [
     ['event_key' => 'flood-response', 'user_key' => 'elira', 'statusi' => 'pending', 'ne_liste_pritje' => 1],
     ['event_key' => 'coding-workshop', 'user_key' => 'klodi', 'statusi' => 'approved', 'ne_liste_pritje' => 0],
     ['event_key' => 'coding-workshop', 'user_key' => 'ena', 'statusi' => 'pending', 'ne_liste_pritje' => 0],
-    ['event_key' => 'tree-planting', 'user_key' => 'elira', 'statusi' => 'present', 'ne_liste_pritje' => 0],
-    ['event_key' => 'tree-planting', 'user_key' => 'sara', 'statusi' => 'present', 'ne_liste_pritje' => 0],
-    ['event_key' => 'tree-planting', 'user_key' => 'noel', 'statusi' => 'present', 'ne_liste_pritje' => 0],
-    ['event_key' => 'tree-planting', 'user_key' => 'arber', 'statusi' => 'absent', 'ne_liste_pritje' => 0],
 ];
 
 $requests = [

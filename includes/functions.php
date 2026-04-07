@@ -1718,22 +1718,30 @@ function send_email_direct(string $toEmail, string $toName, string $subject, str
     try {
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host       = (string) ($cfg['host'] ?? '');
-        $mail->SMTPAuth   = true;
-        $mail->Username   = (string) ($cfg['username'] ?? '');
-        $mail->Password   = (string) ($cfg['password'] ?? '');
-        $mail->Port       = (int) ($cfg['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-        $secure = (string) ($cfg['encryption'] ?? 'tls');
-        $mail->SMTPSecure = $secure === 'ssl'
-            ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
-            : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Host    = (string) ($cfg['host'] ?? '');
+        $mail->Port    = (int) ($cfg['port'] ?? 587);
+        $mail->CharSet = 'UTF-8';
+        $smtpUser = trim((string) ($cfg['username'] ?? ''));
+        if ($smtpUser !== '') {
+            $mail->SMTPAuth = true;
+            $mail->Username = $smtpUser;
+            $mail->Password = (string) ($cfg['password'] ?? '');
+            $secure = (string) ($cfg['encryption'] ?? 'tls');
+            $mail->SMTPSecure = $secure === 'ssl'
+                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        } else {
+            // No-auth SMTP (e.g. local Mailpit catcher) — disable auth and TLS
+            $mail->SMTPAuth    = false;
+            $mail->SMTPSecure  = '';
+            $mail->SMTPAutoTLS = false;
+        }
         $mail->setFrom(
             (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
             (string) ($cfg['from_name']  ?? 'Tirana Solidare')
         );
-        // Envelope sender must match the authenticated SMTP account (required by Gmail)
-        $mail->Sender = (string) ($cfg['username'] ?? $cfg['from_email'] ?? '');
+        // Envelope sender: use authenticated user if set, otherwise from_email
+        $mail->Sender = $smtpUser !== '' ? $smtpUser : (string) ($cfg['from_email'] ?? 'no-reply@localhost');
         $replyToEmail = $options['reply_to_email'] ?? null;
         if (is_string($replyToEmail) && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
             $replyToName = trim((string) ($options['reply_to_name'] ?? $replyToEmail));
@@ -1747,6 +1755,51 @@ function send_email_direct(string $toEmail, string $toName, string $subject, str
             $mail->AltBody = $bodyText;
         }
         $mail->send();
+
+        // Secondary relay: also send via Gmail (SMTP2) when configured and recipient is a real address.
+        // This lets emails appear in real inboxes on phones during demos while Mailpit still shows them locally.
+        $relay2Host = trim((string) (getenv('SMTP2_HOST') ?: ''));
+        $toEmailLower = strtolower($toEmail);
+        $isLocalAddress = str_ends_with($toEmailLower, '.local')
+            || str_ends_with($toEmailLower, '.localhost');
+        if ($relay2Host !== '' && !$isLocalAddress) {
+            try {
+                $mail2 = new \PHPMailer\PHPMailer\PHPMailer(false);
+                $mail2->isSMTP();
+                $mail2->Host    = $relay2Host;
+                $mail2->Port    = (int) (getenv('SMTP2_PORT') ?: 587);
+                $mail2->CharSet = 'UTF-8';
+                $relay2User = trim((string) (getenv('SMTP2_USER') ?: ''));
+                if ($relay2User !== '') {
+                    $mail2->SMTPAuth   = true;
+                    $mail2->Username   = $relay2User;
+                    $mail2->Password   = (string) (getenv('SMTP2_PASS') ?: '');
+                    $mail2->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                } else {
+                    $mail2->SMTPAuth    = false;
+                    $mail2->SMTPSecure  = '';
+                    $mail2->SMTPAutoTLS = false;
+                }
+                $relay2From = trim((string) (getenv('SMTP2_FROM') ?: getenv('SMTP_FROM') ?: 'no-reply@localhost'));
+                $mail2->setFrom($relay2From, (string) ($cfg['from_name'] ?? 'Tirana Solidare'));
+                $mail2->Sender = $relay2User !== '' ? $relay2User : $relay2From;
+                if (isset($replyToEmail) && is_string($replyToEmail) && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+                    $replyToName = trim((string) ($options['reply_to_name'] ?? $replyToEmail));
+                    $mail2->addReplyTo($replyToEmail, $replyToName !== '' ? $replyToName : $replyToEmail);
+                }
+                $mail2->addAddress($toEmail, $toName);
+                $mail2->isHTML(true);
+                $mail2->Subject = $subject;
+                $mail2->Body    = $bodyHtml;
+                if ($bodyText !== '') {
+                    $mail2->AltBody = $bodyText;
+                }
+                $mail2->send();
+            } catch (Throwable $e2) {
+                error_log('send_email_direct relay2 failed: ' . $e2->getMessage());
+            }
+        }
+
         return true;
     } catch (Throwable $e) {
         error_log('send_email_direct failed: ' . $e->getMessage());
@@ -1816,22 +1869,30 @@ function process_email_queue(int $batchSize = 10): int
         try {
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             $mail->isSMTP();
-            $mail->Host       = (string) ($cfg['host'] ?? '');
-            $mail->SMTPAuth   = true;
-            $mail->Username   = (string) ($cfg['username'] ?? '');
-            $mail->Password   = (string) ($cfg['password'] ?? '');
-            $mail->Port       = (int) ($cfg['port'] ?? 587);
-            $mail->CharSet    = 'UTF-8';
-            $secure = (string) ($cfg['encryption'] ?? 'tls');
-            $mail->SMTPSecure = $secure === 'ssl'
-                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
-                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Host    = (string) ($cfg['host'] ?? '');
+            $mail->Port    = (int) ($cfg['port'] ?? 587);
+            $mail->CharSet = 'UTF-8';
+            $smtpUser = trim((string) ($cfg['username'] ?? ''));
+            if ($smtpUser !== '') {
+                $mail->SMTPAuth = true;
+                $mail->Username = $smtpUser;
+                $mail->Password = (string) ($cfg['password'] ?? '');
+                $secure = (string) ($cfg['encryption'] ?? 'tls');
+                $mail->SMTPSecure = $secure === 'ssl'
+                    ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                    : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            } else {
+                // No-auth SMTP (e.g. local Mailpit catcher) — disable auth and TLS
+                $mail->SMTPAuth    = false;
+                $mail->SMTPSecure  = '';
+                $mail->SMTPAutoTLS = false;
+            }
             $mail->setFrom(
                 (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
                 (string) ($cfg['from_name']  ?? 'Tirana Solidare')
             );
-            // Envelope sender must match the authenticated SMTP account (required by Gmail)
-            $mail->Sender = (string) ($cfg['username'] ?? $cfg['from_email'] ?? '');
+            // Envelope sender: use authenticated user if set, otherwise from_email
+            $mail->Sender = $smtpUser !== '' ? $smtpUser : (string) ($cfg['from_email'] ?? 'no-reply@localhost');
             $mail->addAddress($row['to_email'], $row['to_name']);
             $mail->isHTML(true);
             $mail->Subject = $row['subject'];

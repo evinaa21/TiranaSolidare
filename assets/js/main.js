@@ -239,8 +239,17 @@ async function editEventPrompt(id, btnEl) {
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Banner URL</label>
-                    <input id="edit-ev-banner" type="url" value="${escapeHtml(ev.banner || '')}" placeholder="https://example.com/image.jpg" style="width:100%;padding:10px 14px;border:1.5px solid #e4e8ee;border-radius:10px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+                    <label style="font-size:0.8rem;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px;">Banner</label>
+                    <input type="hidden" id="edit-ev-banner" value="${escapeHtml(ev.banner || '')}">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <label style="cursor:pointer;font-size:0.85rem;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e4e8ee;border-radius:10px;color:#374151;background:#f9fafb;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                            Ngarko imazh
+                            <input type="file" id="edit-ev-banner-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="previewEditEventBanner(this)">
+                        </label>
+                        <span id="edit-ev-banner-filename" style="font-size:0.82rem;color:#64748b;">${ev.banner ? 'Banneri aktual i ruajtur' : 'Asnjë imazh'}</span>
+                    </div>
+                    <img id="edit-ev-banner-preview" src="${ev.banner ? escapeHtml(ev.banner) : ''}" alt="" style="${ev.banner ? 'display:block' : 'display:none'};max-height:90px;border-radius:8px;margin-top:8px;object-fit:cover;max-width:220px;">
                 </div>
             </div>
             <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
@@ -253,17 +262,53 @@ async function editEventPrompt(id, btnEl) {
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
+function previewEditEventBanner(input) {
+    const prev = document.getElementById('edit-ev-banner-preview');
+    const fname = document.getElementById('edit-ev-banner-filename');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { prev.src = e.target.result; prev.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+        if (fname) fname.textContent = input.files[0].name;
+    }
+}
+
 async function saveEventEdit(id) {
     const titulli = document.getElementById('edit-ev-titulli')?.value.trim();
     const pershkrimi = document.getElementById('edit-ev-pershkrimi')?.value.trim();
     const data = document.getElementById('edit-ev-data')?.value;
     const vendndodhja = document.getElementById('edit-ev-vendndodhja')?.value.trim();
     const id_kategoria = document.getElementById('edit-ev-kategoria')?.value;
-    const banner = document.getElementById('edit-ev-banner')?.value.trim() || null;
+    let banner = document.getElementById('edit-ev-banner')?.value.trim() || null;
 
     if (!titulli) { showToast('Titulli është i detyrueshëm.', 'danger'); return; }
     if (!data) { showToast('Data është e detyrueshme.', 'danger'); return; }
     if (!vendndodhja) { showToast('Vendndodhja është e detyrueshme.', 'danger'); return; }
+
+    // Upload new banner file if one was selected
+    const bannerFile = document.getElementById('edit-ev-banner-file');
+    if (bannerFile && bannerFile.files.length > 0) {
+        const uploadFd = new FormData();
+        uploadFd.append('image', bannerFile.files[0]);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        try {
+            const upRes = await fetch(tsAppPath('api/upload.php'), {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
+                credentials: 'same-origin',
+                body: uploadFd
+            });
+            const upJson = await upRes.json();
+            if (!upJson.success) {
+                showToast('Gabim gjatë ngarkimit të bannerit: ' + (upJson.message || 'Gabim.'), 'danger');
+                return;
+            }
+            banner = upJson.data.url;
+        } catch (err) {
+            showToast('Gabim rrjeti gjatë ngarkimit të bannerit.', 'danger');
+            return;
+        }
+    }
 
     const json = await apiCall(`events.php?action=update&id=${id}`, 'PUT', {
         titulli, pershkrimi, data, vendndodhja, id_kategoria, banner

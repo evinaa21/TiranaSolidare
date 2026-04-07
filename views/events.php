@@ -6,6 +6,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 $isLoggedIn = isset($_SESSION['user_id']);
 $isDashboardUser = ($isLoggedIn && ts_is_dashboard_role_value($_SESSION['roli'] ?? ''));
 $currentUserId = $_SESSION['user_id'] ?? null;
+$isEventFull = false;
 
 // ── Single event detail ──
 if (isset($_GET['id'])) {
@@ -26,6 +27,12 @@ if (isset($_GET['id'])) {
     );
     $stmt->execute([$id]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($event) {
+      $capacity = isset($event['kapaciteti']) ? (int) $event['kapaciteti'] : 0;
+      $approvedCount = isset($event['pranuar_count']) ? (int) $event['pranuar_count'] : 0;
+      $isEventFull = $capacity > 0 && $approvedCount >= $capacity;
+    }
 
     // Check if current user already applied
     $alreadyApplied = false;
@@ -239,7 +246,9 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
         </ul>
 
         <div class="rq-sidebar-cta">
-          <?php if (!$isLoggedIn): ?>
+          <?php if ($isEventFull): ?>
+            <p class="rq-sidebar-hint">Kapaciteti i eventit është plotësuar. Nuk pranohen më aplikime.</p>
+          <?php elseif (!$isLoggedIn): ?>
             <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="rq-btn-full rq-btn-login">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
               Kyçu për të aplikuar

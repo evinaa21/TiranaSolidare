@@ -208,9 +208,7 @@ switch ($action) {
             json_error('Nuk mund të aplikoni për një event që ka kaluar.', 422);
         }
 
-        // Determine waitlist status and insert atomically — prevents duplicate applications
-        // and duplicate waitlist flags under concurrent requests.
-        $waitlisted = 0;
+        // Insert atomically so duplicate applications cannot slip through concurrent requests.
         try {
             $pdo->beginTransaction();
 
@@ -226,22 +224,22 @@ switch ($action) {
             }
 
             if ($event['kapaciteti'] !== null && (int) $event['kapaciteti'] > 0) {
-                // Lock approved rows for this event so no other transaction can sneak an INSERT
-                // between our count check and our own INSERT.
+                // Lock approved rows for this event so capacity cannot be overrun under concurrency.
                 $countStmt = $pdo->prepare(
                     "SELECT COUNT(*) FROM Aplikimi WHERE id_eventi = ? AND statusi = 'approved' FOR UPDATE"
                 );
                 $countStmt->execute([$eventId]);
                 $acceptedCount = (int) $countStmt->fetchColumn();
                 if ($acceptedCount >= (int) $event['kapaciteti']) {
-                    $waitlisted = 1;
+                    $pdo->rollBack();
+                    json_error('Kapaciteti i eventit është plotësuar. Nuk pranohen më aplikime.', 422);
                 }
             }
 
             $stmt = $pdo->prepare(
-                "INSERT INTO Aplikimi (id_perdoruesi, id_eventi, statusi, ne_liste_pritje) VALUES (?, ?, 'pending', ?)"
+                "INSERT INTO Aplikimi (id_perdoruesi, id_eventi, statusi, ne_liste_pritje) VALUES (?, ?, 'pending', 0)"
             );
-            $stmt->execute([$user['id'], $eventId, $waitlisted]);
+            $stmt->execute([$user['id'], $eventId]);
             $appId = (int) $pdo->lastInsertId();
 
             $pdo->commit();
@@ -305,9 +303,7 @@ switch ($action) {
         $userEmailStmt->execute([$user['id']]);
         $userEmail = $userEmailStmt->fetchColumn();
         if (filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
-            $applicantMessage = ($waitlisted
-                ? "Aplikimi juaj për eventin \"{$event['titulli']}\" u regjistrua dhe jeni shtuar në listën e pritjes."
-                : "Aplikimi juaj për eventin \"{$event['titulli']}\" u regjistrua me sukses dhe është në pritje të shqyrtimit.")
+            $applicantMessage = "Aplikimi juaj për eventin \"{$event['titulli']}\" u regjistrua me sukses dhe është në pritje të shqyrtimit."
                 . "\n\nDetaje:\n"
                 . 'Data: ' . date('d/m/Y H:i', strtotime((string) $event['data'])) . "\n"
                 . 'Vendndodhja: ' . (($event['vendndodhja'] ?? '') !== '' ? $event['vendndodhja'] : 'Do të konfirmohet në faqen e eventit.');
@@ -325,9 +321,7 @@ switch ($action) {
             );
         }
 
-        $guardianMessage = ($waitlisted
-            ? "{$user['emri']} u regjistrua për eventin \"{$event['titulli']}\" dhe u shtua në listën e pritjes."
-            : "{$user['emri']} u regjistrua për eventin \"{$event['titulli']}\" dhe aplikimi është në pritje të shqyrtimit.")
+        $guardianMessage = "{$user['emri']} u regjistrua për eventin \"{$event['titulli']}\" dhe aplikimi është në pritje të shqyrtimit."
             . "\n\nDetaje:\n"
             . 'Data: ' . date('d/m/Y H:i', strtotime((string) $event['data'])) . "\n"
             . 'Vendndodhja: ' . (($event['vendndodhja'] ?? '') !== '' ? $event['vendndodhja'] : 'Do të konfirmohet në faqen e eventit.');
@@ -343,14 +337,10 @@ switch ($action) {
             ]
         );
 
-        $successMsg = $waitlisted
-            ? 'Eventi është plot. Jeni shtuar në listën e pritjes.'
-            : 'Aplikimi u dërgua me sukses.';
-
         json_success([
             'id_aplikimi'    => $appId,
-            'ne_liste_pritje' => $waitlisted,
-            'message'         => $successMsg,
+            'ne_liste_pritje' => 0,
+            'message'         => 'Aplikimi u dërgua me sukses.',
         ], 201);
         break;
 
