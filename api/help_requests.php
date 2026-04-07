@@ -770,7 +770,7 @@ switch ($action) {
             }
 
             // Enforce moderation visibility: non-approved posts hidden from non-owner non-admins
-            $getViewerIsAdmin = isset($_SESSION['user_id']) && is_admin();
+            $getViewerIsAdmin = isset($_SESSION['user_id']) && is_admin_role($_SESSION['roli'] ?? '');
             $getViewerId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
             if (($request['moderation_status'] ?? 'approved') !== 'approved'
                 && !$getViewerIsAdmin

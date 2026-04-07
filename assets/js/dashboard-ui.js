@@ -17,7 +17,8 @@ const STATUS_LABELS = {
     admin: 'Admin', super_admin: 'Super Admin', organizer: 'Organizator', volunteer: 'Vullnetar',
     request: 'Kërkesë', offer: 'Ofertë',
     open: 'Hapur', filled: 'Mbushur', closed: 'Mbyllur', completed: 'Përfunduar', cancelled: 'Anuluar',
-    pending_review: 'Në shqyrtim'
+    pending_review: 'Në shqyrtim',
+    past: 'E kaluar'
 };
 function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
 
@@ -578,10 +579,8 @@ window.loadAdminEvents = async function (page = 1) {
         </select>
         <select id="admin-ev-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
-            <option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktive</option>
-            <option value="pending_review"${filterStatus === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
-            <option value="completed"${filterStatus === 'completed' ? ' selected' : ''}>Përfunduara</option>
-            <option value="cancelled"${filterStatus === 'cancelled' ? ' selected' : ''}>Anuluara</option>
+<option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktive</option>
+<option value="past"${filterStatus === 'past' ? ' selected' : ''}>Të kaluara</option>
         </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAdminEvents(1)">Filtro</button>
         <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';document.getElementById('admin-ev-filter-daterange').value='';document.getElementById('admin-ev-filter-status').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
@@ -595,23 +594,24 @@ window.loadAdminEvents = async function (page = 1) {
 
     events.forEach(ev => {
         const isPast = ev.data && new Date(ev.data) < new Date();
-        const statusClass = ev.statusi === 'pending_review' ? 'pending' : ev.statusi === 'cancelled' ? 'blocked' : ev.statusi === 'completed' ? 'vol' : 'active';
+const ds = ev.display_status || ev.statusi;
+const statusClass = ds === 'pending_review' ? 'pending' : ds === 'cancelled' ? 'blocked' : ds === 'completed' ? 'vol' : ds === 'past' ? 'deactivated' : 'active';
         const canApprove = CAN_REVIEW_EVENTS && ev.statusi === 'pending_review';
         html += `<tr${isPast ? ' style="opacity:0.6"' : ''}>
             
             <td>${escapeHtml(ev.titulli)}</td>
             <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
             <td>${formatDate(ev.data)}</td>
-            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(ev.statusi))}</span></td>
+            <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(ds))}</span></td>
             <td>${parseInt(ev.total_aplikime || 0, 10)}</td>
             <td>
                 <div class="db-table__actions">
-    ${!isPast && ev.statusi !== 'cancelled' && ev.statusi !== 'completed'
-        ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
-        : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
-    ${canApprove ? `<button class="db-btn db-btn--success db-btn--sm" onclick="approveEvent(${ev.id_eventi})">Mirato</button>` : ''}
-    <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
-    <button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})" ${ev.statusi === 'pending_review' ? 'disabled' : ''}>Aplikime</button>
+   ${!isPast && ev.statusi !== 'cancelled' && ev.statusi !== 'completed'
+    ? `<button class="db-btn db-btn--warning db-btn--sm" onclick="editEventPrompt(${ev.id_eventi}, this)">Ndrysho</button>` 
+    : `<button class="db-btn db-btn--sm" style="visibility:hidden;pointer-events:none;">Ndrysho</button>`}
+${canApprove ? `<button class="db-btn db-btn--success db-btn--sm" onclick="approveEvent(${ev.id_eventi})">Mirato</button>` : ''}
+<button class="db-btn db-btn--danger db-btn--sm" onclick="deleteEvent(${ev.id_eventi})">Fshi</button>
+<button class="db-btn db-btn--info db-btn--sm" onclick="viewEventApps(${ev.id_eventi})" ${ev.statusi === 'pending_review' ? 'disabled' : ''}>Aplikime</button>
 </div>
             </td>
         </tr>`;
@@ -1274,7 +1274,7 @@ window.loadHelpRequests = async function (page = 1) {
             <option value="offer"${filterType === 'offer' ? ' selected' : ''}>Ofertë</option>
         </select>
         <select id="admin-req-filter-moderation" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
-            <option value=""${!filterModeration ? ' selected' : ''}>Të gjitha moderimi</option>
+            <option value=""${!filterModeration ? ' selected' : ''}>Të gjitha</option>
             <option value="pending_review"${filterModeration === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
             <option value="approved"${filterModeration === 'approved' ? ' selected' : ''}>Miratuar</option>
             <option value="rejected"${filterModeration === 'rejected' ? ' selected' : ''}>Refuzuar</option>

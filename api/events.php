@@ -142,10 +142,12 @@ switch ($action) {
             $where[] = 'e.id_perdoruesi = ?';
             $params[] = $manager['id'];
         }
-        if ($status !== '') {
-            $where[] = 'e.statusi = ?';
-            $params[] = $status;
-        }
+if ($status === 'past') {
+    $where[] = "e.data < NOW() AND e.statusi NOT IN ('cancelled','completed')";
+} elseif ($status !== '') {
+    $where[] = 'e.statusi = ?';
+    $params[] = $status;
+}
         if ($search !== '') {
             $where[] = '(e.titulli LIKE ? OR e.vendndodhja LIKE ? OR e.pershkrimi LIKE ?)';
             $params[] = '%' . $search . '%';
@@ -170,17 +172,25 @@ switch ($action) {
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        $stmt = $pdo->prepare(
-            "SELECT e.*, k.emri AS kategoria_emri,
-                    " . ts_event_creator_display_sql() . ",
-                    (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime
-             FROM Eventi e
-             LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-             LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
-             $whereSql
-             ORDER BY e.krijuar_me DESC, e.id_eventi DESC
-             LIMIT ? OFFSET ?"
-        );
+$stmt = $pdo->prepare(
+    "SELECT e.*, k.emri AS kategoria_emri,
+            " . ts_event_creator_display_sql() . ",
+            (SELECT COUNT(*) FROM Aplikimi a WHERE a.id_eventi = e.id_eventi) AS total_aplikime,
+            CASE
+                WHEN e.statusi IN ('cancelled','completed') THEN e.statusi
+                WHEN e.data < NOW() THEN 'past'
+                ELSE e.statusi
+            END AS display_status
+     FROM Eventi e
+     LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
+     LEFT JOIN Perdoruesi p ON p.id_perdoruesi = e.id_perdoruesi
+     $whereSql
+     ORDER BY
+        CASE WHEN e.data >= NOW() THEN 0 ELSE 1 END ASC,
+        CASE WHEN e.data >= NOW() THEN e.data END ASC,
+        CASE WHEN e.data <  NOW() THEN e.data END DESC
+     LIMIT ? OFFSET ?"
+);
         $params[] = $pagination['limit'];
         $params[] = $pagination['offset'];
         $stmt->execute($params);
@@ -515,8 +525,14 @@ switch ($action) {
                 }
             }
 
-            log_admin_action($manager['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
-            json_success(['message' => 'Eventi u fshi me sukses.']);
+// Withdraw aplikimet pasi njoftimet u dërguan
+$pdo->prepare(
+    "UPDATE Aplikimi SET statusi = 'withdrawn'
+     WHERE id_eventi = ? AND statusi IN ('approved', 'pending')"
+)->execute([$id]);
+
+log_admin_action($manager['id'], 'archive_event', 'event', $id, ['titulli' => $eventTitle]);
+json_success(['message' => 'Eventi u fshi me sukses.']);
         } else {
             // Hard-delete: no applications
             $stmt = $pdo->prepare('DELETE FROM Eventi WHERE id_eventi = ?');
