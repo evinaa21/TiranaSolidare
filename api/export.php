@@ -47,6 +47,7 @@ if ($type === 'report_html') {
         "SELECT p.emri, p.roli, COUNT(a.id_aplikimi) AS app_count
          FROM Perdoruesi p
          JOIN Aplikimi a ON a.id_perdoruesi = p.id_perdoruesi AND a.statusi = 'approved'
+         WHERE p.roli NOT IN ('super_admin', 'admin')
          GROUP BY p.id_perdoruesi
          ORDER BY app_count DESC
          LIMIT 5"
@@ -329,7 +330,7 @@ function csv_date(?string $value, bool $withTime = true): string
 
 if ($type === 'users') {
     fputcsv($output, ['ID', 'Emri', 'Email', 'Roli', 'Statusi', 'Regjistruar Me']);
-    $stmt = $pdo->query("SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me FROM Perdoruesi ORDER BY krijuar_me DESC");
+    $stmt = $pdo->query("SELECT id_perdoruesi, emri, email, roli, statusi_llogarise, krijuar_me FROM Perdoruesi WHERE roli NOT IN ('super_admin', 'admin') ORDER BY krijuar_me DESC");
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     fputcsv($output, [$row['id_perdoruesi'], csv_safe($row['emri']), csv_safe($row['email']), $row['roli'], $row['statusi_llogarise'], csv_date($row['krijuar_me'])]);
     }

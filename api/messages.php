@@ -246,7 +246,8 @@ if ($blockCheck2->fetchColumn() > 0) {
                     $receiver['email'],
                     $receiver['emri'],
                     "{$user['emri']} ju dërgoi një mesazh — Tirana Solidare",
-                    "{$user['emri']} ju dërgoi një mesazh të ri në Tirana Solidare. Klikoni link-un për ta lexuar: {$panelUrl}"
+                    "{$user['emri']} ju dërgoi një mesazh të ri në Tirana Solidare. Klikoni link-un për ta lexuar: {$panelUrl}",
+                    ['send_now' => true, 'action_url' => $panelUrl, 'action_label' => 'Shiko mesazhin']
                 );
             }
 

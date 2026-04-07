@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/status_labels.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $isLoggedIn = isset($_SESSION['user_id']);
@@ -249,15 +250,16 @@ $currentMonth = $months_sq[(int)$monday->format('n')] . ' ' . $monday->format('Y
           <?php if ($isEventFull): ?>
             <p class="rq-sidebar-hint">Kapaciteti i eventit është plotësuar. Nuk pranohen më aplikime.</p>
           <?php elseif (!$isLoggedIn): ?>
-            <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="rq-btn-full rq-btn-login">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
-              Kyçu për të aplikuar
+            <?php $eventRedirect = urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']); ?>
+            <a href="/TiranaSolidare/views/register.php?redirect=<?= $eventRedirect ?>" class="rq-btn-full rq-btn-login">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+              Regjistrohu për të aplikuar
             </a>
-            <p class="rq-sidebar-hint">Duhet të jeni i kyçur për të aplikuar si vullnetar. <a href="/TiranaSolidare/views/login.php?redirect=<?= urlencode('/TiranaSolidare/views/events.php?id=' . $event['id_eventi']) ?>" class="rq-hint-link">Kyçu këtu &rarr;</a></p>
+            <p class="rq-sidebar-hint">Duhet të keni një llogari për të aplikuar si vullnetar. <a href="/TiranaSolidare/views/register.php?redirect=<?= $eventRedirect ?>" class="rq-hint-link">Regjistrohu këtu &rarr;</a> ose <a href="/TiranaSolidare/views/login.php?redirect=<?= $eventRedirect ?>" class="rq-hint-link">kyçu nëse keni llogari</a></p>
           <?php elseif ($isDashboardUser): ?>
             <p class="rq-sidebar-hint">Llogaritë me akses në panel nuk mund të aplikojnë si vullnetarë për evente.</p>
           <?php elseif ($alreadyApplied): ?>
-            <span class="rq-badge rq-badge--status"><?= htmlspecialchars($existingApp['statusi']) ?></span>
+            <span class="rq-badge rq-badge--status"><?= htmlspecialchars(status_label($existingApp['statusi'])) ?></span>
             <p class="rq-sidebar-hint">Ju keni aplikuar tashmë për këtë event.</p>
           <?php elseif (strtotime($event['data']) <= time()): ?>
             <p class="rq-sidebar-hint">Ky event ka kaluar. Nuk mund të aplikoni më.</p>

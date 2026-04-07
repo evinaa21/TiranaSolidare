@@ -106,11 +106,7 @@ $supportEmail = ts_support_email();
       border-color: transparent;
     }
 
-    .contact-card--accent h2,
-    .contact-card--accent p,
-    .contact-card--accent li,
-    .contact-card--accent a,
-    .contact-card--accent strong {
+    .contact-card--accent * {
       color: inherit;
     }
 

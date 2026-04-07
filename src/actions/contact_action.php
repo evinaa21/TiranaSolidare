@@ -28,7 +28,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     exit();
 }
 
-if (!validate_csrf_token($_POST['csrf_token'] ?? null)) {
+if (!validate_csrf_token($_POST['_csrf_token'] ?? null)) {
     redirect_contact_with_flash('Sesioni ka skaduar. Rifreskoni faqen dhe provoni përsëri.', 'error');
 }
 

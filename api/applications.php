@@ -430,7 +430,7 @@ switch ($action) {
                 $recipient['emri'] ?? 'Volunteer',
                 $emailSubject,
                 $msg,
-                ['bypass_preferences' => true, 'action_url' => $eventLink, 'action_label' => 'Shiko eventin']
+                ['bypass_preferences' => true, 'send_now' => true, 'action_url' => $eventLink, 'action_label' => 'Shiko eventin']
             );
         }
 

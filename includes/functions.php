@@ -2187,7 +2187,7 @@ function send_notification_email(string $toEmail, string $toName, string $subjec
 {
     global $pdo;
     $bypassPreferences = !empty($options['bypass_preferences']);
-    $sendNow = !empty($options['send_now']);
+    $sendNow = isset($options['send_now']) ? !empty($options['send_now']) : true;
     $requireSendNowSuccess = !empty($options['require_send_now_success']);
 
     if (!$bypassPreferences) {

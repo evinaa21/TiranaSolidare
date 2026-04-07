@@ -6,7 +6,7 @@ $host    = getenv('DB_HOST') ?: 'localhost';
 $db      = getenv('DB_NAME') ?: 'TiranaSolidare';
 $user    = getenv('DB_USER') ?: 'root';
 $pass    = getenv('DB_PASS') ?: '';
-$port    = getenv('DB_PORT') ?: '3307';
+$port    = getenv('DB_PORT') ?: '3306';
 $charset = getenv('DB_CHARSET') ?: 'utf8mb4';
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";

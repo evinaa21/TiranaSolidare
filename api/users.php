@@ -142,6 +142,9 @@ $params = [];
 $where[]  = 'id_perdoruesi != ?';
 $params[] = $user['id'];
 
+// Hide super_admin and other admins from the user list
+$where[]  = "roli NOT IN ('super_admin', 'admin')";
+
 // Hide anonymized/self-deleted accounts (they get purged by cron after 30 days)
 $where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
 
