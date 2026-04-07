@@ -214,6 +214,15 @@ $countStmt->execute($params);
 $total = (int) $countStmt->fetchColumn();
 $totalPages = (int) ceil($total / $limit);
 
+// Type breakdown for tab strip counts — respects current search/status/category filters
+$typeBreakdownStmt = $pdo->prepare("SELECT k.tipi, COUNT(*) AS cnt FROM Kerkesa_per_Ndihme k $whereSQL GROUP BY k.tipi");
+$typeBreakdownStmt->execute($params);
+$_typeCounts = [];
+foreach ($typeBreakdownStmt->fetchAll(PDO::FETCH_ASSOC) as $_row) {
+    $_typeCounts[$_row['tipi'] ?? ''] = (int) $_row['cnt'];
+}
+unset($typeBreakdownStmt, $_row);
+
 $sql = "SELECT k.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
         FROM Kerkesa_per_Ndihme k
         LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
@@ -242,12 +251,12 @@ foreach ($requests as &$req) {
 unset($req);
 
 // Trust stats (only approved posts in public counts)
-$statTotalKerkesa = (int) ($publicHelpStats['all_total'] ?? 0);
+$statTotalKerkesa = $total;
 $statOpen         = (int) ($publicHelpStats['open_total'] ?? 0);
 $statCompleted    = (int) ($publicHelpStats['completed_total'] ?? 0);
 $statVullnetare   = ts_count_active_volunteers($pdo);
-$statOferta       = (int) ($publicHelpStats['offer_total'] ?? 0);
-$statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (!isset($_GET['id']))
+$statOferta       = $_typeCounts['offer'] ?? 0;
+$statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']))
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -327,12 +336,12 @@ $statKerkesa      = (int) ($publicHelpStats['request_total'] ?? 0);} // end if (
         <div id="request-detail-map" class="ts-map-display"></div>
       </div>
       <?php elseif (!$canViewRequestLocation): ?>
-      <div class="map-detail-card" style="background:#f8fafc;border:1px solid #dbe7e2;">
+      <div class="map-detail-card map-detail-card--private">
         <div class="map-detail-card__header">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12 11 14 15 10"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
           Vendndodhja është e mbrojtur
         </div>
-        <p style="margin:0;color:#506172;line-height:1.7;">Për siguri dhe privatësi, vendndodhja e saktë shfaqet vetëm për postuesin, administratorët ose pasi të keni aplikuar në këtë postim.</p>
+        <p class="map-detail-card__body">Për siguri dhe privatësi, vendndodhja e saktë shfaqet vetëm për postuesin, administratorët ose pasi të keni aplikuar në këtë postim.</p>
       </div>
       <?php endif; ?>
     </div>

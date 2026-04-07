@@ -386,12 +386,12 @@ $kategorite = $pdo->query(
         <div class="cv-header__right">
           <div class="cv-stats">
             <div class="cv-stat">
-                <span class="cv-stat__num"><?= (int) ($publicHelpStats['request_open'] ?? 0) ?></span>
+                <span class="cv-stat__num"><?= (int) ($publicHelpStats['request_total'] ?? 0) ?></span>
                 <span class="cv-stat__text">Kërkoj ndihmë</span>
             </div>
             <div class="cv-stat-divider"></div>
             <div class="cv-stat">
-                <span class="cv-stat__num"><?= (int) ($publicHelpStats['offer_open'] ?? 0) ?></span>
+                <span class="cv-stat__num"><?= (int) ($publicHelpStats['offer_total'] ?? 0) ?></span>
                 <span class="cv-stat__text">Ofroj ndihmë</span>
             </div>
           </div>
