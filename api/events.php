@@ -501,29 +501,32 @@ $stmt = $pdo->prepare(
             $eventStmt->execute([$id]);
             $eventTitle = $eventStmt->fetchColumn();
 
-            $applicants = $pdo->prepare(
-                "SELECT DISTINCT a.id_perdoruesi, p.emri, p.email
-                 FROM Aplikimi a
-                 JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
-                 WHERE a.id_eventi = ? AND a.statusi IN ('approved', 'pending')"
+           // Dërgo njoftim vetëm nëse eventi nuk ka kaluar ende
+if (strtotime($eventMeta['data']) > time()) {
+    $applicants = $pdo->prepare(
+        "SELECT DISTINCT a.id_perdoruesi, p.emri, p.email
+         FROM Aplikimi a
+         JOIN Perdoruesi p ON p.id_perdoruesi = a.id_perdoruesi
+         WHERE a.id_eventi = ? AND a.statusi IN ('approved', 'pending')"
+    );
+    $applicants->execute([$id]);
+    $notifStmt = $pdo->prepare(
+        'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $msg = "Eventi \"{$eventTitle}\" u anulua.";
+    $eventLink = "/TiranaSolidare/views/events.php";
+    foreach ($applicants as $app) {
+        $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $eventLink]);
+        if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            send_notification_email(
+                $app['email'],
+                $app['emri'],
+                'Eventi u anulua — Tirana Solidare',
+                $msg
             );
-            $applicants->execute([$id]);
-            $notifStmt = $pdo->prepare(
-                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, target_type, target_id, linku) VALUES (?, ?, ?, ?, ?, ?)'
-            );
-            $msg = "Eventi \"{$eventTitle}\" u anulua.";
-            $eventLink = "/TiranaSolidare/views/events.php";
-            foreach ($applicants as $app) {
-                $notifStmt->execute([$app['id_perdoruesi'], $msg, 'admin_veprim', 'event', $id, $eventLink]);
-                if (filter_var($app['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
-                    send_notification_email(
-                        $app['email'],
-                        $app['emri'],
-                        'Eventi u anulua — Tirana Solidare',
-                        $msg
-                    );
-                }
-            }
+        }
+    }
+}
 
 // Withdraw aplikimet pasi njoftimet u dërguan
 $pdo->prepare(

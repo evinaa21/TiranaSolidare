@@ -96,7 +96,9 @@ if (!$privateProfile && !$isBlocked) {
          FROM Aplikimi a
          JOIN Eventi e ON e.id_eventi = a.id_eventi
          LEFT JOIN Kategoria k ON k.id_kategoria = e.id_kategoria
-         WHERE a.id_perdoruesi = ? AND a.statusi = 'approved'
+         WHERE a.id_perdoruesi = ? 
+         AND a.statusi IN ('approved', 'present')
+         AND e.data < NOW()
          ORDER BY e.data DESC
          LIMIT 10"
     );

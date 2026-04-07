@@ -186,7 +186,6 @@ $badgeIcons = [
         <?php endif; ?>
         <div class="vp-hero__actions">
           <a href="<?= htmlspecialchars($publicProfileUrl) ?>" target="_blank" rel="noopener" class="btn_primary vp-hero__cta">Shiko profilin publik</a>
-          <a href="?tab=settings" class="vp-hero__ghost">Personalizo profilin</a>
         </div>
       </div>
     </div>
@@ -411,7 +410,7 @@ $badgeIcons = [
       <section class="vp-settings-panel" id="vp-settings-public-profile" data-settings-panel="public-profile" role="tabpanel">
         <div class="vp-card">
           <div class="vp-card__header">
-            <h3>Dukshmëria e profilit</h3>
+            <h3>Privatësia e profilit</h3>
           </div>
           <div class="vp-card__body">
             <form id="vp-visibility-form" class="vp-form">
@@ -553,7 +552,7 @@ $badgeIcons = [
       <div id="vp-delete-account-modal" role="dialog" aria-modal="true" aria-labelledby="vp-delete-modal-title" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:12px;padding:2rem;max-width:440px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.3);">
           <h3 id="vp-delete-modal-title" style="color:#dc2626;margin:0 0 .75rem;">Konfirmo fshirjen e llogarisë</h3>
-          <p style="color:#374151;margin:0 0 1.25rem;line-height:1.6;">Kjo veprim është <strong>i pakthyeshëm</strong>. Profili, aplikimet, mesazhet dhe të gjitha të dhënat tuaja do të fshihen përgjithmonë. Futni fjalëkalimin tuaj aktual për të konfirmuar.</p>
+          <p style="color:#374151;margin:0 0 1.25rem;line-height:1.6;">Kjo veprim është <strong>i pakthyeshëm</strong>. Profili, aplikimet, mesazhet dhe të gjitha të dhënat tuaja do të fshihen përgjithmonë. Shkruani fjalëkalimin tuaj aktual për të konfirmuar.</p>
           <div class="vp-field" style="margin-bottom:1rem;">
             <label for="vp-delete-pw" style="font-weight:600;display:block;margin-bottom:.375rem;">Fjalëkalimi aktual</label>
             <input type="password" id="vp-delete-pw" class="vp-input" placeholder="••••••••" autocomplete="current-password">
@@ -1706,7 +1705,7 @@ if (visibilityForm) {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Gabim.');
-      vpStatus('vp-visibility-status', 'success', 'Dukshmëria e profilit u përditësua me sukses.');
+      vpStatus('vp-visibility-status', 'success', 'Privatësia e profilit u ruajt me sukses.');
     } catch (err) {
       vpStatus('vp-visibility-status', 'error', err.message);
     }

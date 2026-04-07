@@ -569,7 +569,7 @@ window.loadAdminEvents = async function (page = 1) {
     let filterHtml = `<div class="db-filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
         <input id="admin-ev-filter-search" type="text" placeholder="Kërko titull…" value="${escapeHtml(filterSearch)}" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;min-width:160px;" onkeydown="if(event.key==='Enter')loadAdminEvents(1)">
         <select id="admin-ev-filter-category" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
-            <option value="">Të gjitha kategorite</option>
+            <option value="">Të gjitha kategoritë</option>
         </select>
         <select id="admin-ev-filter-daterange" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
             <option value=""${!filterDateRange ? ' selected' : ''}>Periudha</option>
@@ -578,7 +578,7 @@ window.loadAdminEvents = async function (page = 1) {
             <option value="past3"${filterDateRange === 'past3' ? ' selected' : ''}>3 muajt e fundit</option>
         </select>
         <select id="admin-ev-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
-            <option value=""${!filterStatus ? ' selected' : ''}>Të gjitha statuset</option>
+            <option value=""${!filterStatus ? ' selected' : ''}>Statusi</option>
 <option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktive</option>
 <option value="past"${filterStatus === 'past' ? ' selected' : ''}>Të kaluara</option>
         </select>
@@ -589,7 +589,7 @@ window.loadAdminEvents = async function (page = 1) {
     let html = filterHtml;
     html += `<div class="db-table-count">Gjithsej: <strong>${total}</strong> evente</div>`;
     html += '<div class="db-table-responsive"><table class="db-table"><thead><tr>'
-        + '<th>Titulli</th><th>Kategoria</th><th>Data</th><th>Statusi</th><th>Aplikime</th><th>Veprime</th>'
+        + '<th>Titulli</th><th>Kategoria</th><th>Data</th><th>Statusi</th><th style="text-align:center;">Aplikime</th><th>Veprime</th>'
         + '</tr></thead><tbody>';
 
     events.forEach(ev => {
@@ -603,7 +603,7 @@ const statusClass = ds === 'pending_review' ? 'pending' : ds === 'cancelled' ? '
             <td>${ev.kategoria_emri ? `<span class="db-badge db-badge--vol">${escapeHtml(ev.kategoria_emri)}</span>` : '<span style="color:#b0b8c4">—</span>'}</td>
             <td>${formatDate(ev.data)}</td>
             <td><span class="db-badge db-badge--${statusClass}">${escapeHtml(statusLabel(ds))}</span></td>
-            <td>${parseInt(ev.total_aplikime || 0, 10)}</td>
+            <td style="text-align:center;">${parseInt(ev.total_aplikime || 0, 10)}</td>
             <td>
                 <div class="db-table__actions">
    ${!isPast && ev.statusi !== 'cancelled' && ev.statusi !== 'completed'
@@ -966,16 +966,18 @@ const [ufrom, uto] = colorMap[u.profile_color || 'emerald'] || colorMap.emerald;
 
 <!-- Stats Row -->
 <div class="ud-stats">
-    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
-        <div class="ud-stat-card__value">${u.total_aplikime}</div>
-        <div class="ud-stat-card__label">Aplikimet</div>
-        <div class="ud-stat-card__hint">Shiko →</div>
-    </div>
-    <div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
-        <div class="ud-stat-card__value">${u.total_kerkesa}</div>
-        <div class="ud-stat-card__label">Kërkesa</div>
-        <div class="ud-stat-card__hint">Shiko →</div>
-    </div>
+<div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserApplications(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+    <div class="ud-stat-card__value">${parseInt(u.total_aplikime || 0) + parseInt(u.total_aplikime_kerkesa || 0)}</div>
+    <div class="ud-stat-card__label">Aplikime</div>
+    <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">${u.total_aplikime || 0} evente · ${u.total_aplikime_kerkesa || 0} kërkesa</div>
+    <div class="ud-stat-card__hint">Shiko →</div>
+</div>
+<div class="ud-stat-card ud-stat-card--clickable" onclick="loadUserRequests(${u.id_perdoruesi}, '${escapeHtml(u.emri)}')">
+    <div class="ud-stat-card__value">${u.total_kerkesa || 0}</div>
+    <div class="ud-stat-card__label">Kërkesat</div>
+    <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">kërkesa të krijuara</div>
+    <div class="ud-stat-card__hint">Shiko →</div>
+</div>
 <div class="ud-stat-card">
     <div class="ud-stat-card__value">${formatDate(u.krijuar_me)}</div>
     <div class="ud-stat-card__label">Regjistruar më</div>
@@ -1274,7 +1276,7 @@ window.loadHelpRequests = async function (page = 1) {
             <option value="offer"${filterType === 'offer' ? ' selected' : ''}>Ofertë</option>
         </select>
         <select id="admin-req-filter-moderation" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadHelpRequests(1)">
-            <option value=""${!filterModeration ? ' selected' : ''}>Të gjitha</option>
+            <option value=""${!filterModeration ? ' selected' : ''}>Të gjitha moderimet</option>
             <option value="pending_review"${filterModeration === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
             <option value="approved"${filterModeration === 'approved' ? ' selected' : ''}>Miratuar</option>
             <option value="rejected"${filterModeration === 'rejected' ? ' selected' : ''}>Refuzuar</option>
