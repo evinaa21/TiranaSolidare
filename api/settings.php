@@ -67,13 +67,13 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Check MIME type
-    $allowed_types = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/svg+xml', 'image/webp'];
+    $allowed_types = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime_type = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
 
     if (!in_array($mime_type, $allowed_types)) {
-        json_error('Tipi i skedarit nuk lejohet. Përdorni PNG, JPG, GIF, SVG, ose WebP.', 400);
+        json_error('Tipi i skedarit nuk lejohet. Përdorni PNG, JPG, GIF, ose WebP.', 400);
     }
 
     // Ensure upload directory exists
@@ -81,8 +81,12 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         mkdir($upload_dir, 0755, true);
     }
 
-    // Save with consistent filename
-    $logo_filename = 'site-logo-' . time() . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+    // Derive extension from validated MIME type, not from user-supplied filename
+    $mimeToExt = [
+        'image/png' => 'png', 'image/jpeg' => 'jpg', 'image/jpg' => 'jpg',
+        'image/gif' => 'gif', 'image/webp' => 'webp',
+    ];
+    $logo_filename = 'site-logo-' . time() . '.' . $mimeToExt[$mime_type];
     $logo_path = $upload_dir . '/' . $logo_filename;
 
     if (!move_uploaded_file($file['tmp_name'], $logo_path)) {
@@ -90,7 +94,7 @@ if ($action === 'upload_logo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Remove old logos (keep only the latest 2)
-    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
+    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,webp}', GLOB_BRACE);
     usort($files, function ($a, $b) {
         return filemtime($b) - filemtime($a);
     });
@@ -117,7 +121,7 @@ else if ($action === 'get_logo') {
     $base_url = rtrim(ts_app_path('public/assets/uploads'), '/');
     
     // Get the latest logo
-    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,svg,webp}', GLOB_BRACE);
+    $files = glob($upload_dir . '/site-logo-*.{png,jpg,jpeg,gif,webp}', GLOB_BRACE);
     usort($files, function ($a, $b) {
         return filemtime($b) - filemtime($a);
     });

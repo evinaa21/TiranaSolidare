@@ -1,0 +1,9 @@
+# Prevent PHP execution in the uploads directory.
+# Only serve static image files.
+
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|pht|phar|inc)$">
+    Require all denied
+</FilesMatch>
+
+# Disable directory listing
+Options -Indexes

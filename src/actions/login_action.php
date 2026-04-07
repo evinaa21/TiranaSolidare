@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Rate limiting: max 5 login attempts per 15 minutes
-    if (!check_rate_limit('login', 100, 900)) {
+    if (!check_rate_limit('login', 5, 900)) {
         header('Location: ' . ts_app_path('views/login.php?error=rate_limited'));
         exit();
     }

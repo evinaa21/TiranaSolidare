@@ -106,10 +106,6 @@ $supportEmail = ts_support_email();
       border-color: transparent;
     }
 
-    .contact-card--accent * {
-      color: inherit;
-    }
-
     .contact-card h2 {
       margin: 0 0 12px;
       color: #0f172a;
@@ -120,6 +116,17 @@ $supportEmail = ts_support_email();
       margin: 0 0 16px;
       color: #526072;
       line-height: 1.7;
+    }
+
+    .contact-card--accent,
+    .contact-card--accent h2,
+    .contact-card--accent p,
+    .contact-card--accent a,
+    .contact-card--accent li,
+    .contact-card--accent strong,
+    .contact-card--accent span,
+    .contact-card--accent div {
+      color: #f8fffc;
     }
 
     .contact-points {
