@@ -114,11 +114,17 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     try {
         const res = await fetch(`${API}/${endpoint}`, opts);
 
-        // Session expired or unauthorized — redirect to login
-        if (res.status === 401 || res.status === 403) {
+        // Session expired or account no longer exists — redirect to login
+        if (res.status === 401) {
             const j = await res.json().catch(() => ({}));
             handleSessionExpired();
             return { success: false, message: j.message || j.error || 'Sesioni ka skaduar.' };
+        }
+
+        // Forbidden (blocked account, insufficient role, business rule) — return error without logout
+        if (res.status === 403) {
+            const j = await res.json().catch(() => ({}));
+            return { success: false, message: j.message || j.error || 'Veprim i ndaluar.' };
         }
 
         const json = await res.json();

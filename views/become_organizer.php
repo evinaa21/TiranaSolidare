@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $isOrganizer = $isLoggedIn && ts_is_organizer_role_value($_SESSION['roli'] ?? '');
+$isAdmin = $isLoggedIn && is_admin();
 $userName = $_SESSION['emri'] ?? 'Përdorues';
 $userEmail = $_SESSION['email'] ?? '';
 ?>
@@ -107,8 +108,8 @@ $userEmail = $_SESSION['email'] ?? '';
   </section>
 
   <section class="org-panel">
-    <h2><?= $isOrganizer ? 'Statusi i llogarisë suaj organizatore' : 'Dërgoni aplikimin tuaj' ?></h2>
-    <p><?= $isOrganizer ? 'Llogaria juaj është tashmë organizator aktiv. Mund të vazhdoni drejtpërdrejt në panelin e eventeve.' : 'Plotësoni të dhënat bazë të organizatës. Një super administrator do t’i shqyrtojë dhe do t’ju njoftojë për vendimin.' ?></p>
+    <h2><?= $isOrganizer ? 'Statusi i llogarisë suaj organizatore' : ($isAdmin ? 'Akses i drejtpërdrejtë si administrator' : 'Dërgoni aplikimin tuaj') ?></h2>
+    <p><?= $isOrganizer ? 'Llogaria juaj është tashmë organizator aktiv. Mund të vazhdoni drejtpërdrejt në panelin e eventeve.' : ($isAdmin ? 'Si administrator, keni akses të plotë në panelin e eventeve pa nevojë për aplikim si organizatë.' : 'Plotësoni të dhënat bazë të organizatës. Një super administrator do t\'i shqyrtojë dhe do t\'ju njoftojë për vendimin.') ?></p>
 
     <?php if (!$isLoggedIn): ?>
       <div class="org-status org-status--pending" style="display:block;">
@@ -117,6 +118,15 @@ $userEmail = $_SESSION['email'] ?? '';
       </div>
     <?php else: ?>
       <div id="org-status-card" class="org-status"></div>
+      <?php if ($isAdmin): ?>
+      <div class="org-status org-status--approved" style="display:block;">
+        <strong>Jeni të kyçur si administrator.</strong>
+        Administratorët kanë akses të drejtpërdrejtë në panelin e eventeve — ky formular aplikimi nuk vlen për llogarinë tuaj.
+      </div>
+      <div class="org-actions" style="margin-top:12px;">
+        <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary">Hap panelin e adminit</a>
+      </div>
+      <?php else: ?>
       <form id="organization-application-form" class="org-form<?= $isOrganizer ? ' org-hidden' : '' ?>">
         <div class="org-row">
           <div class="org-field">
@@ -162,7 +172,8 @@ $userEmail = $_SESSION['email'] ?? '';
         <a href="/TiranaSolidare/views/dashboard.php" class="btn_primary">Hap panelin e organizatorit</a>
       </div>
       <?php endif; ?>
-    <?php endif; ?>
+      <?php endif; // end !$isAdmin ?>
+    <?php endif; // end isLoggedIn ?>
   </section>
 </main>
 

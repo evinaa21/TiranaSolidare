@@ -42,7 +42,7 @@ switch ($action) {
         $user = require_auth();
 
         if (in_array(ts_normalize_value($user['roli'] ?? ''), ['admin', 'super_admin'], true)) {
-            json_error('Administratorët nuk kanë nevojë të aplikojnë si organizatorë.', 403);
+            json_error('Administratorët nuk kanë nevojë të aplikojnë si organizatorë.', 409);
         }
         if (ts_is_organizer_role_value($user['roli'] ?? null)) {
             json_error('Ju jeni tashmë organizator i miratuar.', 409);

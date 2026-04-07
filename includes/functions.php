@@ -1617,6 +1617,8 @@ function send_email_direct(string $toEmail, string $toName, string $subject, str
             (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
             (string) ($cfg['from_name']  ?? 'Tirana Solidare')
         );
+        // Envelope sender must match the authenticated SMTP account (required by Gmail)
+        $mail->Sender = (string) ($cfg['username'] ?? $cfg['from_email'] ?? '');
         $replyToEmail = $options['reply_to_email'] ?? null;
         if (is_string($replyToEmail) && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
             $replyToName = trim((string) ($options['reply_to_name'] ?? $replyToEmail));
@@ -1713,6 +1715,8 @@ function process_email_queue(int $batchSize = 10): int
                 (string) ($cfg['from_email'] ?? 'no-reply@localhost'),
                 (string) ($cfg['from_name']  ?? 'Tirana Solidare')
             );
+            // Envelope sender must match the authenticated SMTP account (required by Gmail)
+            $mail->Sender = (string) ($cfg['username'] ?? $cfg['from_email'] ?? '');
             $mail->addAddress($row['to_email'], $row['to_name']);
             $mail->isHTML(true);
             $mail->Subject = $row['subject'];

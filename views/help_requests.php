@@ -152,7 +152,7 @@ if (isset($_GET['id'])) {
 // ── List view: paginated & filterable (only when not viewing detail) ──
 $page = $limit = $offset = $total = $totalPages = 0;
 $requests = [];
-$search = $tipi = $statusi = '';
+$search = $tipi = $statusi = $kategoria = '';
 $statTotalKerkesa = $statCompleted = $statVullnetare = $statOferta = 0;
 $publicHelpStats = ts_help_request_summary($pdo, ['approved_only' => true]);
 
@@ -619,7 +619,7 @@ if ($_catBanner !== '' && $_catBanner !== null) {
         </div>
 
           <?php if ($currentUserId && !$isOwner): ?>
-        <button class="rq-btn-full rq-btn-sm" style="background:#fff;color:#ef4444;border:1.5px solid #fee2e2" onclick="reportHelpRequest(<?= (int) $request['id_kerkese_ndihme'] ?>)">
+        <button type="button" class="rq-btn-full rq-btn-sm" style="background:#fff !important;color:#ef4444 !important;border:1.5px solid #fee2e2" onclick="reportHelpRequest(<?= (int) $request['id_kerkese_ndihme'] ?>)">
           <svg style="margin-right:8px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
           Raporto këtë kërkesë
         </button>
@@ -984,10 +984,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.querySelectorAll('.rq-contact-form').forEach((form) => {
     form.addEventListener('submit', async (e) => {
-        setInlineStatus(applyStatus, 'success', (json.data.message || 'Aplikimi u dërgua me sukses.') + ' Po hapim detajet e vendndodhjes...');
+      e.preventDefault();
       const statusEl = form.querySelector('.rq-inline-status');
       const requestId = parseInt(form.dataset.requestId || '0', 10);
-        setTimeout(() => window.location.reload(), 900);
       const applicantId = parseInt(form.dataset.applicantId || '0', 10);
       const subjekti = (form.querySelector('input[name="subjekti"]')?.value || '').trim();
       const mesazhi = (form.querySelector('textarea[name="mesazhi"]')?.value || '').trim();
@@ -1369,7 +1368,7 @@ function reportHelpRequest(requestId) {
 
     const modal = document.createElement('div');
     modal.id = 'rq-report-modal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);';
     modal.innerHTML = `
         <div style="background:#fff;border-radius:16px;padding:28px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
             <h3 style="margin:0 0 8px;color:#dc2626;font-size:1.1rem;">Raporto këtë kërkesë</h3>

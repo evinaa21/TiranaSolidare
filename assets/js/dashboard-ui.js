@@ -2407,20 +2407,78 @@ window.viewRequestFlags = async function(requestId) {
 };
 
 // ── Change User Role (Super Admin only) ──
-window.changeUserRole = async function(userId, currentRole) {
-    const desired = window.prompt('Vendosni rolin e ri: admin, organizer ose volunteer', currentRole === 'admin' ? 'volunteer' : currentRole === 'organizer' ? 'volunteer' : 'organizer');
-    if (!desired) return;
-    const newRole = desired.trim().toLowerCase();
-    if (!['admin', 'organizer', 'volunteer'].includes(newRole) || newRole === currentRole) return;
-    const label = STATUS_LABELS[newRole] || newRole;
-    if (!confirm(`Ndryshoni rolin e përdoruesit në "${label}"?`)) return;
+window.changeUserRole = function(userId, currentRole) {
+    const existing = document.getElementById('db-role-modal');
+    if (existing) existing.remove();
 
-    const json = await apiCall(`users.php?action=change_role&id=${userId}`, 'PUT', { roli: newRole });
-    if (json.success) {
-        loadUsers();
-    } else {
-        alert(json.message || 'Gabim gjatë ndryshimit të rolit.');
-    }
+    const roles = [
+        { value: 'volunteer', label: 'Vullnetar' },
+        { value: 'organizer', label: 'Organizator' },
+        { value: 'admin',     label: 'Administrator' },
+    ];
+
+    const modal = document.createElement('div');
+    modal.id = 'db-role-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:28px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 6px;font-size:1.05rem;color:#1e293b;">Ndrysho Rolin</h3>
+            <p style="margin:0 0 18px;font-size:0.85rem;color:#64748b;">Zgjidhni rolin e ri për këtë përdorues.</p>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+                ${roles.map(r => `
+                    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid ${r.value === currentRole ? '#6366f1' : '#e4e8ee'};border-radius:10px;cursor:${r.value === currentRole ? 'default' : 'pointer'};font-size:0.9rem;color:#374151;transition:border-color .15s;"
+                           onmouseover="if('${r.value}'!=='${currentRole}')this.style.borderColor='#818cf8'"
+                           onmouseout="this.style.borderColor='${r.value === currentRole ? '#6366f1' : '#e4e8ee'}'">
+                        <input type="radio" name="db-role-pick" value="${r.value}" ${r.value === currentRole ? 'checked disabled' : ''} style="accent-color:#6366f1;">
+                        ${r.label}${r.value === currentRole ? ' <em style="font-size:0.75rem;color:#94a3b8;">(aktual)</em>' : ''}
+                    </label>`).join('')}
+            </div>
+            <div id="db-role-status" style="min-height:1.2em;font-size:0.83rem;margin-bottom:8px;"></div>
+            <div style="display:flex;gap:10px;">
+                <button id="db-role-confirm" style="flex:1;padding:10px;background:#4f46e5;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.9rem;">Ruaj Rolin</button>
+                <button id="db-role-cancel" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:1px solid #e4e8ee;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.9rem;">Anulo</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+
+    const statusEl = modal.querySelector('#db-role-status');
+    const confirmBtn = modal.querySelector('#db-role-confirm');
+    const cancelBtn = modal.querySelector('#db-role-cancel');
+
+    cancelBtn.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    confirmBtn.addEventListener('click', async () => {
+        const selected = modal.querySelector('input[name="db-role-pick"]:checked:not(:disabled)');
+        if (!selected) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = 'Ju lutem zgjidhni një rol tjetër.';
+            return;
+        }
+        const newRole = selected.value;
+        if (newRole === currentRole) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = 'Roli i zgjedhur është i njëjtë me atë aktual.';
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Duke ruajtur...';
+        statusEl.textContent = '';
+
+        const json = await apiCall(`users.php?action=change_role&id=${userId}`, 'PUT', { roli: newRole });
+        if (json.success) {
+            statusEl.style.color = '#16a34a';
+            statusEl.textContent = json.message || 'Roli u ndryshua me sukses.';
+            setTimeout(() => { modal.remove(); loadUsers(); }, 800);
+        } else {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = json.message || 'Gabim gjatë ndryshimit të rolit.';
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Ruaj Rolin';
+        }
+    });
 };
 
 

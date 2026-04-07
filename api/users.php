@@ -371,8 +371,9 @@ $where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
                 $blockMessage,
                 [
                     'bypass_preferences' => true,
-                    'action_url' => '/views/blocked.php',
-                    'action_label' => 'Shiko udhëzimet',
+                    'send_now'           => true,
+                    'action_url'         => '/views/blocked.php',
+                    'action_label'       => 'Shiko udhëzimet',
                 ]
             );
         }
@@ -428,8 +429,9 @@ $where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
                 $unblockMsg,
                 [
                     'bypass_preferences' => true,
-                    'action_url' => '/views/volunteer_panel.php',
-                    'action_label' => 'Hap panelin',
+                    'send_now'           => true,
+                    'action_url'         => '/views/volunteer_panel.php',
+                    'action_label'       => 'Hap panelin',
                 ]
             );
         }
@@ -501,8 +503,9 @@ $where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
                 $roleMsg,
                 [
                     'bypass_preferences' => true,
-                    'action_url' => $panelLink,
-                    'action_label' => 'Hap panelin',
+                    'send_now'           => true,
+                    'action_url'         => $panelLink,
+                    'action_label'       => 'Hap panelin',
                 ]
             );
         }
