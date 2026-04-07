@@ -171,6 +171,7 @@ document.addEventListener('click',function(e){
   var wrap=document.getElementById('header-notif-wrap');
   if(wrap&&!wrap.contains(e.target)){var d=document.getElementById('header-notif-dropdown');if(d)d.hidden=true;}
 });
+function _hEsc(s){var m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};return String(s||'').replace(/[&<>"]/g,function(c){return m[c];});}
 function _notifTimeAgo(s){var diff=Math.floor((Date.now()-new Date(s))/1000);if(diff<60)return'tani';if(diff<3600)return Math.floor(diff/60)+'m';if(diff<86400)return Math.floor(diff/3600)+'o';return Math.floor(diff/86400)+'d';}
 async function headerLoadNotifications(){
   var list=document.getElementById('header-notif-list');if(!list)return;
@@ -180,9 +181,11 @@ async function headerLoadNotifications(){
     var json=await res.json();
     if(!json.success||(json.data.notifications||[]).length===0){list.innerHTML='<div class="header-notif-empty">Nuk ka njoftime.</div>';return;}
     list.innerHTML=json.data.notifications.map(function(n){
-      var link=n.linku?(n.linku):'#';
-      var txt=(n.mesazhi||'').substring(0,90)+((n.mesazhi||'').length>90?'\u2026':'');
-      return'<a href="'+link+'" class="header-notif-item '+(n.is_read?'header-notif-item--read':'header-notif-item--unread')+'" onclick="headerMarkNotifRead('+n.id_njoftimi+')">'
+      var rawMsg=String(n.mesazhi||'');
+      var txt=_hEsc(rawMsg.substring(0,90))+(rawMsg.length>90?'\u2026':'');
+      var safeLink=_hEsc(n.linku||'#');
+      var notifId=parseInt(n.id_njoftimi)||0;
+      return'<a href="'+safeLink+'" class="header-notif-item '+(n.is_read?'header-notif-item--read':'header-notif-item--unread')+'" onclick="headerMarkNotifRead('+notifId+')">'
         +'<div class="header-notif-item__dot"></div>'
         +'<div class="header-notif-item__text">'+txt+'<div class="header-notif-item__time">'+_notifTimeAgo(n.krijuar_me)+'</div></div>'
         +'</a>';

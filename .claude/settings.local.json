@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright:*)",
+      "Bash(C:/xampp/php/php.exe ops/check-production-readiness.php)",
+      "Bash(C:/xampp/php/php.exe vendor/bin/phpunit --colors=never)",
+      "Bash(grep -v \"\\\\.git\\\\|#\\\\|//\")",
+      "Bash(C:/xampp/php/php.exe -l public/components/header.php)",
+      "Bash(C:/xampp/php/php.exe -l assets/js/map-component.js)",
+      "Bash(C:/xampp/php/php.exe -r ':*)"
+    ]
+  }
+}

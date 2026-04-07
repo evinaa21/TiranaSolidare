@@ -156,9 +156,7 @@ $kategorite = $pdo->query(
 
         <div class="reveal reveal-up reveal-d3" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <a href="/TiranaSolidare/views/register.php" class="btn_primary">Bëhu Vullnetar <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-          <a href="/TiranaSolidare/views/become_organizer.php" class="btn_secondary">Apliko si organizatë</a>
         </div>
-        <p class="regjistrohu-note reveal reveal-up reveal-d3">Një profil i plotë i jep më shumë besim çdo kontakti të ri në platformë. Nëse përfaqësoni një OJF ose grup lokal, mund të kërkoni llogari organizatori.</p>
       </div>
   </section>
 
