@@ -1304,7 +1304,7 @@ function reportHelpRequest(requestId) {
                 ${[
                     'Përmbajtje e rreme ose mashtruese',
                     'Përmbajtje e papërshtatshme',
-                    'Postim i dubluar',
+                    'Postim i kopjuar',
                     'Spam',
                     'Tjetër'
                 ].map(reason => `

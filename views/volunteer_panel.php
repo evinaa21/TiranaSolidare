@@ -249,35 +249,35 @@ $badgeIcons = [
 </section>
 
 <!-- ─── TAB NAVIGATION ─── -->
-<section class="vp-tabs-section">
+<section class="vp-tabs-section" id="tabs">
   <div class="vp-tabs">
-    <a href="?tab=profile" class="vp-tab <?= $tab === 'profile' ? 'active' : '' ?>">
+    <a href="?tab=profile" class="vp-tab vp-tab-link <?= $tab === 'profile' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profili
     </a>
-    <a href="?tab=applications" class="vp-tab <?= $tab === 'applications' ? 'active' : '' ?>">
+    <a href="?tab=applications" class="vp-tab vp-tab-link <?= $tab === 'applications' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
       Aplikimet e mia
     </a>
-    <a href="?tab=requests" class="vp-tab <?= $tab === 'requests' ? 'active' : '' ?>">
+    <a href="?tab=requests" class="vp-tab vp-tab-link <?= $tab === 'requests' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
       Kërkesat e mia
     </a>
-    <a href="?tab=score" class="vp-tab <?= $tab === 'score' ? 'active' : '' ?>">
+    <a href="?tab=score" class="vp-tab vp-tab-link <?= $tab === 'score' ? 'active' : '' ?>">
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   Pikët e mia
 </a>
-    <a href="?tab=notifications" class="vp-tab <?= $tab === 'notifications' ? 'active' : '' ?>">
+    <a href="?tab=notifications" class="vp-tab vp-tab-link <?= $tab === 'notifications' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       Njoftimet
       <span class="vp-tab-badge" id="notif-tab-badge" style="display:none"></span>
     </a>
-    <a href="?tab=messages" class="vp-tab <?= $tab === 'messages' ? 'active' : '' ?>">
+    <a href="?tab=messages" class="vp-tab vp-tab-link <?= $tab === 'messages' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
       Mesazhet
       <span class="vp-tab-badge" id="msg-tab-badge" style="display:none"></span>
     </a>
-    <a href="?tab=settings" class="vp-tab <?= $tab === 'settings' ? 'active' : '' ?>">
+    <a href="?tab=settings" class="vp-tab vp-tab-link <?= $tab === 'settings' ? 'active' : '' ?>">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Cilësimet
     </a>
@@ -290,7 +290,6 @@ $badgeIcons = [
 <?php if ($tab === 'profile'): ?>
 <!-- ════════════ PROFILE TAB ════════════ -->
 <div class="vp-panel">
-  <div class="vp-profile-grid">
     <!-- Profile Info Card -->
     <div class="vp-card">
       <div class="vp-card__header">
@@ -537,30 +536,32 @@ $badgeIcons = [
         </div>
 
         <!-- Danger Zone: Delete Account -->
-        <div class="vp-card" style="border:1px solid #fca5a5;margin-top:1.5rem;">
-          <div class="vp-card__header" style="background-color:#fff1f2;">
-            <h3 style="color:#dc2626;">Fshi llogarinë</h3>
-            <p style="color:#991b1b;">Kjo veprim është i pakthyeshëm. Të gjitha të dhënat tuaja (profili, aplikimet, mesazhet) do të fshihen përgjithmonë.</p>
-          </div>
-          <div class="vp-card__body">
-            <button type="button" id="vp-delete-account-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;">Fshi llogarinë tënde</button>
-          </div>
-        </div>
+<div style="margin-top:4rem;">
+  <div class="vp-card vp-card--danger">
+    <div class="vp-card__header" style="display:flex;flex-direction:column;align-items:flex-start;gap:1.5rem;">
+      <div>
+        <h3 style="font-size:1.375rem;font-weight:700;color:#dc2626;margin:0 0 0.5rem;">Fshi llogarinë</h3>
+        <p style="margin:0;color:#666;font-size:0.95rem;">Ky veprim është i pakthyeshëm. Të gjitha të dhënat tuaja (profili, aplikimet, mesazhet) do të fshihen përgjithmonë.</p>
+      </div>
+      <button type="button" id="vp-delete-account-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;color:#fff;border:2px solid #dc2626;padding:0.75rem 1.5rem;font-weight:600;">Fshi llogarinë tënde</button>
+    </div>
+  </div>
+</div>
       </section>
 
       <!-- Delete Account Confirmation Modal -->
       <div id="vp-delete-account-modal" role="dialog" aria-modal="true" aria-labelledby="vp-delete-modal-title" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:12px;padding:2rem;max-width:440px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.3);">
           <h3 id="vp-delete-modal-title" style="color:#dc2626;margin:0 0 .75rem;">Konfirmo fshirjen e llogarisë</h3>
-          <p style="color:#374151;margin:0 0 1.25rem;line-height:1.6;">Kjo veprim është <strong>i pakthyeshëm</strong>. Profili, aplikimet, mesazhet dhe të gjitha të dhënat tuaja do të fshihen përgjithmonë. Shkruani fjalëkalimin tuaj aktual për të konfirmuar.</p>
+          <p style="color:#374151;margin:0 0 1.25rem;line-height:1.6;">Ky veprim është <strong>i pakthyeshëm</strong>. Profili, aplikimet, mesazhet dhe të gjitha të dhënat tuaja do të fshihen përgjithmonë. Shkruani fjalëkalimin tuaj aktual për të konfirmuar.</p>
           <div class="vp-field" style="margin-bottom:1rem;">
             <label for="vp-delete-pw" style="font-weight:600;display:block;margin-bottom:.375rem;">Fjalëkalimi aktual</label>
             <input type="password" id="vp-delete-pw" class="vp-input" placeholder="••••••••" autocomplete="current-password">
           </div>
           <div id="vp-delete-status" style="min-height:1.2em;font-size:.875rem;color:#dc2626;margin-bottom:.75rem;"></div>
           <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-            <button id="vp-delete-confirm-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;flex:1;">Fshi llogarinë</button>
-            <button id="vp-delete-cancel-btn" class="btn_secondary" style="flex:1;" type="button">Anulo</button>
+            <button id="vp-delete-confirm-btn" class="btn_primary" style="background:#dc2626;border-color:#dc2626;flex:1;padding:15px 30px;border-radius:12px;font-weight:500;border:2px solid #dc2626;color:#fff;">Fshi llogarinë</button>
+            <button id="vp-delete-cancel-btn" type="button" style="flex:1;padding:15px 30px;border-radius:12px;font-weight:500;background:#f3f4f6;border:1px solid #e4e8ee;color:#374151;cursor:pointer;font-size:inherit;line-height:1;">Anulo</button>
           </div>
         </div>
       </div>
@@ -2213,6 +2214,26 @@ async function vpDeleteConversation(userId, userName) {
 }
 </script>
 <?php endif; ?>
+<script>
+// ── Preserve scroll position on tab navigation ──
+(function() {
+  // Restore scroll position after page reload
+  document.addEventListener('DOMContentLoaded', function() {
+    const savedScroll = sessionStorage.getItem('vp_scroll');
+    if (savedScroll !== null) {
+      window.scrollTo(0, parseInt(savedScroll, 10));
+      sessionStorage.removeItem('vp_scroll');
+    }
+  });
+  
+  // Save scroll position before navigating to a new tab
+  document.querySelectorAll('.vp-tab-link').forEach(link => {
+    link.addEventListener('click', function() {
+      sessionStorage.setItem('vp_scroll', window.scrollY);
+    });
+  });
+})();
+</script>
 </body>
 </html>
 

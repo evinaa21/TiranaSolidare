@@ -1117,7 +1117,7 @@ body {
 
 .footer{
   position: relative;
-  padding: 100px clamp(20px, 8%, 8%);
+  padding: 80px clamp(20px, 8%, 8%);
   color: #fff;
   background: url('../images/logo_transparent.svg') no-repeat top 50px left 15%;
   background-size: 400px;
@@ -1256,9 +1256,9 @@ body {
   color: #fff;
 }
 .footer-copy{
-  margin-top: 50px;
+  margin-top: 30px;
   border-top: 1px solid #fff5;
-  padding-top: 30px;
+  padding-top: 20px;
   color: #fff8;
   display: flex;
   flex-direction: column;

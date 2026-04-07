@@ -205,7 +205,7 @@ function require_admin(): array
 {
     $user = require_auth();
     if (!in_array($user['roli'], ['admin', 'super_admin'], true)) {
-        json_error('Kjo veprim kërkon privilegje administratori. / Forbidden.', 403);
+        json_error('Ky veprim kërkon privilegje administratori. / Forbidden.', 403);
     }
     return $user;
 }
@@ -217,7 +217,7 @@ function require_super_admin(): array
 {
     $user = require_auth();
     if ($user['roli'] !== 'super_admin') {
-        json_error('Kjo veprim kërkon privilegje super administratori. / Forbidden.', 403);
+        json_error('Ky veprim kërkon privilegje super administratori. / Forbidden.', 403);
     }
     return $user;
 }
@@ -229,7 +229,7 @@ function require_dashboard_user(): array
 {
     $user = require_auth();
     if (!ts_is_dashboard_role_value($user['roli'] ?? null)) {
-        json_error('Kjo veprim kërkon akses në panel. / Forbidden.', 403);
+        json_error('Ky veprim kërkon akses në panel. / Forbidden.', 403);
     }
     return $user;
 }
@@ -241,7 +241,7 @@ function require_event_manager(): array
 {
     $user = require_auth();
     if (!ts_is_event_manager_role_value($user['roli'] ?? null)) {
-        json_error('Kjo veprim kërkon privilegje për menaxhimin e eventeve. / Forbidden.', 403);
+        json_error('Ky veprim kërkon privilegje për menaxhimin e eventeve. / Forbidden.', 403);
     }
     return $user;
 }

@@ -327,14 +327,14 @@
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
-  -webkit-transform: translateX(6%);
-          transform: translateX(6%);
+  -webkit-transform: translateX(0%);
+          transform: translateX(0%);
 }
 
 .hero-img{
   position: relative;
-  width: 130%;
-  max-width: 900px;
+  width: 110%;
+  max-width: 1050px;
   z-index: 2;
   -webkit-animation: fadeScaleIn 1s ease-out 0.3s both;
           animation: fadeScaleIn 1s ease-out 0.3s both;
@@ -348,7 +348,7 @@
 }
 
 .hero-img-ring-1{
-  width: 520px; height: 520px;
+  width: 580px; height: 580px;
   -webkit-animation: heroRingSpin 25s linear infinite, fadeScaleIn 1s ease-out 0.5s both;
           animation: heroRingSpin 25s linear infinite, fadeScaleIn 1s ease-out 0.5s both;
   border-style: dashed;
@@ -356,7 +356,7 @@
 }
 
 .hero-img-ring-2{
-  width: 620px; height: 620px;
+  width: 700px; height: 700px;
   -webkit-animation: heroRingSpin 35s linear infinite reverse, fadeScaleIn 1s ease-out 0.7s both;
           animation: heroRingSpin 35s linear infinite reverse, fadeScaleIn 1s ease-out 0.7s both;
   border-style: dotted;
@@ -395,7 +395,7 @@
 
 /* ---- RESPONSIVE ---- */
 @media screen and (max-width: 1280px) {
-  .hero-img{ width: 120%; max-width: 700px; }
+  .hero-img{ width: 100%; max-width: 750px; }
 }
 
 @media screen and (max-width: 1050px) {

@@ -581,6 +581,58 @@
   padding: 24px;
 }
 
+.vp-card--danger {
+  border: 1px solid #dc2626;
+  margin-top: 3rem;
+  background-color: #fff5f5;
+}
+
+.vp-card--danger .vp-card__header {
+  background-color: transparent;
+  border-bottom: none;
+  padding-bottom: 12px;
+}
+
+.vp-card--danger .vp-card__header h3 {
+  color: #dc2626;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.vp-card--danger .vp-card__header p {
+  color: #7f1d1d;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.vp-card--danger .vp-card__body {
+  padding-top: 16px;
+}
+
+.vp-card--danger .btn_primary {
+  background: #fff;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vp-card--danger .btn_primary:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+  color: #b91c1c;
+}
+
+.vp-card--danger .btn_primary:active {
+  background: #fee2e2;
+  border-color: #991b1b;
+  color: #991b1b;
+}
+
 #vp-request-form > button{
   z-index: 1000;
 }
