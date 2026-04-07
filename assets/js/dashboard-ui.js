@@ -2906,6 +2906,13 @@ window.saveSiteSettings = async function() {
         status.textContent = json.message || json.data?.message || (json.success ? 'Cilësimet u ruajtën.' : 'Ruajtja dështoi.');
     }
     if (json.success) {
+        // Apply new brand colors immediately without a page reload
+        if (body.theme_primary) {
+            document.documentElement.style.setProperty('--ts-brand-primary', body.theme_primary);
+        }
+        if (body.theme_accent) {
+            document.documentElement.style.setProperty('--ts-brand-accent', body.theme_accent);
+        }
         refreshAllLogos();
     }
 };

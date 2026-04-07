@@ -1898,7 +1898,7 @@ function send_guardian_consent_email(
         $relationText = $relation !== '' ? $relation : 'prind ose kujdestar';
         $safeRelationText = htmlspecialchars($relationText, ENT_QUOTES, 'UTF-8');
 
-        $subject = 'Kërkohet pëlqimi prindëror - Tirana Solidare';
+        $subject = 'Kërkohet pranimi prindëror - Tirana Solidare';
         $bodyHtml = "
                 <div style=\"font-family:Inter, Arial, sans-serif; margin:0; padding:0; background:#f6fbf9; color:#1f2d2a;\">
                     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">
@@ -1914,14 +1914,14 @@ function send_guardian_consent_email(
                                     <tr>
                                         <td style=\"padding:24px 30px 20px;\">
                                             <p style=\"margin:0 0 8px; color:#2b3a3a; font-size:15px;\">Përshëndetje {$safeGuardianName},</p>
-                                            <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkohet pëlqimi juaj</h2>
+                                            <h2 style=\"margin:0 0 16px; color:#0b3f34; font-size:22px;\">Kërkohet pranimi juaj</h2>
                                             <p style=\"margin:0 0 14px; color:#4a4a4a; font-size:15px; line-height:1.6;\">{$safeChildName} është regjistruar në Tirana Solidare dhe ka deklaruar se është nën moshën " . TS_GUARDIAN_CONSENT_MIN_AGE . " vjeç. Për të vazhduar me aplikimet në evente dhe aktivitetet vullnetare, nevojitet miratimi i {$safeRelationText}.</p>
                                             <div style=\"margin:0 0 18px; padding:14px 16px; background:#f4faf7; border:1px solid #dceee6; border-radius:10px;\">
                                                 <p style=\"margin:0 0 6px; color:#2b3a3a; font-size:14px;\"><strong>Përdoruesi:</strong> {$safeChildName}</p>
                                                 <p style=\"margin:0; color:#2b3a3a; font-size:14px;\"><strong>Email:</strong> {$safeChildEmail}</p>
                                             </div>
                                             <p style=\"margin:20px 0; text-align:center;\">
-                                                <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Jap pëlqimin</a>
+                                                <a href=\"{$safeUrl}\" style=\"display:inline-block; padding:13px 20px; background:#00715D; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;\">Jap pranimin</a>
                                             </p>
                                             <p style=\"margin:0 0 20px; color:#4a4a4a; font-size:14px; line-height:1.6;\">Nëse nuk e njihni këtë regjistrim ose nuk dëshironi ta miratoni, thjesht injorojeni këtë email. Llogaria nuk do të aktivizohet plotësisht pa konfirmimin tuaj.</p>
                                             <p style=\"word-break:break-all; margin:0; font-size:13px; color:#0b3f34;\"><a href=\"{$safeUrl}\" style=\"color:#00715D; text-decoration:none;\">{$safeUrl}</a></p>
@@ -1942,7 +1942,7 @@ function send_guardian_consent_email(
                         </tr>
                     </table>
                 </div>";
-        $bodyText = "Përshëndetje {$guardianName},\n\n{$childName} është regjistruar në Tirana Solidare dhe ka nevojë për pëlqimin e {$relationText} për të vazhduar me aktivitetet vullnetare.\n\nPër të miratuar regjistrimin, hapni këtë link:\n{$consentUrl}\n\nNëse nuk e njihni këtë regjistrim, injoroni këtë email. Linku skadon pas 7 ditësh.";
+        $bodyText = "Përshëndetje {$guardianName},\n\n{$childName} është regjistruar në Tirana Solidare dhe ka nevojë për pranimin e {$relationText} për të vazhduar me aktivitetet vullnetare.\n\nPër të dhënë pranimin, hapni këtë link:\n{$consentUrl}\n\nNëse nuk e njihni këtë regjistrim, injoroni këtë email. Linku skadon pas 7 ditësh.";
 
         global $pdo;
         $queueId = 0;

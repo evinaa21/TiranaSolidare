@@ -432,12 +432,23 @@ switch ($action) {
         $userContact->execute([$app['id_perdoruesi']]);
         $recipient = $userContact->fetch();
         if ($recipient && filter_var($recipient['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            $emailSubject = $newStatus === 'approved'
+                ? 'Aplikimi juaj u pranua — Tirana Solidare'
+                : ($newStatus === 'rejected' ? 'Aplikimi juaj u refuzua — Tirana Solidare' : 'Njoftim i ri nga Tirana Solidare');
             send_notification_email(
                 $recipient['email'],
                 $recipient['emri'] ?? 'Volunteer',
-                'Njoftim i ri nga Tirana Solidare',
-                $msg
+                $emailSubject,
+                $msg,
+                ['bypass_preferences' => true, 'action_url' => $eventLink, 'action_label' => 'Shiko eventin']
             );
+        }
+
+        // Notify the event owner admin if different from the applicant's own manager
+        if (!empty($app['event_owner_id']) && (int) $app['event_owner_id'] !== (int) $manager['id']) {
+            $volunteerName = $recipient ? ($recipient['emri'] ?? 'Vullnetari') : 'Vullnetari';
+            $ownerMsg = "Aplikimi i \"{$volunteerName}\" për eventin \"{$app['eventi_titulli']}\" u {$statusLabel} nga administratori.";
+            $notifStmt->execute([$app['event_owner_id'], $ownerMsg, 'aplikim_event', 'event', $app['id_eventi'], $eventLink]);
         }
 
         // Auto-promote the next waitlisted applicant if an approved slot just opened

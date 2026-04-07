@@ -217,6 +217,19 @@ switch ($action) {
         if ($sendEmail) {
             $message .= " Email u futën në radhë për $emailed përdorues.";
         }
+
+        // Create a delivery-receipt notification for the super_admin who sent the broadcast
+        // so it shows up in their own notification panel as confirmation.
+        $preview = mb_substr($mesazhi, 0, 60) . (mb_strlen($mesazhi) > 60 ? '…' : '');
+        $receiptMsg = "📢 Njoftim kolektiv u dërgua te $count përdorues: \"{$preview}\"";
+        try {
+            $pdo->prepare(
+                'INSERT INTO Njoftimi (id_perdoruesi, mesazhi, tipi, linku, is_read) VALUES (?, ?, ?, ?, 0)'
+            )->execute([$user['id'], $receiptMsg, 'broadcast_sent', $linku]);
+        } catch (Throwable $e) {
+            error_log('broadcast receipt insert: ' . $e->getMessage());
+        }
+
         json_success(['sent' => $count, 'emailed' => $emailed, 'message' => $message]);
         break;
 

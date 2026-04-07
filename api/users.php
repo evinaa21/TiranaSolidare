@@ -142,6 +142,9 @@ $params = [];
 $where[]  = 'id_perdoruesi != ?';
 $params[] = $user['id'];
 
+// Hide anonymized/self-deleted accounts (they get purged by cron after 30 days)
+$where[]  = "email NOT LIKE 'deleted_%@deleted.invalid'";
+
         
 
         if ($roli) {

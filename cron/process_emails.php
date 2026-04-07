@@ -29,6 +29,23 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
 
 $sent = process_email_queue(20);
 
+// ── Purge self-deleted accounts older than 30 days ───────────
+try {
+    $purgeStmt = $pdo->prepare(
+        "DELETE FROM Perdoruesi
+         WHERE email LIKE 'deleted_%@deleted.invalid'
+           AND deaktivizuar_me IS NOT NULL
+           AND deaktivizuar_me < DATE_SUB(NOW(), INTERVAL 30 DAY)"
+    );
+    $purgeStmt->execute();
+    $purged = (int) $purgeStmt->rowCount();
+    if ($purged > 0) {
+        echo date('Y-m-d H:i:s') . " — Purged {$purged} anonymized account(s) older than 30 days.\n";
+    }
+} catch (Throwable $e) {
+    error_log('cron purge_deleted_users: ' . $e->getMessage());
+}
+
 flock($lock, LOCK_UN);
 fclose($lock);
 
