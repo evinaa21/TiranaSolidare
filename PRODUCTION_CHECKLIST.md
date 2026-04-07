@@ -7,7 +7,7 @@ Use this checklist before switching traffic to a live deployment.
 - Copy `.env.example` to `.env` and set a real `APP_URL` with no trailing slash.
 - Set production database credentials and verify the database user has read/write access.
 - Set `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, and `SMTP_FROM_NAME`.
-- Generate VAPID keys with `C:\xampp\php\php.exe generate_vapid.php` and store `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in `.env`.
+- Generate VAPID keys with `C:\xampp\php\php.exe migrations/generate_vapid.php` and store `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in `.env`.
 - Set `APP_TIMEZONE=Europe/Tirane` unless the deployment intentionally uses another timezone.
 
 ## 2. PHP And Apache

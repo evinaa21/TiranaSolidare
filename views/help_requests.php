@@ -657,6 +657,7 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
   <svg class="rq-blob rq-blob--filters" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(225,114,84,0.05)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
 
   <form class="rq-filters" method="GET" action="">
+    <input type="hidden" name="tipi" id="rq-tipi-input" value="<?= htmlspecialchars($tipi) ?>">
     <div class="rq-filters__search">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Kërko sipas titullit ose përshkrimit...">
@@ -683,17 +684,17 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
 <!-- ─── TABS STRIP ─── -->
 <div class="rq-tabs-strip rq-tabs-strip--below">
   <div class="rq-tabs-strip__inner">
-    <button type="button" class="rq-tab rq-tab--all rq-tab--active" data-filter="all">
+    <button type="button" class="rq-tab rq-tab--all <?= $tipi === '' ? 'rq-tab--active' : '' ?>" data-filter="all">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
       Të gjitha
       <span class="rq-tab__count"><?= $statTotalKerkesa ?></span>
     </button>
-    <button type="button" class="rq-tab rq-tab--request" data-filter="request">
+    <button type="button" class="rq-tab rq-tab--request <?= $tipi === 'request' ? 'rq-tab--active' : '' ?>" data-filter="request">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       Kërkoj Ndihmë
       <span class="rq-tab__count"><?= $statKerkesa ?></span>
     </button>
-    <button type="button" class="rq-tab rq-tab--offer" data-filter="offer">
+    <button type="button" class="rq-tab rq-tab--offer <?= $tipi === 'offer' ? 'rq-tab--active' : '' ?>" data-filter="offer">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
       Ofroj Ndihmë
       <span class="rq-tab__count"><?= $statOferta ?></span>
@@ -1114,13 +1115,15 @@ document.addEventListener('DOMContentLoaded', function() {
         countEl.textContent = (filter === 'all' ? totalCards : visible) + ' kërkesa u gjetën';
       }
 
-      // Sync the <select> for tipi so form still works if they search
-      const tipiSelect = document.querySelector('.rq-filters select[name="tipi"]');
-      if (tipiSelect) {
-        if (filter === 'request') tipiSelect.value = 'request';
-        else if (filter === 'offer') tipiSelect.value = 'offer';
-        else tipiSelect.value = '';
+      // Sync the hidden tipi input so the form submits with the correct type filter
+      const tipiInput = document.getElementById('rq-tipi-input');
+      if (tipiInput) {
+        tipiInput.value = (filter === 'request' || filter === 'offer') ? filter : '';
       }
+
+      // Deprecated: old code looked for a <select name="tipi"> which does not exist
+      // const tipiSelect = document.querySelector('.rq-filters select[name="tipi"]');
+      // (removed)
 
       // Smooth scroll to results
       const results = document.querySelector('.rq-results');

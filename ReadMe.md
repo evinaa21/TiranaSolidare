@@ -63,7 +63,7 @@ A lightweight polling mechanism that checks for state changes in the `Njoftimi` 
   * Import `TiranaSolidare.sql` into your MySQL instance.
   * Run the schema migrations after import. For the latest help request matching flow update, execute:
   ```bash
-  php migrate_help_request_matching_flow.php
+  php migrations/migrate_help_request_matching_flow.php
   ```
     * Configure the connection settings in `config/db.php`:
     ```php

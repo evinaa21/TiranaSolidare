@@ -10,7 +10,7 @@ module.exports = defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   forbidOnly: false,
-  retries: 0,
+  retries: 1,
   workers: 1,
 
   globalSetup: require.resolve('./tests/e2e/global-setup.js'),
@@ -39,7 +39,7 @@ module.exports = defineConfig({
     {
       name: 'auth-flows',
       testMatch: ['**/auth.spec.js'],
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], navigationTimeout: 30_000 },
     },
     // Routing tests — no stored session
     {

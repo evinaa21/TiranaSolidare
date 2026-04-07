@@ -11,6 +11,16 @@ Options -Indexes
     Require all denied
 </FilesMatch>
 
+# Block direct web access to CLI-only scripts (migrations, seeds, dev tools)
+<FilesMatch "^(migrate_|cleanup_|seed_|generate_)">
+    Require all denied
+</FilesMatch>
+
+# Block web access to the entire migrations/ directory
+<IfModule mod_rewrite.c>
+    RewriteRule ^migrations/ - [F,L]
+</IfModule>
+
 # Protect config directory
 <IfModule mod_rewrite.c>
     RewriteEngine On

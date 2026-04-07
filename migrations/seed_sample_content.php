@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+// CLI only — deny web access
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('CLI only.');
+}
+
 require_once __DIR__ . '/config/db.php';
 
 const SEED_PASSWORD = 'Demo123!';

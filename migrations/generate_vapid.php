@@ -9,6 +9,11 @@
  *
  * DO NOT commit the private key to version control.
  */
+// CLI only — deny web access
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('CLI only.');
+}
 require_once __DIR__ . '/includes/web_push.php';
 
 $keys = vapid_generate_keys();
