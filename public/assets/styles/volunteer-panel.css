@@ -1540,7 +1540,7 @@ select.vp-input {
 
 .vp-notif {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid #f0f2f5;
@@ -1557,18 +1557,21 @@ select.vp-input {
   border-radius: 8px;
 }
 
-.vp-notif__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #d0d5db;
+/* Typed icon (replaces plain dot) */
+.vp-notif__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  margin-top: 6px;
 }
-
-.vp-notif--unread .vp-notif__dot {
-  background: #00715D;
-}
+.vp-notif__icon--broadcast { background: rgba(59,130,246,0.12);  color: #2563eb; }
+.vp-notif__icon--admin     { background: rgba(225,114,84,0.12);  color: #d84d27; }
+.vp-notif__icon--event     { background: rgba(0,113,93,0.10);    color: #00715D; }
+.vp-notif__icon--request   { background: rgba(245,158,11,0.12);  color: #d97706; }
+.vp-notif__icon--default   { background: rgba(100,116,139,0.10); color: #64748b; }
 
 .vp-notif__body {
   flex: 1;

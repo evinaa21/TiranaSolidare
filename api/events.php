@@ -144,6 +144,8 @@ switch ($action) {
         }
 if ($status === 'past') {
     $where[] = "e.data < NOW() AND e.statusi NOT IN ('cancelled','completed')";
+} elseif ($status === 'filled') {
+    $where[] = "e.data >= NOW() AND e.statusi NOT IN ('cancelled','completed') AND e.kapaciteti > 0 AND (SELECT COUNT(*) FROM Aplikimi af2 WHERE af2.id_eventi = e.id_eventi AND af2.statusi = 'approved') >= e.kapaciteti";
 } elseif ($status !== '') {
     $where[] = 'e.statusi = ?';
     $params[] = $status;
@@ -179,6 +181,7 @@ $stmt = $pdo->prepare(
             CASE
                 WHEN e.statusi IN ('cancelled','completed') THEN e.statusi
                 WHEN e.data < NOW() THEN 'past'
+                WHEN e.kapaciteti > 0 AND (SELECT COUNT(*) FROM Aplikimi af WHERE af.id_eventi = e.id_eventi AND af.statusi = 'approved') >= e.kapaciteti THEN 'filled'
                 ELSE e.statusi
             END AS display_status
      FROM Eventi e

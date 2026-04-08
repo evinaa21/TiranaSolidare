@@ -22,7 +22,7 @@ const STATUS_LABELS = {
     request: 'Kërkesë', offer: 'Ofertë',
     open: 'Hapur', filled: 'Mbushur', closed: 'Mbyllur', completed: 'Përfunduar', cancelled: 'Anuluar',
     pending_review: 'Në shqyrtim',
-    past: 'E kaluar'
+    past: 'Përfunduar'
 };
 function statusLabel(v) { return STATUS_LABELS[(v || '').toLowerCase()] || v; }
 
@@ -607,7 +607,11 @@ window.loadAdminEvents = async function (page = 1) {
         <select id="admin-ev-filter-status" style="padding:8px 12px;border:1.5px solid #e4e8ee;border-radius:8px;font-size:0.85rem;" onchange="loadAdminEvents(1)">
             <option value=""${!filterStatus ? ' selected' : ''}>Statusi</option>
 <option value="active"${filterStatus === 'active' ? ' selected' : ''}>Aktive</option>
-<option value="past"${filterStatus === 'past' ? ' selected' : ''}>Të kaluara</option>
+<option value="pending_review"${filterStatus === 'pending_review' ? ' selected' : ''}>Në shqyrtim</option>
+<option value="filled"${filterStatus === 'filled' ? ' selected' : ''}>Mbushur</option>
+<option value="past"${filterStatus === 'past' ? ' selected' : ''}>Të përfunduara</option>
+<option value="completed"${filterStatus === 'completed' ? ' selected' : ''}>Përfunduara (manuale)</option>
+<option value="cancelled"${filterStatus === 'cancelled' ? ' selected' : ''}>Anuluar</option>
         </select>
         <button class="db-btn db-btn--primary db-btn--sm" onclick="loadAdminEvents(1)">Filtro</button>
         <button class="db-btn db-btn--sm" onclick="document.getElementById('admin-ev-filter-search').value='';document.getElementById('admin-ev-filter-category').value='';document.getElementById('admin-ev-filter-daterange').value='';document.getElementById('admin-ev-filter-status').value='';loadAdminEvents(1)" style="background:#f3f4f6;border:1px solid #e4e8ee;border-radius:8px;padding:8px 12px;cursor:pointer;">Pastro</button>
@@ -622,7 +626,11 @@ window.loadAdminEvents = async function (page = 1) {
     events.forEach(ev => {
         const isPast = ev.data && new Date(ev.data) < new Date();
 const ds = ev.display_status || ev.statusi;
-const statusClass = ds === 'pending_review' ? 'pending' : ds === 'cancelled' ? 'blocked' : ds === 'completed' ? 'vol' : ds === 'past' ? 'deactivated' : 'active';
+const statusClass = ds === 'pending_review' ? 'pending'
+    : ds === 'cancelled' ? 'blocked'
+    : ds === 'completed' || ds === 'past' ? 'vol'
+    : ds === 'filled' ? 'info'
+    : 'active';
         const canApprove = CAN_REVIEW_EVENTS && ev.statusi === 'pending_review';
         html += `<tr${isPast ? ' style="opacity:0.6"' : ''}>
             
@@ -1426,15 +1434,15 @@ window.loadNotifications = async function () {
     function _notifTypeIcon(tipi) {
         const t = (tipi || '').toLowerCase();
         if (t === 'broadcast' || t === 'broadcast_sent') {
-            return `<div class="db-notif__icon db-notif__icon--broadcast"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>`;
+            return `<div class="db-notif__icon db-notif__icon--broadcast"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>`;
         } else if (t === 'admin_veprim' || t === 'admin') {
-            return `<div class="db-notif__icon db-notif__icon--admin"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>`;
+            return `<div class="db-notif__icon db-notif__icon--admin"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>`;
         } else if (t === 'aplikim_event' || t === 'event') {
-            return `<div class="db-notif__icon db-notif__icon--event"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div>`;
+            return `<div class="db-notif__icon db-notif__icon--event"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div>`;
         } else if (t === 'aplikim_kerkese' || t === 'request' || t === 'help_request') {
-            return `<div class="db-notif__icon db-notif__icon--request"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></div>`;
+            return `<div class="db-notif__icon db-notif__icon--request"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></div>`;
         }
-        return `<div class="db-notif__icon db-notif__icon--default"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>`;
+        return `<div class="db-notif__icon db-notif__icon--default"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>`;
     }
 
     function _notifSourceBadge(tipi) {
@@ -1464,8 +1472,8 @@ window.loadNotifications = async function () {
                 </div>
             </div>${linkClose}
             <div class="db-notif__actions">
-                ${unread ? `<button class="db-btn db-btn--success db-btn--sm" onclick="markRead(${n.id_njoftimi})" title="Shëno si të lexuar">✓</button>` : ''}
-                <button class="db-btn db-btn--danger db-btn--sm" onclick="deleteNotif(${n.id_njoftimi})" title="Fshi">✕</button>
+                ${unread ? `<button class="db-btn db-btn--success db-btn--icon-sq" onclick="markRead(${n.id_njoftimi})" title="Shëno si të lexuar" aria-label="Shëno si të lexuar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>` : ''}
+                <button class="db-btn db-btn--danger db-btn--icon-sq" onclick="deleteNotif(${n.id_njoftimi})" title="Fshi" aria-label="Fshi"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
         </div>`;
     });

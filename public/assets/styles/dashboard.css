@@ -919,9 +919,9 @@
 
 .db-notif {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--db-border);
   transition: background 0.15s;
 }
@@ -936,9 +936,9 @@
 
 /* Type icon replacing the plain dot */
 .db-notif__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1000,6 +1000,17 @@
 .db-notif__actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
+  align-self: center;
+}
+.db-notif__actions .db-btn--icon-sq {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 

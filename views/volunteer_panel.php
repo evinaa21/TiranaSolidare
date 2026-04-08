@@ -1200,10 +1200,22 @@ async function loadVPNotifications() {
     let html = '';
     notifs.forEach(n => {
       const unread = !n.is_read;
+      const tipi = (n.tipi || '').toLowerCase();
+      function _vpNotifIcon(t) {
+        if (t === 'broadcast' || t === 'broadcast_sent')
+          return '<div class="vp-notif__icon vp-notif__icon--broadcast"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>';
+        if (t === 'admin_veprim' || t === 'admin')
+          return '<div class="vp-notif__icon vp-notif__icon--admin"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>';
+        if (t === 'aplikim_event' || t === 'event')
+          return '<div class="vp-notif__icon vp-notif__icon--event"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div>';
+        if (t === 'aplikim_kerkese' || t === 'request' || t === 'help_request')
+          return '<div class="vp-notif__icon vp-notif__icon--request"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></div>';
+        return '<div class="vp-notif__icon vp-notif__icon--default"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>';
+      }
       const markReadBtn = '<button class="vp-notif-icon-btn vp-notif-icon-btn--read" title="Shëno si të lexuar" aria-label="Shëno si të lexuar" onclick="markNotifRead(' + n.id_njoftimi + ')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>';
       const deleteBtn = '<button class="vp-notif-icon-btn vp-notif-icon-btn--delete" title="Fshi njoftimin" aria-label="Fshi njoftimin" onclick="deleteNotif(' + n.id_njoftimi + ')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>';
       html += '<div class="vp-notif ' + (unread ? 'vp-notif--unread' : '') + '">'
-        + '<div class="vp-notif__dot"></div>'
+        + _vpNotifIcon(tipi)
         + '<div class="vp-notif__body">'
         + (n.linku ? '<a href="' + escapeHtml(n.linku) + '" style="text-decoration:none;color:inherit;">' : '')
         + '<p>' + escapeHtml(n.mesazhi) + '</p>'
