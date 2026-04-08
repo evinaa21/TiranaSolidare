@@ -64,7 +64,7 @@ $appPath = static function (string $path = ''): string {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem;">
-      <span>Copyright @ <?= date('Y') ?> Bashkia Tirane. Të gjitha të drejtat të rezervuara.</span>
+      <span>Copyright &copy; <?= date('Y') ?> Bashkia Tirane. Të gjitha të drejtat të rezervuara.</span>
       <span>Kjo faqe është zhvilluar në kuadër të projektit "Web Challenge Tirana".</span>
     </div>
   </div>

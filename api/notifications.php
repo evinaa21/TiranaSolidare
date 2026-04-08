@@ -152,6 +152,9 @@ switch ($action) {
 
         if ($roli === 'all') {
             $uStmt = $pdo->query("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE statusi_llogarise = 'active'");
+        } elseif ($roli === 'admin') {
+            // 'admin' target includes both admin and super_admin roles
+            $uStmt = $pdo->query("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE roli IN ('admin','super_admin') AND statusi_llogarise = 'active'");
         } else {
             $uStmt = $pdo->prepare("SELECT id_perdoruesi, emri, email FROM Perdoruesi WHERE roli = ? AND statusi_llogarise = 'active'");
             $uStmt->execute([$roli]);

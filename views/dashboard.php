@@ -140,7 +140,7 @@ $adminProfileLabel = $adminColorResolved['palette'][$adminColorResolved['key']][
     </div>
     <div class="db-sidebar__user-info">
       <strong><?= $userEmri ?></strong>
-      <span><?= $userRoli ?></span>
+      <span><?= e($dashboardRoleLabel) ?></span>
     </div>
     <form method="POST" action="/TiranaSolidare/src/actions/logout.php" style="display:inline;">
       <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">

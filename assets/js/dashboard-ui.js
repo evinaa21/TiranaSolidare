@@ -1423,17 +1423,45 @@ window.loadNotifications = async function () {
         return;
     }
 
+    function _notifTypeIcon(tipi) {
+        const t = (tipi || '').toLowerCase();
+        if (t === 'broadcast' || t === 'broadcast_sent') {
+            return `<div class="db-notif__icon db-notif__icon--broadcast"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>`;
+        } else if (t === 'admin_veprim' || t === 'admin') {
+            return `<div class="db-notif__icon db-notif__icon--admin"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>`;
+        } else if (t === 'aplikim_event' || t === 'event') {
+            return `<div class="db-notif__icon db-notif__icon--event"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></div>`;
+        } else if (t === 'aplikim_kerkese' || t === 'request' || t === 'help_request') {
+            return `<div class="db-notif__icon db-notif__icon--request"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></div>`;
+        }
+        return `<div class="db-notif__icon db-notif__icon--default"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>`;
+    }
+
+    function _notifSourceBadge(tipi) {
+        const t = (tipi || '').toLowerCase();
+        if (['broadcast', 'broadcast_sent', 'admin_veprim', 'admin'].includes(t)) {
+            return `<span class="db-notif__source db-notif__source--admin">Admin</span>`;
+        } else if (['aplikim_event', 'event', 'aplikim_kerkese', 'request', 'help_request'].includes(t)) {
+            return `<span class="db-notif__source db-notif__source--vol">Vullnetar</span>`;
+        }
+        return '';
+    }
+
     let html = '<div class="db-notif-list">';
     notifs.forEach(n => {
         const unread = !n.is_read;
         const hasLink = n.linku && n.linku.trim() !== '';
         const linkOpen = hasLink ? `<a href="${escapeHtml(n.linku)}" class="db-notif__link" style="text-decoration:none;color:inherit;">` : '';
         const linkClose = hasLink ? '</a>' : '';
+        const tipi = n.tipi || '';
         html += `<div class="db-notif ${unread ? 'db-notif--unread' : 'db-notif--read'}">
-            <div class="db-notif__dot"></div>
+            ${_notifTypeIcon(tipi)}
             ${linkOpen}<div class="db-notif__body">
                 <p class="db-notif__msg">${escapeHtml(n.mesazhi)}</p>
-                <span class="db-notif__time">${formatDate(n.krijuar_me)}</span>
+                <div class="db-notif__meta">
+                    <span class="db-notif__time">${formatDate(n.krijuar_me)}</span>
+                    ${_notifSourceBadge(tipi)}
+                </div>
             </div>${linkClose}
             <div class="db-notif__actions">
                 ${unread ? `<button class="db-btn db-btn--success db-btn--sm" onclick="markRead(${n.id_njoftimi})" title="Shëno si të lexuar">✓</button>` : ''}

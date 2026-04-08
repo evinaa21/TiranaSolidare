@@ -148,6 +148,9 @@ $appBasePath = ts_app_base_path();
 .header-notif-empty{padding:24px;text-align:center;color:#94a3b8;font-size:0.84rem;}
 .header-notif-viewall{display:block;text-align:center;padding:11px;font-size:0.82rem;font-weight:600;color:#00715D;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .15s;}
 .header-notif-viewall:hover{background:#f0fdf9;}
+.header-notif-item__icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.header-notif-item__icon--admin{background:rgba(225,114,84,0.12);color:#d84d27;}
+.header-notif-item__icon--vol{background:rgba(0,113,93,0.10);color:#00715D;}
 </style>
 <script>
 window.TS_BASE_PATH = window.TS_BASE_PATH ?? <?= json_encode($appBasePath, JSON_UNESCAPED_SLASHES) ?>;
@@ -173,6 +176,21 @@ document.addEventListener('click',function(e){
 });
 function _hEsc(s){var m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};return String(s||'').replace(/[&<>"]/g,function(c){return m[c];});}
 function _notifTimeAgo(s){var diff=Math.floor((Date.now()-new Date(s))/1000);if(diff<60)return'tani';if(diff<3600)return Math.floor(diff/60)+'m';if(diff<86400)return Math.floor(diff/3600)+'o';return Math.floor(diff/86400)+'d';}
+function _hNotifIcon(tipi){
+  var t=(tipi||'').toLowerCase();
+  var cls='header-notif-item__icon';
+  var svg;
+  if(t==='broadcast'||t==='broadcast_sent'){
+    return'<span class="'+cls+' '+cls+'--admin" title="Admin"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span>';
+  }else if(t==='admin_veprim'||t==='admin'){
+    return'<span class="'+cls+' '+cls+'--admin" title="Admin"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>';
+  }else if(t==='aplikim_event'||t==='event'){
+    return'<span class="'+cls+' '+cls+'--vol" title="Vullnetar"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></span>';
+  }else if(t==='aplikim_kerkese'||t==='request'){
+    return'<span class="'+cls+' '+cls+'--vol" title="Vullnetar"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6z"/><path d="M12 13v8"/><path d="M12 3v3"/></svg></span>';
+  }
+  return'<div class="header-notif-item__dot"></div>';
+}
 async function headerLoadNotifications(){
   var list=document.getElementById('header-notif-list');if(!list)return;
   list.innerHTML='<div class="header-notif-empty">Duke ngarkuar\u2026</div>';
@@ -185,8 +203,9 @@ async function headerLoadNotifications(){
       var txt=_hEsc(rawMsg.substring(0,90))+(rawMsg.length>90?'\u2026':'');
       var safeLink=_hEsc(n.linku||'#');
       var notifId=parseInt(n.id_njoftimi)||0;
+      var icon=_hNotifIcon(n.tipi||'');
       return'<a href="'+safeLink+'" class="header-notif-item '+(n.is_read?'header-notif-item--read':'header-notif-item--unread')+'" onclick="headerMarkNotifRead('+notifId+')">'
-        +'<div class="header-notif-item__dot"></div>'
+        +icon
         +'<div class="header-notif-item__text">'+txt+'<div class="header-notif-item__time">'+_notifTimeAgo(n.krijuar_me)+'</div></div>'
         +'</a>';
     }).join('');

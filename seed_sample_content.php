@@ -7,16 +7,13 @@ if (PHP_SAPI !== 'cli') {
     exit('CLI only.');
 }
 
-// Resolve project root (one level up from migrations/)
-define('SEED_PROJECT_ROOT', dirname(__DIR__));
-
-require_once SEED_PROJECT_ROOT . '/config/db.php';
+require_once __DIR__ . '/config/db.php';
 
 const SEED_PASSWORD = 'Demo123!';
 const APP_PATH_PREFIX = '/TiranaSolidare';
-const SEED_MEDIA_DIR = SEED_PROJECT_ROOT . '/public/assets/uploads/seed';
+const SEED_MEDIA_DIR = __DIR__ . '/public/assets/uploads/seed';
 const SEED_MEDIA_URL = APP_PATH_PREFIX . '/public/assets/uploads/seed';
-const SEED_AVATAR_DIR = SEED_PROJECT_ROOT . '/uploads/images/profiles/seed';
+const SEED_AVATAR_DIR = __DIR__ . '/uploads/images/profiles/seed';
 const SEED_AVATAR_URL = APP_PATH_PREFIX . '/uploads/images/profiles/seed';
 
 function quote_identifier(string $name): string
