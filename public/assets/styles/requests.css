@@ -34,7 +34,7 @@ body.page-events {
 }
 
 body.page-requests {
-  background-color: #f5f5f7; /* Soft neutral tint */
+  background: linear-gradient(180deg, #fdf9f6 0%, #f8f4ef 100%);
 }
 
 
@@ -1240,12 +1240,13 @@ body.page-events .rq-card__title {
 /* ── Color themes for detail hero ── */
 .rq-detail-hero--request {
   background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(100,110,130,0.5) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 100%, rgba(30,35,45,0.5) 0%, transparent 55%),
-    linear-gradient(160deg, #1a1f2e 0%, #2d3548 50%, #3d4663 100%);
-  background-color: #1a1f2e;
-  background-size: 200% 200%;
-  animation: rqGradientShift 14s ease infinite;
+    linear-gradient(135deg, rgba(0,10,40,0.72) 0%, rgba(0,20,60,0.55) 50%, rgba(0,5,30,0.75) 100%),
+    url('../images/request-detail-bg.jpg');
+  background-color: #00061a;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  animation: none;
 }
 
 .rq-detail-hero--offer {
@@ -1269,16 +1270,85 @@ body.page-events .rq-detail-hero {
   animation: rqGradientShift 14s ease infinite;
 }
 
-/* Request detail hero — soft charcoal/neutral theme */
-body.page-requests .rq-detail-hero {
+/* ══════════════════════════════════════════════════════════
+   DETAIL HERO — Category themes
+   Specificity 0,2,0 — overrides type defaults (0,1,0)
+   ══════════════════════════════════════════════════════════ */
+
+/* MJEDIS — Deep Forest Night */
+.rq-detail-hero.rq-detail-hero--cat-mjedis {
   background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(100,110,130,0.5) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 100%, rgba(30,35,45,0.5) 0%, transparent 55%),
-    linear-gradient(160deg, #1a1f2e 0%, #2d3548 50%, #3d4663 100%);
-  background-color: #1a1f2e;
+    radial-gradient(ellipse 560px 380px at 85% 10%, rgba(16,185,129,0.60) 0%, transparent 68%),
+    radial-gradient(ellipse 420px 520px at 8% 90%,  rgba(4,120,87,0.42)   0%, transparent 65%),
+    radial-gradient(ellipse 300px 300px at 55% 55%, rgba(110,231,183,0.14) 0%, transparent 60%),
+    linear-gradient(155deg, #03150a 0%, #072819 45%, #0a3822 100%);
+  background-color: #03150a;
   background-size: 200% 200%;
-  animation: rqGradientShift 14s ease infinite;
+  animation: rqGradientShift 18s ease infinite;
+  box-shadow: inset 0 4px 0 rgba(52,211,153,0.65);
 }
+.rq-detail-hero--cat-mjedis .rq-blob--hero-1 { fill: rgba(52,211,153,0.14); }
+.rq-detail-hero--cat-mjedis .rq-blob--hero-2 { fill: rgba(16,185,129,0.10); }
+
+/* SOCIALE — Amber Ember */
+.rq-detail-hero.rq-detail-hero--cat-sociale {
+  background-image:
+    radial-gradient(ellipse 560px 380px at 82% 12%, rgba(245,158,11,0.62)  0%, transparent 68%),
+    radial-gradient(ellipse 420px 520px at 10% 88%, rgba(194,65,12,0.45)   0%, transparent 65%),
+    radial-gradient(ellipse 280px 280px at 52% 50%, rgba(253,186,116,0.18) 0%, transparent 60%),
+    linear-gradient(155deg, #180900 0%, #3a1c00 45%, #4e2500 100%);
+  background-color: #180900;
+  background-size: 200% 200%;
+  animation: rqGradientShift 15s ease infinite;
+  box-shadow: inset 0 4px 0 rgba(251,191,36,0.72);
+}
+.rq-detail-hero--cat-sociale .rq-blob--hero-1 { fill: rgba(251,191,36,0.14); }
+.rq-detail-hero--cat-sociale .rq-blob--hero-2 { fill: rgba(245,158,11,0.10); }
+
+/* EDUKIMI — Midnight Sapphire */
+.rq-detail-hero.rq-detail-hero--cat-edukimi {
+  background-image:
+    radial-gradient(ellipse 580px 380px at 85% 12%, rgba(37,99,235,0.58)  0%, transparent 68%),
+    radial-gradient(ellipse 420px 540px at 8% 88%,  rgba(14,165,233,0.36) 0%, transparent 65%),
+    radial-gradient(ellipse 280px 280px at 50% 55%, rgba(99,102,241,0.20) 0%, transparent 60%),
+    linear-gradient(155deg, #030a1c 0%, #070f38 45%, #0a1550 100%);
+  background-color: #030a1c;
+  background-size: 200% 200%;
+  animation: rqGradientShift 20s ease infinite;
+  box-shadow: inset 0 4px 0 rgba(96,165,250,0.80);
+}
+.rq-detail-hero--cat-edukimi .rq-blob--hero-1 { fill: rgba(96,165,250,0.14); }
+.rq-detail-hero--cat-edukimi .rq-blob--hero-2 { fill: rgba(37,99,235,0.10); }
+
+/* SHËNDETËSI — Crimson Pulse */
+.rq-detail-hero.rq-detail-hero--cat-shendetesi {
+  background-image:
+    radial-gradient(ellipse 560px 380px at 83% 12%, rgba(220,38,38,0.65)   0%, transparent 68%),
+    radial-gradient(ellipse 420px 530px at 10% 88%, rgba(159,18,57,0.45)   0%, transparent 65%),
+    radial-gradient(ellipse 280px 280px at 52% 52%, rgba(251,113,133,0.16) 0%, transparent 60%),
+    linear-gradient(155deg, #170303 0%, #380808 45%, #4e0e0e 100%);
+  background-color: #170303;
+  background-size: 200% 200%;
+  animation: rqGradientShift 12s ease infinite;
+  box-shadow: inset 0 4px 0 rgba(252,165,165,0.70);
+}
+.rq-detail-hero--cat-shendetesi .rq-blob--hero-1 { fill: rgba(252,165,165,0.14); }
+.rq-detail-hero--cat-shendetesi .rq-blob--hero-2 { fill: rgba(220,38,38,0.10); }
+
+/* EMERGJENCA — Electric Violet */
+.rq-detail-hero.rq-detail-hero--cat-emergjenca {
+  background-image:
+    radial-gradient(ellipse 580px 400px at 80% 12%, rgba(124,58,237,0.75)  0%, transparent 67%),
+    radial-gradient(ellipse 440px 560px at 10% 88%, rgba(88,28,135,0.55)   0%, transparent 64%),
+    radial-gradient(ellipse 280px 280px at 52% 52%, rgba(192,132,252,0.22) 0%, transparent 60%),
+    linear-gradient(155deg, #0a0418 0%, #16082e 45%, #200c42 100%);
+  background-color: #0a0418;
+  background-size: 200% 200%;
+  animation: rqGradientShift 10s ease infinite;
+  box-shadow: inset 0 4px 0 rgba(167,139,250,0.85);
+}
+.rq-detail-hero--cat-emergjenca .rq-blob--hero-1 { fill: rgba(196,148,255,0.16); }
+.rq-detail-hero--cat-emergjenca .rq-blob--hero-2 { fill: rgba(124,58,237,0.12); }
 
 /* ── Detail hero — decorative noise texture ── */
 .rq-detail-hero::before {
@@ -1519,7 +1589,7 @@ body.page-events .rq-detail-text h2::before {
 }
 
 body.page-requests .rq-detail-text h2::before {
-  background: #3d4663;
+  background: #1a4a8a;
 }
 
 .rq-detail-text p {
@@ -1613,8 +1683,8 @@ body.page-events .rq-sidebar-info li .rq-info-icon {
 }
 
 body.page-requests .rq-sidebar-info li .rq-info-icon {
-  background: rgba(61,70,99,0.08);
-  color: #3d4663;
+  background: rgba(0,30,80,0.07);
+  color: #1a4a8a;
 }
 
 .rq-sidebar-info svg {
@@ -1752,12 +1822,12 @@ body.page-requests .rq-sidebar-info li .rq-info-icon {
 }
 
 body.page-requests .rq-btn-login {
-  background: #2d3548;
+  background: #0a1a3a;
 }
 
 body.page-requests .rq-btn-login:hover {
-  background: #1a1f2e;
-  box-shadow: 0 4px 16px rgba(45,53,72,0.35);
+  background: #00061a;
+  box-shadow: 0 4px 16px rgba(0,30,80,0.35);
 }
 
 body.page-events .rq-btn-full {
@@ -1772,14 +1842,14 @@ body.page-events .rq-btn-full:hover {
 }
 
 body.page-requests .rq-btn-full {
-  background: #2d3548 !important;
+  background: #0a1a3a !important;
   color: #fff !important;
 }
 
 body.page-requests .rq-btn-full:hover {
-  background: #1a1f2e !important;
+  background: #00061a !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(45,53,72,0.35);
+  box-shadow: 0 4px 16px rgba(0,30,80,0.35);
 }
 
 .rq-btn-cancel {
@@ -2120,9 +2190,9 @@ body.page-events .rq-sidebar-trust__icon {
 }
 
 body.page-requests .rq-sidebar-trust__icon {
-  background: rgba(61,70,99,0.1);
-  color: #3d4663;
-  animation: rqPulseGlowNeutral 3s ease-in-out infinite;
+  background: rgba(0,30,80,0.08);
+  color: #1a4a8a;
+  animation: rqPulseGlow 3s ease-in-out infinite;
 }
 
 @keyframes rqPulseGlowWarm {

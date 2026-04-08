@@ -38,7 +38,7 @@ if ($isLoggedIn && !$isAdmin) {
 if (isset($_GET['id'])) {
     $id = (int) $_GET['id'];
     $stmt = $pdo->prepare(
-        "SELECT k.*, p.emri AS krijuesi_emri, p.email AS krijuesi_email, kat.emri AS kategoria_emri
+        "SELECT k.*, p.emri AS krijuesi_emri, p.email AS krijuesi_email, kat.emri AS kategoria_emri, kat.banner_path AS kategoria_banner
          FROM Kerkesa_per_Ndihme k
          LEFT JOIN Perdoruesi p ON p.id_perdoruesi = k.id_perdoruesi
          LEFT JOIN Kategoria kat ON kat.id_kategoria = k.id_kategoria
@@ -214,14 +214,25 @@ $countStmt->execute($params);
 $total = (int) $countStmt->fetchColumn();
 $totalPages = (int) ceil($total / $limit);
 
-// Type breakdown for tab strip counts — respects current search/status/category filters
-$typeBreakdownStmt = $pdo->prepare("SELECT k.tipi, COUNT(*) AS cnt FROM Kerkesa_per_Ndihme k $whereSQL GROUP BY k.tipi");
-$typeBreakdownStmt->execute($params);
+// Type breakdown for tab strip — excludes the tipi filter so all tabs always show correct totals
+// Build a separate WHERE/params without the tipi condition
+$_whereNoTypi  = array_values(array_filter($where, fn($c) => $c !== 'k.tipi = ?'));
+$_paramsNoTypi = [];
+foreach ($_whereNoTypi as $_cond) {
+    // Rebuild params by matching conditions order (blocks=2, search=2, statusi=N, kategoria=1)
+    if (str_contains($_cond, 'user_blocks')) { $_paramsNoTypi[] = (int) $currentUserId; $_paramsNoTypi[] = (int) $currentUserId; }
+    elseif (str_contains($_cond, 'titulli LIKE')) { $_paramsNoTypi[] = "%$search%"; $_paramsNoTypi[] = "%$search%"; }
+    elseif (str_contains($_cond, 'LOWER(k.statusi)')) { foreach (ts_help_request_status_filter_values($statusi) as $_sv) { $_paramsNoTypi[] = $_sv; } }
+    elseif (str_contains($_cond, 'id_kategoria')) { $_paramsNoTypi[] = (int) $kategoria; }
+}
+$_whereNoTypiSQL = $_whereNoTypi ? 'WHERE ' . implode(' AND ', $_whereNoTypi) : '';
+$typeBreakdownStmt = $pdo->prepare("SELECT k.tipi, COUNT(*) AS cnt FROM Kerkesa_per_Ndihme k $_whereNoTypiSQL GROUP BY k.tipi");
+$typeBreakdownStmt->execute($_paramsNoTypi);
 $_typeCounts = [];
 foreach ($typeBreakdownStmt->fetchAll(PDO::FETCH_ASSOC) as $_row) {
     $_typeCounts[$_row['tipi'] ?? ''] = (int) $_row['cnt'];
 }
-unset($typeBreakdownStmt, $_row);
+unset($typeBreakdownStmt, $_row, $_whereNoTypi, $_paramsNoTypi, $_whereNoTypiSQL, $_cond, $_sv);
 
 $sql = "SELECT k.*, p.emri AS krijuesi_emri, kat.emri AS kategoria_emri
         FROM Kerkesa_per_Ndihme k
@@ -256,7 +267,8 @@ $statOpen         = (int) ($publicHelpStats['open_total'] ?? 0);
 $statCompleted    = (int) ($publicHelpStats['completed_total'] ?? 0);
 $statVullnetare   = ts_count_active_volunteers($pdo);
 $statOferta       = $_typeCounts['offer'] ?? 0;
-$statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']))
+$statKerkesa      = $_typeCounts['request'] ?? 0;
+$statTotalKerkesa = $statKerkesa + $statOferta;} // end if (!isset($_GET['id']))
 ?>
 <!DOCTYPE html>
 <html lang="sq">
@@ -265,7 +277,7 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($request) ? htmlspecialchars($request['titulli']) . ' — ' : '' ?>Kërkesat — Tirana Solidare</title>
   <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/main.css?v=20260401a">
-  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260321a">
+  <link rel="stylesheet" href="/TiranaSolidare/public/assets/styles/requests.css?v=20260408c">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/TiranaSolidare/assets/css/map.css?v=20260401a">
   <?= csrf_meta() ?>
@@ -276,11 +288,32 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
 <main>
 
 <?php if (isset($request) && $request): ?>
-<?php $requestType = ts_help_request_type_value($request); ?>
+<?php
+$requestType = ts_help_request_type_value($request);
+$_catMap = [
+    'mjedis'     => ['slug' => 'mjedis',     'overlay' => 'rgba(0,30,16,0.70)'],
+    'sociale'    => ['slug' => 'sociale',    'overlay' => 'rgba(40,16,0,0.68)'],
+    'edukimi'    => ['slug' => 'edukimi',    'overlay' => 'rgba(0,8,45,0.72)'],
+    'shëndetësi' => ['slug' => 'shendetesi', 'overlay' => 'rgba(40,0,0,0.70)'],
+    'shendetesi' => ['slug' => 'shendetesi', 'overlay' => 'rgba(40,0,0,0.70)'],
+    'emergjenca' => ['slug' => 'emergjenca', 'overlay' => 'rgba(18,0,45,0.72)'],
+];
+$_catKey       = mb_strtolower($request['kategoria_emri'] ?? '');
+$_catInfo      = $_catMap[$_catKey] ?? null;
+$_catSlug      = $_catInfo['slug'] ?? '';
+$_heroCatClass = $_catSlug ? ' rq-detail-hero--cat-' . $_catSlug : '';
+$_catBanner    = $request['kategoria_banner'] ?? '';
+$_heroStyle    = '';
+if ($_catBanner !== '' && $_catBanner !== null) {
+    $_overlay     = $_catInfo['overlay'] ?? 'rgba(0,0,0,0.65)';
+    $_bannerUrl   = htmlspecialchars($_catBanner, ENT_QUOTES);
+    $_heroStyle   = ' style="background-image: linear-gradient(' . $_overlay . ', ' . $_overlay . '), url(\'' . $_bannerUrl . '\'); background-size: cover; background-position: center; animation: none;"';
+}
+?>
 <!-- ═══════════════════════════════════════════════════════════
      SINGLE HELP REQUEST — DETAIL VIEW (Premium)
      ═══════════════════════════════════════════════════════════ -->
-<section class="rq-detail-hero <?= $requestType === 'offer' ? 'rq-detail-hero--offer' : 'rq-detail-hero--request' ?>">
+<section class="rq-detail-hero rq-detail-hero--<?= $requestType === 'offer' ? 'offer' : 'request' ?><?= $_heroCatClass ?>"<?= $_heroStyle ?>>
   <!-- Decorative blobs -->
   <svg class="rq-blob rq-blob--hero-1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,255,255,0.08)" d="M44.7,-76.4C58.8,-69.2,71.8,-58.7,79.6,-45.1C87.4,-31.5,90.1,-15.7,88.5,-0.9C86.9,13.9,81.1,27.8,72.6,39.6C64.1,51.4,52.9,61.2,40.1,68.4C27.3,75.6,13.7,80.3,-0.8,81.7C-15.3,83.1,-30.5,81.3,-43.4,74.2C-56.2,67.2,-66.7,55,-73.8,41.2C-80.8,27.3,-84.4,11.7,-83.5,-3.5C-82.6,-18.7,-77.2,-33.4,-68,-45.1C-58.8,-56.8,-45.9,-65.4,-32.3,-72.8C-18.7,-80.3,-9.3,-86.5,3.2,-91.9C15.7,-97.4,30.5,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
   <svg class="rq-blob rq-blob--hero-2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255,215,0,0.06)" d="M39.5,-51.2C52.9,-46.3,66.8,-37.9,71.4,-25.7C76.1,-13.5,71.5,2.6,66,17.3C60.6,31.9,54.3,45.1,44,54.7C33.6,64.3,19.3,70.2,3.4,73.7C-12.6,77.2,-30.3,78.4,-42.2,70.1C-54,61.7,-60,43.8,-65.3,27.3C-70.6,10.8,-75.2,-4.2,-72.3,-18.2C-69.5,-32.1,-59.2,-45,-46.1,-50C-33.1,-55,-16.5,-52.2,-1.4,-50.2C13.7,-48.3,26.1,-56.1,39.5,-51.2Z" transform="translate(100 100)"/></svg>
@@ -663,14 +696,14 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
       <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Kërko sipas titullit ose përshkrimit...">
     </div>
     <div class="rq-filters__pills">
-      <select name="statusi" onchange="this.form.submit()">
+      <select id="rq-status-select" name="statusi">
         <option value="">Të gjitha statuset</option>
         <option value="open" <?= $statusi === 'open' ? 'selected' : '' ?>>Hapur</option>
         <option value="filled" <?= $statusi === 'filled' ? 'selected' : '' ?>>Mbushur</option>
         <option value="completed" <?= $statusi === 'completed' ? 'selected' : '' ?>>Përfunduar</option>
         <option value="cancelled" <?= $statusi === 'cancelled' ? 'selected' : '' ?>>Anuluar</option>
       </select>
-      <select name="kategoria" onchange="this.form.submit()">
+      <select id="rq-category-select" name="kategoria">
         <option value="">Të gjitha kategoritë</option>
         <?php foreach ($categories as $cat): ?>
         <option value="<?= (int) $cat['id_kategoria'] ?>" <?= $kategoria === (string) $cat['id_kategoria'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['emri']) ?></option>
@@ -736,7 +769,7 @@ $statKerkesa      = $_typeCounts['request'] ?? 0;} // end if (!isset($_GET['id']
           ? ($matching['counts']['waitlisted'] . ' në listë pritjeje')
           : (($matching['counts']['pending'] ?? 0) > 0 ? ($matching['counts']['pending'] . ' në shqyrtim') : (($matching['total_applications'] ?? 0) . ' aplikime'));
       ?>
-        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card rq-card--typed<?= $isFeatured ? ' rq-card--featured' : '' ?>" data-type="<?= $cardType ?>" style="animation-delay: <?= $i * 0.05 ?>s">
+        <a href="/TiranaSolidare/views/help_requests.php?id=<?= $req['id_kerkese_ndihme'] ?>" class="rq-card rq-card--typed<?= $isFeatured ? ' rq-card--featured' : '' ?>" data-type="<?= $cardType ?>" data-status="<?= htmlspecialchars($req['statusi'] ?? '') ?>" data-category="<?= (int) ($req['id_kategoria'] ?? 0) ?>" data-title="<?= htmlspecialchars(mb_strtolower($req['titulli'] ?? '')) ?>" data-desc="<?= htmlspecialchars(mb_strtolower(mb_substr($req['pershkrimi'] ?? '', 0, 300))) ?>" style="animation-delay: <?= $i * 0.05 ?>s">
           <div class="rq-card__type-bar rq-card__type-bar--<?= $cardType ?>"></div>
           <?php if ($isFeatured): ?>
           <div class="rq-card__featured-label">
@@ -1052,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', function() {
       lat: <?= json_encode($canViewRequestLocation ? ($request['latitude'] ?? null) : null) ?>,
       lng: <?= json_encode($canViewRequestLocation ? ($request['longitude'] ?? null) : null) ?>,
       label: <?= json_encode($request['titulli'] ?? '') ?>,
-      type: <?= json_encode($requestType) ?>
+      type: <?= json_encode(isset($requestType) ? $requestType : null) ?>
     });
   }
 
@@ -1076,62 +1109,92 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  const tabBtns = document.querySelectorAll('.rq-tabs-strip [data-filter]');
-  const cards   = document.querySelectorAll('.rq-grid .rq-card[data-type]');
-  const countEl = document.querySelector('.rq-results__count');
-  const filterEmpty = document.getElementById('rq-filter-empty');
+  // ── Client-side multi-filter (tabs + search + status + category) ──
+  const tabBtns      = document.querySelectorAll('.rq-tabs-strip [data-filter]');
+  const cards        = document.querySelectorAll('.rq-grid .rq-card[data-type]');
+  const countEl      = document.querySelector('.rq-results__count');
+  const filterEmpty  = document.getElementById('rq-filter-empty');
+  const searchInput  = document.querySelector('.rq-filters__search input[name="search"]');
+  const statusSel    = document.getElementById('rq-status-select');
+  const categorySel  = document.getElementById('rq-category-select');
+
+  // Active filter state
+  let activeType     = <?= json_encode($tipi) ?>;
+  let activeSearch   = <?= json_encode(mb_strtolower($search)) ?>;
+  let activeStatus   = <?= json_encode($statusi) ?>;
+  let activeCategory = <?= json_encode($kategoria) ?>;
+
+  function applyFilters() {
+    const needle = activeSearch.trim().toLowerCase();
+    // Status groups: 'filled' maps to statusi values that contain 'filled'
+    const statusGroups = { filled: ['filled'], open: ['open'], completed: ['completed'], cancelled: ['cancelled'] };
+    const statusValues = activeStatus ? (statusGroups[activeStatus] || [activeStatus]) : null;
+
+    let visible = 0;
+    cards.forEach((card, idx) => {
+      const typeMatch     = !activeType || card.dataset.type === activeType;
+      const statusMatch   = !statusValues || statusValues.some(s => card.dataset.status.toLowerCase().includes(s));
+      const categoryMatch = !activeCategory || card.dataset.category === activeCategory;
+      const searchMatch   = !needle ||
+        card.dataset.title.includes(needle) ||
+        card.dataset.desc.includes(needle);
+
+      const show = typeMatch && statusMatch && categoryMatch && searchMatch;
+      if (show) {
+        card.style.display = '';
+        card.style.animation = 'rqCardIn 0.3s ease both';
+        card.style.animationDelay = (visible * 0.035) + 's';
+        visible++;
+      } else {
+        card.style.animation = 'rqCardOut 0.2s ease forwards';
+        setTimeout(() => { if (!show) card.style.display = 'none'; }, 200);
+      }
+    });
+
+    if (filterEmpty) filterEmpty.style.display = visible === 0 ? '' : 'none';
+    if (countEl) countEl.textContent = visible + ' kërkesa u gjetën';
+  }
 
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const filter = btn.dataset.filter;
-
-      // Update active tab
       tabBtns.forEach(b => b.classList.remove('rq-tab--active'));
       btn.classList.add('rq-tab--active');
-
-      // Filter cards with animation
-      let visible = 0;
-      cards.forEach(card => {
-        const match = filter === 'all' || card.dataset.type === filter;
-        if (match) {
-          card.style.display = '';
-          card.style.animation = 'rqCardIn 0.35s ease forwards';
-          card.style.animationDelay = (visible * 0.04) + 's';
-          visible++;
-        } else {
-          card.style.animation = 'rqCardOut 0.25s ease forwards';
-          setTimeout(() => { card.style.display = 'none'; }, 250);
-        }
-      });
-
-      // Show/hide empty state
-      if (filterEmpty) {
-        filterEmpty.style.display = visible === 0 ? '' : 'none';
-      }
-
-      // Update visible count text
-      if (countEl) {
-        const totalCards = cards.length;
-        countEl.textContent = (filter === 'all' ? totalCards : visible) + ' kërkesa u gjetën';
-      }
-
-      // Sync the hidden tipi input so the form submits with the correct type filter
-      const tipiInput = document.getElementById('rq-tipi-input');
-      if (tipiInput) {
-        tipiInput.value = (filter === 'request' || filter === 'offer') ? filter : '';
-      }
-
-      // Deprecated: old code looked for a <select name="tipi"> which does not exist
-      // const tipiSelect = document.querySelector('.rq-filters select[name="tipi"]');
-      // (removed)
-
-      // Smooth scroll to results
-      const results = document.querySelector('.rq-results');
-      if (results) {
-        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      activeType = btn.dataset.filter === 'all' ? '' : btn.dataset.filter;
+      applyFilters();
     });
   });
+
+  let _searchTimer;
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(() => {
+        activeSearch = searchInput.value.toLowerCase();
+        applyFilters();
+      }, 220);
+    });
+    // Prevent form submit on Enter — handle it inline
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); activeSearch = searchInput.value.toLowerCase(); applyFilters(); }
+    });
+  }
+
+  if (statusSel) {
+    statusSel.addEventListener('change', () => {
+      activeStatus = statusSel.value;
+      applyFilters();
+    });
+  }
+
+  if (categorySel) {
+    categorySel.addEventListener('change', () => {
+      activeCategory = categorySel.value;
+      applyFilters();
+    });
+  }
+
+  // Run once on load to apply any server-side pre-selected filters
+  if (activeType || activeSearch || activeStatus || activeCategory) applyFilters();
 });
 
 const completeBtn = document.getElementById('rq-complete-btn');
